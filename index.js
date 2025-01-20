@@ -1,9 +1,14 @@
 require("dotenv").config();
 
 const express = require("express");
+const helmet = require("helmet");
 const authenticate = require("./middlewares/authenticate");
 const app = express();
-const port = 3000;
+const port = process.env.PORT;
+
+app.use(helmet());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 app.get("/", authenticate, (req, res) => {
   res.send("Welcome to the Habit Tracker API!");
