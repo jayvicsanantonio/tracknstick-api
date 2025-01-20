@@ -18,5 +18,9 @@
     "url": "https://github.com/jayvicsanantonio/tracknstick-api/issues"
   },
   "homepage": "https://github.com/jayvicsanantonio/tracknstick-api#readme",
-  "description": ""
+  "description": "",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2"
+  }
 }
