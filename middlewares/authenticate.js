@@ -1,22 +1,29 @@
-const crypto = require("crypto");
+const db = require("../db");
 
 function authenticate(req, res, next) {
   const apiKey = req.header("X-API-Key");
-  const expectedKey = process.env.API_KEY;
 
-  if (!apiKey || !expectedKey) {
+  if (!apiKey) {
     return res.status(401).json({ error: "Missing authentication" });
   }
 
-  if (apiKey.length !== expectedKey.length) {
-    return res.status(401).json({ error: "Unauthorized" });
-  }
+  const selectStmt = db.prepare("SELECT id FROM users WHERE api_key = ?");
 
-  if (crypto.timingSafeEqual(Buffer.from(apiKey), Buffer.from(expectedKey))) {
+  selectStmt.get(apiKey, (err, row) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Failed to authenticate API Key" });
+    }
+
+    if (!row) {
+      return res.status(401).json({ error: "Invalid API Key" });
+    }
+
+    req.userId = row.id;
+
     next();
-  } else {
-    res.status(401).json({ error: "Unauthorized" });
-  }
+  });
+  selectStmt.finalize();
 }
 
 module.exports = authenticate;
