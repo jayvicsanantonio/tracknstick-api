@@ -217,7 +217,7 @@ app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
     insertTrackerStmt.run(habitId, timestamp, notes, function (err) {
       if (err) {
         console.error(err);
-        return res.status(500).json({ error: "Failed to check habit" });
+        return res.status(500).json({ error: "Failed to add tracker" });
       }
 
       res.status(201).json({

@@ -22,8 +22,8 @@ function authenticate(req, res, next) {
     req.userId = row.id;
 
     next();
+    selectStmt.finalize();
   });
-  selectStmt.finalize();
 }
 
 module.exports = authenticate;

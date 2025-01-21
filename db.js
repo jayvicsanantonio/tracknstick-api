@@ -2,6 +2,9 @@ const sqlite3 = require("sqlite3").verbose();
 
 const db = new sqlite3.Database("./tracknstick.db");
 
+// Enable foreign key constraints
+db.run("PRAGMA foreign_keys = ON;");
+
 // Create the users table
 db.run(`CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
