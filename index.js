@@ -193,8 +193,8 @@ app.get("/habits/:habitId/trackers", authenticate, (req, res) => {
   const endDate = req.query.endDate;
 
   if (
-    (startDate && isNaN(new Date(startDate).getTime())) ||
-    (endDate && isNaN(new Date(endDate).getTime()))
+    (startDate && Number.isNaN(new Date(startDate).getTime())) ||
+    (endDate && Number.isNaN(new Date(endDate).getTime()))
   ) {
     return res.status(400).json({ error: "Invalid date format" });
   }
