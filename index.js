@@ -189,8 +189,15 @@ app.delete("/habits/:habitId", authenticate, (req, res) => {
 app.get("/habits/:habitId/trackers", authenticate, (req, res) => {
   const habitId = req.params.habitId;
   const userId = req.userId;
-  const startDate = req.query.startDate; // Optional start date
-  const endDate = req.query.endDate; // Optional end date
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
+
+  if (
+    (startDate && isNaN(new Date(startDate).getTime())) ||
+    (endDate && isNaN(new Date(endDate).getTime()))
+  ) {
+    return res.status(400).json({ error: "Invalid date format" });
+  }
 
   // Check if the habit exists and belongs to the user
   const checkHabitStmt = db.prepare(
@@ -290,7 +297,7 @@ app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
 
           const updateHabitStmt = db.prepare(`
             UPDATE habits 
-            SET streak = ?, total_completions = total_completions - 1 
+            SET streak = ?, total_completions = MAX(total_completions - 1, 0) 
             WHERE id = ?
           `);
 
