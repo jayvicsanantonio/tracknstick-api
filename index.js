@@ -186,15 +186,20 @@ app.delete("/habits/:habitId", authenticate, (req, res) => {
   checkHabitStmt.finalize();
 });
 
-app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
+app.get("/habits/:habitId/trackers", authenticate, (req, res) => {
   const habitId = req.params.habitId;
-  const { timestamp, notes } = req.body;
   const userId = req.userId;
+  const startDate = req.query.startDate;
+  const endDate = req.query.endDate;
 
-  if (!timestamp) {
-    return res.status(400).json({ error: "Missing required fields" });
+  if (
+    (startDate && Number.isNaN(new Date(startDate).getTime())) ||
+    (endDate && Number.isNaN(new Date(endDate).getTime()))
+  ) {
+    return res.status(400).json({ error: "Invalid date format" });
   }
 
+  // Check if the habit exists and belongs to the user
   const checkHabitStmt = db.prepare(
     `SELECT 1 FROM habits WHERE id = ? AND user_id = ?`
   );
@@ -209,23 +214,148 @@ app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
       return res.status(404).json({ error: "Habit not found" });
     }
 
-    const insertTrackerStmt = db.prepare(`
-      INSERT INTO trackers (habit_id, timestamp, notes)
-      VALUES (?, ?, ?)
-    `);
+    // Construct the query to fetch trackers
+    let selectQuery = "SELECT * FROM trackers WHERE habit_id = ?";
+    const queryParams = [habitId];
 
-    insertTrackerStmt.run(habitId, timestamp, notes, function (err) {
+    if (startDate && endDate) {
+      selectQuery += " AND DATE(timestamp) BETWEEN DATE(?) AND DATE(?)";
+      queryParams.push(startDate, endDate);
+    } else if (startDate) {
+      selectQuery += " AND DATE(timestamp) >= DATE(?)";
+      queryParams.push(startDate);
+    } else if (endDate) {
+      selectQuery += " AND DATE(timestamp) <= DATE(?)";
+      queryParams.push(endDate);
+    }
+
+    const selectStmt = db.prepare(selectQuery);
+
+    selectStmt.all(queryParams, (err, rows) => {
       if (err) {
-        console.error(err);
-        return res.status(500).json({ error: "Failed to add tracker" });
+        console.error("Error fetching trackers:", err);
+        return res.status(500).json({ error: "Failed to fetch trackers" });
       }
 
-      res.status(201).json({
-        message: "Tracker added successfully",
-        trackerId: this.lastID,
-      });
+      res.json(rows);
     });
-    insertTrackerStmt.finalize();
+    selectStmt.finalize();
+  });
+
+  checkHabitStmt.finalize();
+});
+
+app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
+  const habitId = req.params.habitId;
+  const { timestamp, notes } = req.body;
+  const userId = req.userId;
+
+  if (!timestamp) {
+    return res.status(400).json({ error: "Missing required fields" });
+  }
+
+  // Check if the habit exists and belongs to the user
+  const checkHabitStmt = db.prepare(
+    `SELECT 1 FROM habits WHERE id = ? AND user_id = ?`
+  );
+
+  checkHabitStmt.get(habitId, userId, (error, row) => {
+    if (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Failed to check habit" });
+    }
+
+    if (!row) {
+      return res.status(404).json({ error: "Habit not found" });
+    }
+
+    const date = new Date(timestamp).toLocaleDateString();
+
+    // Check if a tracker for the habit already exists on the same day
+    const checkTrackerStmt = db.prepare(`
+      SELECT id FROM trackers 
+      WHERE habit_id = ? AND DATE(timestamp) = DATE(?)
+    `);
+
+    checkTrackerStmt.get(habitId, timestamp, (err, row) => {
+      if (err) {
+        console.error("Error checking tracker:", err);
+        return res.status(500).json({ error: "Failed to toggle tracker" });
+      }
+
+      if (row) {
+        // If a tracker already exists, delete it
+        const deleteTrackerStmt = db.prepare(
+          "DELETE FROM trackers WHERE id = ?"
+        );
+
+        deleteTrackerStmt.run(row.id, function (err) {
+          if (err) {
+            console.error("Error deleting tracker:", err);
+            return res.status(500).json({ error: "Failed to toggle tracker" });
+          }
+
+          const updateHabitStmt = db.prepare(`
+            UPDATE habits 
+            SET streak = ?, total_completions = MAX(total_completions - 1, 0) 
+            WHERE id = ?
+          `);
+
+          const newStreak = calculateStreak(habitId);
+
+          updateHabitStmt.run(newStreak, habitId, function (err) {
+            if (err) {
+              console.error("Error updating habit streak:", err);
+            }
+
+            res.status(201).json({
+              message: "Tracker removed successfully",
+            });
+          });
+
+          updateHabitStmt.finalize();
+        });
+
+        deleteTrackerStmt.finalize();
+      } else {
+        const insertTrackerStmt = db.prepare(`
+          INSERT INTO trackers (habit_id, timestamp, notes)
+          VALUES (?, ?, ?)
+        `);
+
+        insertTrackerStmt.run(habitId, timestamp, notes, function (err) {
+          if (err) {
+            console.error("Error inserting tracker:", err);
+            return res.status(500).json({ error: "Failed to toggle tracker" });
+          }
+
+          const updateHabitStmt = db.prepare(`
+            UPDATE habits 
+            SET streak = ?, total_completions = total_completions + 1 
+            WHERE id = ?
+          `);
+
+          const newStreak = calculateStreak(habitId);
+
+          updateHabitStmt.run(newStreak, habitId, function (err) {
+            if (err) {
+              console.error("Error updating habit streak:", err);
+            }
+
+            res.status(201).json({
+              message: "Tracker added successfully",
+              trackerId: this.lastID,
+            });
+          });
+
+          updateHabitStmt.finalize();
+        });
+
+        insertTrackerStmt.finalize();
+      }
+    });
+
+    checkTrackerStmt.finalize();
   });
 
   checkHabitStmt.finalize();
@@ -243,3 +373,7 @@ app.use((err, req, res, next) => {
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
+
+function calculateStreak() {
+  // TODO: Implement the streak calculation logic
+}
