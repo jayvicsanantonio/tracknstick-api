@@ -1,0 +1,8 @@
+name = "tracknstick-api"
+type = "javascript"
+account_id = "3ff5eddc22ab1009a4e16bd8f56015cb"
+workers_dev = true
+route = ""
+zone_id = ""
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
