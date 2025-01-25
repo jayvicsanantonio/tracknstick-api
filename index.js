@@ -28,8 +28,12 @@ app.get("/habits", authenticate, (req, res) => {
         name: row.name,
         icon: row.icon,
         frequency: row.frequency.split(","),
-        totalCompletions: row.total_completions,
-        streak: 0,
+        completed: false,
+        stats: {
+          totalCompletions: row.total_completions,
+          streak: 0,
+          lastCompleted: null,
+        },
       };
 
       return habit;
