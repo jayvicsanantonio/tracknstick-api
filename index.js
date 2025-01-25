@@ -1,11 +1,18 @@
 require("dotenv").config();
 
 const express = require("express");
+const cors = require("cors");
 const helmet = require("helmet");
 const db = require("./db");
 const authenticate = require("./middlewares/authenticate");
 const app = express();
 const port = process.env.PORT;
+
+app.use(
+  cors({
+    origin: "http://localhost:5173",
+  })
+);
 
 app.use(helmet());
 app.use(express.json());
