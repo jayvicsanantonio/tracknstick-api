@@ -1,6 +1,7 @@
 const db = require("../db");
 
 function authenticate(req, res, next) {
+  console.log("Authenticating API Key");
   const apiKey = req.header("X-API-Key");
 
   if (!apiKey) {
