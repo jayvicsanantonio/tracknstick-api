@@ -20,8 +20,12 @@ app.use(express.urlencoded({ extended: true }));
 
 app.get("/habits", authenticate, (req, res) => {
   const userId = req.userId;
-
-  const selectStmt = db.prepare("SELECT * FROM habits WHERE user_id = ?");
+  const date = req.query.date;
+  const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const day = daysOfWeek[new Date(date).getDay()];
+  const selectStmt = db.prepare(
+    `SELECT * FROM habits WHERE user_id = ? AND INSTR(',' || frequency || ',', ',${day},') > 0`
+  );
 
   selectStmt.all(userId, (err, rows) => {
     if (err) {
