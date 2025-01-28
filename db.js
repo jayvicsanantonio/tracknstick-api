@@ -32,9 +32,11 @@ db.run(`
   CREATE TABLE IF NOT EXISTS trackers (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     habit_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL,
     timestamp DATETIME NOT NULL,
     notes TEXT,
     FOREIGN KEY (habit_id) REFERENCES habits (id)
+    FOREIGN KEY (user_id) REFERENCES users (id)
   );
 `);
 
