@@ -27,6 +27,9 @@ db.run(`
   )
 `);
 
+// Create an index on the frequency column
+db.run(`CREATE INDEX IF NOT EXISTS idx_habits_frequency ON habits(frequency)`);
+
 // Create the trackers table
 db.run(`
   CREATE TABLE IF NOT EXISTS trackers (
