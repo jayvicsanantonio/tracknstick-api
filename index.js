@@ -20,10 +20,25 @@ app.use(express.urlencoded({ extended: true }));
 
 app.get("/habits", authenticate, (req, res) => {
   const userId = req.userId;
+  const date = req.query.date;
 
-  const selectStmt = db.prepare("SELECT * FROM habits WHERE user_id = ?");
+  if (!date) {
+    return res.status(400).json({ error: "Date parameter is required" });
+  }
 
-  selectStmt.all(userId, (err, rows) => {
+  const parsedDate = new Date(date);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return res.status(400).json({ error: "Invalid date format" });
+  }
+
+  const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const day = daysOfWeek[parsedDate.getDay()];
+  const selectStmt = db.prepare(
+    `SELECT * FROM habits WHERE user_id = ? AND (',' || frequency || ',') LIKE '%,' || ? || ',%'`
+  );
+
+  selectStmt.all(userId, day, (err, rows) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ error: "Failed to retrieve habits" });
