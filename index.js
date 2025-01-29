@@ -40,7 +40,7 @@ app.get("/habits", authenticate, (req, res) => {
   try {
     Intl.DateTimeFormat(undefined, { timeZone });
   } catch (error) {
-    res.status(400).json({ error: "Invalid timeZone format" });
+    return res.status(400).json({ error: "Invalid timeZone format" });
   }
 
   const localeDate = parsedDate.toLocaleString("en-US", { timeZone });
@@ -292,6 +292,11 @@ app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
   }
 
   const utcDate = new Date(timestamp);
+
+  if (Number.isNaN(utcDate.getTime())) {
+    return res.status(400).json({ error: "Invalid timestamp format" });
+  }
+
   const localeDate = new Date(
     utcDate.toLocaleString("en-US", {
       timeZone,
@@ -336,7 +341,9 @@ app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
     (err, rows) => {
       if (err) {
         console.error("Error checking for existing tracker:", err);
-        return;
+        return res
+          .status(500)
+          .json({ error: "Failed to check existing tracker" });
       }
 
       if (rows.length > 0) {
@@ -346,7 +353,7 @@ app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
         deleteStmt.run([habitId, userId, timestamp], function (err) {
           if (err) {
             console.error("Error deleting tracker:", err);
-            return;
+            return res.status(500).json({ error: "Failed to delete tracker" });
           }
 
           res.status(201).json({
@@ -361,7 +368,7 @@ app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
         insertStmt.run([habitId, userId, timestamp, notes], function (err) {
           if (err) {
             console.error("Error inserting tracker:", err);
-            return;
+            return res.status(500).json({ error: "Failed to insert tracker" });
           }
 
           res.status(201).json({
