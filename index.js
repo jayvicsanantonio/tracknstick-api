@@ -33,6 +33,16 @@ app.get("/habits", authenticate, (req, res) => {
     return res.status(400).json({ error: "Invalid date format" });
   }
 
+  if (!timeZone) {
+    return res.status(400).json({ error: "TimeZone parameter is required" });
+  }
+
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone });
+  } catch (error) {
+    res.status(400).json({ error: "Invalid timeZone format" });
+  }
+
   const localeDate = parsedDate.toLocaleString("en-US", { timeZone });
   const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const day = daysOfWeek[new Date(localeDate).getDay()];
