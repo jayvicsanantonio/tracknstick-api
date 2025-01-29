@@ -21,6 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.get("/habits", authenticate, (req, res) => {
   const userId = req.userId;
   const date = req.query.date;
+  const timeZone = req.query.timeZone;
 
   if (!date) {
     return res.status(400).json({ error: "Date parameter is required" });
@@ -32,8 +33,9 @@ app.get("/habits", authenticate, (req, res) => {
     return res.status(400).json({ error: "Invalid date format" });
   }
 
+  const localeDate = parsedDate.toLocaleString("en-US", { timeZone });
   const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const day = daysOfWeek[parsedDate.getDay()];
+  const day = daysOfWeek[new Date(localeDate).getDay()];
   const selectStmt = db.prepare(
     `SELECT * FROM habits WHERE user_id = ? AND (',' || frequency || ',') LIKE '%,' || ? || ',%'`
   );
@@ -225,7 +227,6 @@ app.get("/habits/:habitId/trackers", authenticate, (req, res) => {
     return res.status(400).json({ error: "Invalid date format" });
   }
 
-  // Check if the habit exists and belongs to the user
   const checkHabitStmt = db.prepare(
     `SELECT 1 FROM habits WHERE id = ? AND user_id = ?`
   );
@@ -240,9 +241,9 @@ app.get("/habits/:habitId/trackers", authenticate, (req, res) => {
       return res.status(404).json({ error: "Habit not found" });
     }
 
-    // Construct the query to fetch trackers
-    let selectQuery = "SELECT * FROM trackers WHERE habit_id = ?";
-    const queryParams = [habitId];
+    let selectQuery =
+      "SELECT * FROM trackers WHERE habit_id = ? AND user_id = ?";
+    const queryParams = [habitId, userId];
 
     if (startDate && endDate) {
       selectQuery += " AND DATE(timestamp) BETWEEN DATE(?) AND DATE(?)";
@@ -273,118 +274,97 @@ app.get("/habits/:habitId/trackers", authenticate, (req, res) => {
 
 app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
   const habitId = req.params.habitId;
-  const { timestamp, notes } = req.body;
+  const { timestamp, timeZone, notes } = req.body;
   const userId = req.userId;
 
   if (!timestamp) {
     return res.status(400).json({ error: "Missing required fields" });
   }
 
-  // Check if the habit exists and belongs to the user
-  const checkHabitStmt = db.prepare(
-    `SELECT 1 FROM habits WHERE id = ? AND user_id = ?`
+  const utcDate = new Date(timestamp);
+  const localeDate = new Date(
+    utcDate.toLocaleString("en-US", {
+      timeZone,
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+    })
   );
 
-  checkHabitStmt.get(habitId, userId, (error, row) => {
-    if (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Failed to check habit" });
-    }
+  const lacaleStart = new Date(
+    localeDate.getFullYear(),
+    localeDate.getMonth(),
+    localeDate.getDate(),
+    0,
+    0,
+    0,
+    0
+  );
+  const lacaleEnd = new Date(
+    localeDate.getFullYear(),
+    localeDate.getMonth(),
+    localeDate.getDate(),
+    23,
+    59,
+    59,
+    999
+  );
 
-    if (!row) {
-      return res.status(404).json({ error: "Habit not found" });
-    }
+  const utcStart = new Date(
+    lacaleStart.toLocaleString("en-US", { timeZone: "UTC" })
+  );
+  const utcEnd = new Date(
+    lacaleEnd.toLocaleString("en-US", { timeZone: "UTC" })
+  );
 
-    const date = new Date(timestamp).toLocaleDateString();
+  const checkStmt = db.prepare(
+    `SELECT * FROM trackers WHERE habit_id = ? AND user_id = ? AND (timestamp BETWEEN ? AND ?)`
+  );
 
-    // Check if a tracker for the habit already exists on the same day
-    const checkTrackerStmt = db.prepare(`
-      SELECT id FROM trackers 
-      WHERE habit_id = ? AND DATE(timestamp) = DATE(?)
-    `);
-
-    checkTrackerStmt.get(habitId, timestamp, (err, row) => {
+  checkStmt.all(
+    [habitId, userId, utcStart.toISOString(), utcEnd.toISOString()],
+    (err, rows) => {
       if (err) {
-        console.error("Error checking tracker:", err);
-        return res.status(500).json({ error: "Failed to toggle tracker" });
+        console.error("Error checking for existing tracker:", err);
+        return;
       }
 
-      if (row) {
-        // If a tracker already exists, delete it
-        const deleteTrackerStmt = db.prepare(
-          "DELETE FROM trackers WHERE id = ?"
+      if (rows.length > 0) {
+        const deleteStmt = db.prepare(
+          "DELETE FROM trackers WHERE habit_id = ? AND user_id = ? AND timestamp = ?"
         );
-
-        deleteTrackerStmt.run(row.id, function (err) {
+        deleteStmt.run([habitId, userId, timestamp], function (err) {
           if (err) {
             console.error("Error deleting tracker:", err);
-            return res.status(500).json({ error: "Failed to toggle tracker" });
+            return;
           }
 
-          const updateHabitStmt = db.prepare(`
-            UPDATE habits 
-            SET streak = ?, total_completions = MAX(total_completions - 1, 0) 
-            WHERE id = ?
-          `);
-
-          const newStreak = calculateStreak(habitId);
-
-          updateHabitStmt.run(newStreak, habitId, function (err) {
-            if (err) {
-              console.error("Error updating habit streak:", err);
-            }
-
-            res.status(201).json({
-              message: "Tracker removed successfully",
-            });
+          res.status(201).json({
+            message: "Tracker removed successfully",
           });
-
-          updateHabitStmt.finalize();
         });
-
-        deleteTrackerStmt.finalize();
+        deleteStmt.finalize();
       } else {
-        const insertTrackerStmt = db.prepare(`
-          INSERT INTO trackers (habit_id, timestamp, notes)
-          VALUES (?, ?, ?)
-        `);
-
-        insertTrackerStmt.run(habitId, timestamp, notes, function (err) {
+        const insertStmt = db.prepare(
+          "INSERT INTO trackers (habit_id, user_id, timestamp, notes) VALUES (?, ?, ?, ?)"
+        );
+        insertStmt.run([habitId, userId, timestamp, notes], function (err) {
           if (err) {
             console.error("Error inserting tracker:", err);
-            return res.status(500).json({ error: "Failed to toggle tracker" });
+            return;
           }
 
-          const updateHabitStmt = db.prepare(`
-            UPDATE habits 
-            SET streak = ?, total_completions = total_completions + 1 
-            WHERE id = ?
-          `);
-
-          const newStreak = calculateStreak(habitId);
-
-          updateHabitStmt.run(newStreak, habitId, function (err) {
-            if (err) {
-              console.error("Error updating habit streak:", err);
-            }
-
-            res.status(201).json({
-              message: "Tracker added successfully",
-              trackerId: this.lastID,
-            });
+          res.status(201).json({
+            message: "Tracker added successfully",
+            trackerId: this.lastID,
           });
-
-          updateHabitStmt.finalize();
         });
-
-        insertTrackerStmt.finalize();
+        insertStmt.finalize();
       }
-    });
+    }
+  );
 
-    checkTrackerStmt.finalize();
-  });
-
-  checkHabitStmt.finalize();
+  checkStmt.finalize();
 });
 
 app.use((req, res, next) => {
