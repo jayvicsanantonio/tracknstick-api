@@ -27,9 +27,9 @@ app.get("/habits", authenticate, (req, res) => {
     return res.status(400).json({ error: "Date parameter is required" });
   }
 
-  const parsedDate = new Date(date);
+  const utcDate = new Date(date);
 
-  if (Number.isNaN(parsedDate.getTime())) {
+  if (Number.isNaN(utcDate.getTime())) {
     return res.status(400).json({ error: "Invalid date format" });
   }
 
@@ -43,37 +43,90 @@ app.get("/habits", authenticate, (req, res) => {
     return res.status(400).json({ error: "Invalid timeZone format" });
   }
 
-  const localeDate = parsedDate.toLocaleString("en-US", { timeZone });
+  const localeDate = utcDate.toLocaleString("en-US", { timeZone });
   const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const day = daysOfWeek[new Date(localeDate).getDay()];
   const selectStmt = db.prepare(
     `SELECT * FROM habits WHERE user_id = ? AND (',' || frequency || ',') LIKE '%,' || ? || ',%'`
   );
 
-  selectStmt.all(userId, day, (err, rows) => {
+  selectStmt.all(userId, day, (err, habitRows) => {
     if (err) {
       console.error(err);
       return res.status(500).json({ error: "Failed to retrieve habits" });
     }
 
-    const habits = rows.map((row) => {
-      const habit = {
-        id: row.id,
-        name: row.name,
-        icon: row.icon,
-        frequency: row.frequency.split(","),
-        completed: false,
-        stats: {
-          totalCompletions: row.total_completions,
-          streak: 0,
-          lastCompleted: null,
-        },
-      };
+    const ids = habitRows.map((habitRow) => habitRow.id);
+    const availableIdsPlaceholder = ids.map(() => "?").join(",");
 
-      return habit;
-    });
+    const localeDate = new Date(
+      utcDate.toLocaleString("en-US", {
+        timeZone,
+        year: "numeric",
+        month: "numeric",
+        day: "numeric",
+      })
+    );
 
-    res.json(habits);
+    const localeStart = new Date(
+      localeDate.getFullYear(),
+      localeDate.getMonth(),
+      localeDate.getDate(),
+      0,
+      0,
+      0,
+      0
+    );
+    const localeEnd = new Date(
+      localeDate.getFullYear(),
+      localeDate.getMonth(),
+      localeDate.getDate(),
+      23,
+      59,
+      59,
+      999
+    );
+    const selectTrackersStmt = db.prepare(
+      `SELECT * FROM trackers WHERE habit_id in (${availableIdsPlaceholder}) AND user_id = ? AND (timestamp BETWEEN ? AND ?)`
+    );
+
+    selectTrackersStmt.all(
+      ...ids,
+      userId,
+      localeStart.toISOString(),
+      localeEnd.toISOString(),
+      (err, trackerRows) => {
+        if (err) {
+          console.error("Error selecting for existing trackers:", err);
+          return res
+            .status(500)
+            .json({ error: "Failed to check existing trackers" });
+        }
+
+        const habitIds = trackerRows.map((trackRow) => trackRow.habit_id);
+
+        const habits = habitRows.map((habitRow) => {
+          const habit = {
+            id: habitRow.id,
+            name: habitRow.name,
+            icon: habitRow.icon,
+            frequency: habitRow.frequency.split(","),
+            completed: habitIds.includes(habitRow.id),
+            stats: {
+              totalCompletions: habitRow.total_completions,
+              streak: 0,
+              lastCompleted: null,
+            },
+          };
+
+          return habit;
+        });
+
+        res.json(habits);
+      }
+    );
+
+    selectTrackersStmt.finalize();
   });
   selectStmt.finalize();
 });
@@ -306,7 +359,7 @@ app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
     })
   );
 
-  const lacaleStart = new Date(
+  const localeStart = new Date(
     localeDate.getFullYear(),
     localeDate.getMonth(),
     localeDate.getDate(),
@@ -315,7 +368,7 @@ app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
     0,
     0
   );
-  const lacaleEnd = new Date(
+  const localeEnd = new Date(
     localeDate.getFullYear(),
     localeDate.getMonth(),
     localeDate.getDate(),
@@ -325,19 +378,12 @@ app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
     999
   );
 
-  const utcStart = new Date(
-    lacaleStart.toLocaleString("en-US", { timeZone: "UTC" })
-  );
-  const utcEnd = new Date(
-    lacaleEnd.toLocaleString("en-US", { timeZone: "UTC" })
-  );
-
   const checkStmt = db.prepare(
     `SELECT * FROM trackers WHERE habit_id = ? AND user_id = ? AND (timestamp BETWEEN ? AND ?)`
   );
 
   checkStmt.all(
-    [habitId, userId, utcStart.toISOString(), utcEnd.toISOString()],
+    [habitId, userId, localeStart.toISOString(), localeEnd.toISOString()],
     (err, rows) => {
       if (err) {
         console.error("Error checking for existing tracker:", err);
@@ -348,18 +394,23 @@ app.post("/habits/:habitId/trackers", authenticate, (req, res) => {
 
       if (rows.length > 0) {
         const deleteStmt = db.prepare(
-          "DELETE FROM trackers WHERE habit_id = ? AND user_id = ? AND timestamp = ?"
+          "DELETE FROM trackers WHERE habit_id = ? AND user_id = ? AND (timestamp BETWEEN ? AND ?)"
         );
-        deleteStmt.run([habitId, userId, timestamp], function (err) {
-          if (err) {
-            console.error("Error deleting tracker:", err);
-            return res.status(500).json({ error: "Failed to delete tracker" });
-          }
+        deleteStmt.run(
+          [habitId, userId, localeStart.toISOString(), localeEnd.toISOString()],
+          function (err) {
+            if (err) {
+              console.error("Error deleting tracker:", err);
+              return res
+                .status(500)
+                .json({ error: "Failed to delete tracker" });
+            }
 
-          res.status(201).json({
-            message: "Tracker removed successfully",
-          });
-        });
+            res.status(201).json({
+              message: "Tracker removed successfully",
+            });
+          }
+        );
         deleteStmt.finalize();
       } else {
         const insertStmt = db.prepare(
