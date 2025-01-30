@@ -43,9 +43,12 @@ app.get("/habits", authenticate, (req, res) => {
     return res.status(400).json({ error: "Invalid timeZone format" });
   }
 
-  const localeDate = utcDate.toLocaleString("en-US", { timeZone });
-  const daysOfWeek = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const day = daysOfWeek[new Date(localeDate).getDay()];
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+  });
+  const day = formatter.format(utcDate);
+
   const selectStmt = db.prepare(
     `SELECT * FROM habits WHERE user_id = ? AND (',' || frequency || ',') LIKE '%,' || ? || ',%'`
   );
