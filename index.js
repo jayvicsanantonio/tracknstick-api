@@ -14,7 +14,10 @@ app.use(
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
       // Allow requests from any localhost port
-      if (/^http:\/\/localhost:\d+$/.test(origin)) {
+      if (
+        process.env.NODE_ENV === 'development' &&
+        /^http:\/\/localhost:\d+$/.test(origin)
+      ) {
         return callback(null, true);
       }
       // Block other origins
