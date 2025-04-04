@@ -1,184 +1,166 @@
 # Habit Tracker API
 
-This is a RESTful API for a habit tracker application built with Node.js and Express.js. It uses SQLite as the database.
+This is a RESTful API for a habit tracker application built with Node.js, Express.js, and SQLite.
+
+## Features
+
+- Create, Read, Update, and Delete (CRUD) habits.
+- Track habit completions for specific dates (toggle on/off).
+- Retrieve habit statistics (streak, total completions, last completed date).
+- Secure endpoints using API Key authentication.
+
+## Tech Stack
+
+- **Backend:** Node.js
+- **Framework:** Express.js
+- **Database:** SQLite
+- **Linting/Formatting:** ESLint, Prettier
+
+## Visual Overview
+
+### High-Level Architecture
+
+```mermaid
+graph LR
+    Client -->|HTTP Request<br>(GET, POST, PUT, DELETE)| ExpressApp[Express App];
+    ExpressApp -->|Request| Middleware[Middleware <br> (CORS, Helmet, JSON Parser, Auth)];
+    Middleware -->|Authenticated Request| Routes[API Routes <br> (/api/v1/...)];
+    Routes -->|Params, Body| Controller[Controller <br> (e.g., habit.controller.js)];
+    Controller -->|Data Request| Service[Service Layer <br> (e.g., habit.service.js)];
+    Service -->|DB Operations| Repository[Repository Layer <br> (e.g., habit.repository.js)];
+    Repository -->|SQL Query| DBUtils[DB Utils <br> (dbUtils.js)];
+    DBUtils -->|Read/Write| Database[(SQLite <br> tracknstick.db)];
+    Database -->|Result Set| DBUtils;
+    DBUtils -->|Data| Repository;
+    Repository -->|Data| Service;
+    Service -->|Processed Data| Controller;
+    Controller -->|JSON Response| ExpressApp;
+    ExpressApp -->|HTTP Response| Client;
+
+    subgraph "Application Layers"
+        Controller
+        Service
+        Repository
+        DBUtils
+    end
+
+    subgraph "Infrastructure"
+        Database
+    end
+```
+
+### Simplified Database ERD
+
+```mermaid
+erDiagram
+    USERS ||--|{ HABITS : "tracks"
+    USERS ||--|{ TRACKERS : "logs"
+    HABITS ||--|{ TRACKERS : "records"
+
+    USERS {
+        INTEGER id PK
+        TEXT clerk_user_id UK "Clerk User ID"
+        TEXT api_key UK "API Key"
+    }
+
+    HABITS {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT name
+        TEXT icon
+        TEXT frequency "Comma-separated days"
+        INTEGER streak
+        INTEGER total_completions
+        DATETIME last_completed
+    }
+
+    TRACKERS {
+        INTEGER id PK
+        INTEGER habit_id FK
+        INTEGER user_id FK
+        DATETIME timestamp "Completion Timestamp (UTC)"
+        TEXT notes
+    }
+```
 
 ## Authentication
 
-All API endpoints require an API key for authentication. The API key should be sent in the `X-API-Key` header with each request.
+All API endpoints require an API key for authentication. The API key must be sent in the `X-API-Key` header with each request.
 
-## Endpoints
+## Prerequisites
 
-### Habits
+- Node.js (v16 or later recommended)
+- npm (usually included with Node.js)
 
-- **`POST /habits`**
+## Setup and Installation
 
-  - Description: Creates a new habit.
-  - Headers:
-    - `X-API-Key`: Your API key
-  - Body:
-    ```json
-    {
-      "name": "Habit Name",
-      "icon": "habit-icon", // Optional
-      "frequency": ["Mon", "Tue", "Wed"] // Array of day abbreviations
-    }
+1.  **Clone the repository:**
+    ```bash
+    git clone https://github.com/jayvicsanantonio/tracknstick-api.git
+    cd tracknstick-api
     ```
-  - Response:
-    ```json
-    {
-      "message": "Habit created successfully",
-      "habitId": 123 // ID of the created habit
-    }
+2.  **Install dependencies:**
+    ```bash
+    npm install
     ```
+3.  **Set up environment variables:**
+    - Create a `.env` file in the project root.
+    - Add the following variables (adjust values as needed):
+      ```dotenv
+      PORT=3000
+      NODE_ENV=development
+      # Add any other necessary environment variables
+      ```
+4.  **Database Setup & API Key:**
+    - The SQLite database file (`tracknstick.db`) and tables will be created automatically when the application first starts (via `src/utils/dbUtils.js`).
+    - **Important:** You must manually add at least one user record with an API key to the `users` table to authenticate requests. Use a tool like DB Browser for SQLite or the `sqlite3` CLI:
+      ```bash
+      # Example using sqlite3 CLI (replace with your actual Clerk ID and desired API key)
+      sqlite3 tracknstick.db "INSERT INTO users (clerk_user_id, api_key) VALUES ('user_your_clerk_id', 'your-secure-api-key');"
+      ```
 
-- **`GET /habits`**
+## Running the Application
 
-  - Description: Retrieves a list of habits for the authenticated user.
-  - Headers:
-    - `X-API-Key`: Your API key
-  - Response:
-    ```json
-    [
-      {
-        "id": 123,
-        "name": "Habit Name",
-        "icon": "habit-icon",
-        "frequency": ["Mon", "Tue", "Wed"],
-        "totalCompletions": 5,
-        "streak": 2
-      }
-      // ... more habits
-    ]
-    ```
+- **Development Mode (with auto-restart via nodemon):**
+  ```bash
+  npm start
+  ```
+- **(Optional) Production Mode:**
+  ```bash
+  npm install --production
+  NODE_ENV=production node index.js
+  ```
 
-- **`PUT /habits/:habitId`**
+The API will typically be available at `http://localhost:3000` (or the port specified in your `.env` file).
 
-  - Description: Updates an existing habit.
-  - Headers:
-    - `X-API-Key`: Your API key
-  - Parameters:
-    - `habitId`: ID of the habit to update
-  - Body:
-    ```json
-    {
-      "name": "Updated Habit Name", // Optional
-      "icon": "new-habit-icon", // Optional
-      "frequency": ["Mon", "Wed", "Fri"] // Optional
-    }
-    ```
-  - Response:
-    ```json
-    {
-      "message": "Habit updated successfully"
-    }
-    ```
+## Running Tests
 
-- **`DELETE /habits/:habitId`**
+```bash
+npm test
+```
 
-  - Description: Deletes a habit.
-  - Headers:
-    - `X-API-Key`: Your API key
-  - Parameters:
-    - `habitId`: ID of the habit to delete
-  - Response:
-    ```json
-    {
-      "message": "Habit deleted successfully"
-    }
-    ```
+_(Note: Test suite setup is pending)_
 
-- **`GET /habits/:habitId/stats`**
-  - Description: Retrieves statistics (current streak, total completions, last completed date) for a specific habit.
-  - Headers:
-    - `X-API-Key`: Your API key
-  - Parameters:
-    - `habitId`: ID of the habit
-  - Query Parameters:
-    - `timeZone`: The user's timezone (e.g., "America/Los_Angeles") (Required for accurate streak calculation)
-  - Response:
-    ```json
-    {
-      "habit_id": 123,
-      "user_id": 1,
-      "streak": 5,
-      "total_completions": 25,
-      "last_completed": "2024-04-03T18:30:00.000Z" // ISO 8601 timestamp or null
-    }
-    ```
+## API Documentation
 
-### Trackers
+For detailed endpoint specifications, request/response examples, and the full database schema, please see the **[API Documentation](API.md)**.
 
-- **`POST /habits/:habitId/trackers`**
+## Refactoring Overview
 
-  - Description: Adds or removes a tracker for a habit on a specific date (toggle behavior).
-  - Headers:
-    - `X-API-Key`: Your API key
-  - Parameters:
-    - `habitId`: ID of the habit
-  - Body:
-    ```json
-    {
-      "timestamp": "2024-03-10T12:00:00.000Z" // Date and time of the tracker
-    }
-    ```
-  - Response:
-    ```json
-    {
-      "message": "Tracker added/removed successfully",
-      "trackerId": 456 // ID of the added tracker (if applicable)
-    }
-    ```
+A significant refactoring effort was recently completed on this project with the primary goals of improving maintainability, testability, and performance, and establishing a scalable architecture.
 
-- **`GET /habits/:habitId/trackers`**
-  - Description: Retrieves trackers for a habit, optionally filtered by a date range.
-  - Headers:
-    - `X-API-Key`: Your API key
-  - Parameters:
-    - `habitId`: ID of the habit
-  - Query Parameters:
-    - `startDate`: Start date for filtering (optional)
-    - `endDate`: End date for filtering (optional)
-  - Response:
-    ```json
-    [
-      {
-        "id": 456,
-        "habit_id": 123,
-        "timestamp": "2024-03-10T12:00:00.000Z",
-        "notes": "Some notes"
-      }
-      // ... more trackers
-    ]
-    ```
+Details about the refactoring process, architecture decisions, specific improvements, and learnings can be found in the `/docs/refactoring` directory:
 
-## Database Schema
+- [Architecture Decisions](docs/refactoring/ARCHITECTURE_DECISIONS.md)
+- [Maintainability Improvements](docs/refactoring/MAINTAINABILITY.md)
+- [Enhancements & Future Work](docs/refactoring/ENHANCEMENTS.md)
+- [Performance Optimizations](docs/refactoring/OPTIMIZATIONS.md)
+- [Learnings & Takeaways](docs/refactoring/LEARNINGS.md)
 
-**`users` table:**
+## Contributing
 
-| Column          | Data Type | Constraints                |
-| --------------- | --------- | -------------------------- |
-| `id`            | INTEGER   | PRIMARY KEY, AUTOINCREMENT |
-| `clerk_user_id` | TEXT      | UNIQUE, NOT NULL           |
-| `api_key`       | TEXT      | UNIQUE, NOT NULL           |
+_(Add contribution guidelines if applicable)_
 
-**`habits` table:**
+## License
 
-| Column              | Data Type | Constraints                                     |
-| ------------------- | --------- | ----------------------------------------------- | ------------------------------------------------------ |
-| `id`                | INTEGER   | PRIMARY KEY, AUTOINCREMENT                      |
-| `user_id`           | INTEGER   | NOT NULL, FOREIGN KEY referencing `users`(`id`) |
-| `name`              | TEXT      | NOT NULL                                        |
-| `icon`              | TEXT      |                                                 |
-| `frequency`         | TEXT      | NOT NULL                                        | (Store as comma-separated string, e.g., "Mon,Tue,Wed") |
-| `streak`            | INTEGER   | DEFAULT 0                                       |
-| `total_completions` | INTEGER   | DEFAULT 0                                       |
-| `last_completed`    | DATETIME  |                                                 |
-
-**`trackers` table:**
-
-| Column      | Data Type | Constraints                                      |
-| ----------- | --------- | ------------------------------------------------ |
-| `id`        | INTEGER   | PRIMARY KEY, AUTOINCREMENT                       |
-| `habit_id`  | INTEGER   | NOT NULL, FOREIGN KEY referencing `habits`(`id`) |
-| `timestamp` | DATETIME  | NOT NULL                                         |
-| `notes`     | TEXT      |                                                  |
+_(Add license information if applicable, e.g., ISC)_
