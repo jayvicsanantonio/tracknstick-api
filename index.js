@@ -3,10 +3,13 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const db = require('./db');
-const authenticate = require('./middlewares/authenticate');
+// db and authenticate will be used within specific layers, not directly here
+// const db = require('./db');
+// const authenticate = require('./middlewares/authenticate');
+const habitRoutes = require('./src/api/habits.routes'); // Import the new router
+
 const app = express();
-const port = process.env.PORT;
+const port = process.env.PORT || 3000; // Provide a default port
 
 app.use(
   cors({
@@ -30,6 +33,11 @@ app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Mount the habit routes under /api/v1/habits
+app.use('/api/v1/habits', habitRoutes);
+
+// --- Remove all old route handlers from here ---
+/*
 app.get('/habits', authenticate, (req, res) => {
   const userId = req.userId;
   const date = req.query.date;
@@ -577,7 +585,10 @@ app.get('/habits/:habitId/stats', authenticate, (req, res) => {
   });
   getHabitStmt.finalize();
 });
+*/
+// --- End of removed route handlers ---
 
+// Centralized 404 handler (after all routes)
 app.use((req, res, next) => {
   res.status(404).json({ error: 'API Endpoint Not Found' });
 });
@@ -591,6 +602,7 @@ app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
 });
 
-function calculateStreak() {
-  // TODO: Implement the streak calculation logic
-}
+// Remove unused function placeholder
+// function calculateStreak() {
+//   // TODO: Implement the streak calculation logic
+// }
