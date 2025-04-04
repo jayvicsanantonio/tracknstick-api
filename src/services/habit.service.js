@@ -126,7 +126,8 @@ async function updateHabit(userId, habitId, habitData) {
   // 2. Call repository to update
   // habitData should contain { name?, icon?, frequency? }
   try {
-    const result = await habitRepository.update(userId, habitId, habitData);
+    // Correct parameter order: habitId, userId, habitData
+    const result = await habitRepository.update(habitId, userId, habitData);
     // Check if any rows were actually updated
     if (result.changes === 0) {
       // This could mean the habit wasn't found (race condition?) or data was identical

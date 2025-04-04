@@ -1,10 +1,14 @@
 const sqlite3 = require('sqlite3').verbose();
 const { promisify } = require('util');
+const path = require('path'); // Import path module
 
-// Use a relative path from src/utils to the root directory for the DB file
-const db = new sqlite3.Database('../../tracknstick.db', (err) => {
+// Construct absolute path to the database file in the project root
+const dbPath = path.resolve(__dirname, '../../tracknstick.db');
+console.log(`Attempting to connect to database at: ${dbPath}`); // Log the absolute path being used
+
+const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
-    console.error('Error opening database', err.message);
+    console.error(`Error opening database at ${dbPath}:`, err.message);
     // Exit process if DB connection fails on startup
     process.exit(1);
   } else {
@@ -15,7 +19,8 @@ const db = new sqlite3.Database('../../tracknstick.db', (err) => {
         console.error('Error enabling foreign keys', pragmaErr.message);
       } else {
         console.log('Foreign key constraints enabled.');
-        initializeSchema(); // Initialize schema after enabling FKs
+        // Initialize schema after enabling FKs (Removed temporary logging)
+        initializeSchema();
       }
     });
   }
