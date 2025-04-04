@@ -22,20 +22,20 @@ This is a RESTful API for a habit tracker application built with Node.js, Expres
 
 ```mermaid
 graph LR
-    Client -->|HTTP Request<br>(GET, POST, PUT, DELETE)| ExpressApp[Express App];
-    ExpressApp -->|Request| Middleware[Middleware <br> (CORS, Helmet, JSON Parser, Auth)];
-    Middleware -->|Authenticated Request| Routes[API Routes <br> (/api/v1/...)];
-    Routes -->|Params, Body| Controller[Controller <br> (e.g., habit.controller.js)];
-    Controller -->|Data Request| Service[Service Layer <br> (e.g., habit.service.js)];
-    Service -->|DB Operations| Repository[Repository Layer <br> (e.g., habit.repository.js)];
-    Repository -->|SQL Query| DBUtils[DB Utils <br> (dbUtils.js)];
-    DBUtils -->|Read/Write| Database[(SQLite <br> tracknstick.db)];
-    Database -->|Result Set| DBUtils;
-    DBUtils -->|Data| Repository;
-    Repository -->|Data| Service;
-    Service -->|Processed Data| Controller;
-    Controller -->|JSON Response| ExpressApp;
-    ExpressApp -->|HTTP Response| Client;
+    Client -->|"HTTP Request\nGET POST PUT DELETE"| ExpressApp[Express App];
+    ExpressApp -->|"Request"| Middleware["Middleware <br> (CORS, Helmet, JSON Parser, Auth)"];
+    Middleware -->|"Authenticated Request"| Routes["API Routes <br> (/api/v1/...)"];
+    Routes -->|"Params, Body"| Controller["Controller <br> (e.g., habit.controller.js)"];
+    Controller -->|"Data Request"| Service["Service Layer <br> (e.g., habit.service.js)"];
+    Service -->|"DB Operations"| Repository["Repository Layer <br> (e.g., habit.repository.js)"];
+    Repository -->|"SQL Query"| DBUtils["DB Utils <br> (dbUtils.js)"];
+    DBUtils -->|"Read/Write"| Database["(SQLite <br> tracknstick.db)"];
+    Database -->|"Result Set"| DBUtils;
+    DBUtils -->|"Data"| Repository;
+    Repository -->|"Data"| Service;
+    Service -->|"Processed Data"| Controller;
+    Controller -->|"JSON Response"| ExpressApp;
+    ExpressApp -->|"HTTP Response"| Client;
 
     subgraph "Application Layers"
         Controller
