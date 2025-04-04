@@ -22,7 +22,7 @@ This is a RESTful API for a habit tracker application built with Node.js, Expres
 
 ```mermaid
 graph LR
-    Client -->|HTTP Request<br>(GET, POST, PUT, DELETE)| ExpressApp[Express App];
+    Client -->|HTTP Request<br>(GET POST PUT DELETE)| ExpressApp[Express App];
     ExpressApp -->|Request| Middleware[Middleware <br> (CORS, Helmet, JSON Parser, Auth)];
     Middleware -->|Authenticated Request| Routes[API Routes <br> (/api/v1/...)];
     Routes -->|Params, Body| Controller[Controller <br> (e.g., habit.controller.js)];
