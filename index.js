@@ -36,9 +36,7 @@ app.get('/habits', authenticate, (req, res) => {
   const timeZone = req.query.timeZone;
 
   if (!date) {
-    return res
-      .status(400)
-      .json({ error: 'Date parameter is required' });
+    return res.status(400).json({ error: 'Date parameter is required' });
   }
 
   const utcDate = new Date(date);
@@ -48,9 +46,7 @@ app.get('/habits', authenticate, (req, res) => {
   }
 
   if (!timeZone) {
-    return res
-      .status(400)
-      .json({ error: 'TimeZone parameter is required' });
+    return res.status(400).json({ error: 'TimeZone parameter is required' });
   }
 
   try {
@@ -72,9 +68,7 @@ app.get('/habits', authenticate, (req, res) => {
   selectStmt.all(userId, day, (err, habitRows) => {
     if (err) {
       console.error(err);
-      return res
-        .status(500)
-        .json({ error: 'Failed to retrieve habits' });
+      return res.status(500).json({ error: 'Failed to retrieve habits' });
     }
 
     const ids = habitRows.map((habitRow) => habitRow.id);
@@ -118,18 +112,13 @@ app.get('/habits', authenticate, (req, res) => {
       localeEnd.toISOString(),
       (err, trackerRows) => {
         if (err) {
-          console.error(
-            'Error selecting for existing trackers:',
-            err
-          );
+          console.error('Error selecting for existing trackers:', err);
           return res
             .status(500)
             .json({ error: 'Failed to check existing trackers' });
         }
 
-        const habitIds = trackerRows.map(
-          (trackRow) => trackRow.habit_id
-        );
+        const habitIds = trackerRows.map((trackRow) => trackRow.habit_id);
 
         const habits = habitRows.map((habitRow) => {
           const habit = {
@@ -182,9 +171,7 @@ app.post('/habits', authenticate, (req, res) => {
     function (err) {
       if (err) {
         console.error(err);
-        return res
-          .status(500)
-          .json({ error: 'Failed to create habit' });
+        return res.status(500).json({ error: 'Failed to create habit' });
       }
       res.status(201).json({
         message: 'Habit created successfully',
@@ -211,9 +198,7 @@ app.put('/habits/:habitId', authenticate, (req, res) => {
   checkHabitStmt.get(habitId, userId, (err, row) => {
     if (err) {
       console.error(err);
-      return res
-        .status(500)
-        .json({ error: 'Failed to update habit' });
+      return res.status(500).json({ error: 'Failed to update habit' });
     }
 
     if (!row) {
@@ -247,9 +232,7 @@ app.put('/habits/:habitId', authenticate, (req, res) => {
     updateStmt.run(updateParams, function (err) {
       if (err) {
         console.error(err);
-        return res
-          .status(500)
-          .json({ error: 'Failed to update habit' });
+        return res.status(500).json({ error: 'Failed to update habit' });
       }
 
       res.status(200).json({ message: 'Habit updated successfully' });
@@ -270,9 +253,7 @@ app.delete('/habits/:habitId', authenticate, (req, res) => {
   checkHabitStmt.get(habitId, userId, (err, row) => {
     if (err) {
       console.error(err);
-      return res
-        .status(500)
-        .json({ error: 'Failed to delete habit' });
+      return res.status(500).json({ error: 'Failed to delete habit' });
     }
 
     if (!row) {
@@ -291,21 +272,15 @@ app.delete('/habits/:habitId', authenticate, (req, res) => {
           .json({ error: 'Failed to delete related trackers' });
       }
 
-      const deleteHabitStmt = db.prepare(
-        `DELETE FROM habits WHERE id = ?`
-      );
+      const deleteHabitStmt = db.prepare(`DELETE FROM habits WHERE id = ?`);
 
       deleteHabitStmt.run(habitId, function (err) {
         if (err) {
           console.error(err);
-          return res
-            .status(500)
-            .json({ error: 'Failed to delete habit' });
+          return res.status(500).json({ error: 'Failed to delete habit' });
         }
 
-        res
-          .status(200)
-          .json({ message: 'Habit deleted successfully' });
+        res.status(200).json({ message: 'Habit deleted successfully' });
       });
 
       deleteHabitStmt.finalize();
@@ -349,8 +324,7 @@ app.get('/habits/:habitId/trackers', authenticate, (req, res) => {
     const queryParams = [habitId, userId];
 
     if (startDate && endDate) {
-      selectQuery +=
-        ' AND DATE(timestamp) BETWEEN DATE(?) AND DATE(?)';
+      selectQuery += ' AND DATE(timestamp) BETWEEN DATE(?) AND DATE(?)';
       queryParams.push(startDate, endDate);
     } else if (startDate) {
       selectQuery += ' AND DATE(timestamp) >= DATE(?)';
@@ -365,9 +339,7 @@ app.get('/habits/:habitId/trackers', authenticate, (req, res) => {
     selectStmt.all(queryParams, (err, rows) => {
       if (err) {
         console.error('Error fetching trackers:', err);
-        return res
-          .status(500)
-          .json({ error: 'Failed to fetch trackers' });
+        return res.status(500).json({ error: 'Failed to fetch trackers' });
       }
 
       res.json(rows);
@@ -390,9 +362,7 @@ app.post('/habits/:habitId/trackers', authenticate, (req, res) => {
   const utcDate = new Date(timestamp);
 
   if (Number.isNaN(utcDate.getTime())) {
-    return res
-      .status(400)
-      .json({ error: 'Invalid timestamp format' });
+    return res.status(400).json({ error: 'Invalid timestamp format' });
   }
 
   const localeDate = new Date(
@@ -428,12 +398,7 @@ app.post('/habits/:habitId/trackers', authenticate, (req, res) => {
   );
 
   checkStmt.all(
-    [
-      habitId,
-      userId,
-      localeStart.toISOString(),
-      localeEnd.toISOString(),
-    ],
+    [habitId, userId, localeStart.toISOString(), localeEnd.toISOString()],
     (err, rows) => {
       if (err) {
         console.error('Error checking for existing tracker:', err);
@@ -447,12 +412,7 @@ app.post('/habits/:habitId/trackers', authenticate, (req, res) => {
           'DELETE FROM trackers WHERE habit_id = ? AND user_id = ? AND (timestamp BETWEEN ? AND ?)'
         );
         deleteStmt.run(
-          [
-            habitId,
-            userId,
-            localeStart.toISOString(),
-            localeEnd.toISOString(),
-          ],
+          [habitId, userId, localeStart.toISOString(), localeEnd.toISOString()],
           function (err) {
             if (err) {
               console.error('Error deleting tracker:', err);
@@ -471,22 +431,17 @@ app.post('/habits/:habitId/trackers', authenticate, (req, res) => {
         const insertStmt = db.prepare(
           'INSERT INTO trackers (habit_id, user_id, timestamp, notes) VALUES (?, ?, ?, ?)'
         );
-        insertStmt.run(
-          [habitId, userId, timestamp, notes],
-          function (err) {
-            if (err) {
-              console.error('Error inserting tracker:', err);
-              return res
-                .status(500)
-                .json({ error: 'Failed to insert tracker' });
-            }
-
-            res.status(201).json({
-              message: 'Tracker added successfully',
-              trackerId: this.lastID,
-            });
+        insertStmt.run([habitId, userId, timestamp, notes], function (err) {
+          if (err) {
+            console.error('Error inserting tracker:', err);
+            return res.status(500).json({ error: 'Failed to insert tracker' });
           }
-        );
+
+          res.status(201).json({
+            message: 'Tracker added successfully',
+            trackerId: this.lastID,
+          });
+        });
         insertStmt.finalize();
       }
     }
@@ -501,9 +456,7 @@ app.get('/habits/:habitId/stats', authenticate, (req, res) => {
   const timeZone = req.query.timeZone;
 
   if (!timeZone) {
-    return res
-      .status(400)
-      .json({ error: 'TimeZone parameter is required' });
+    return res.status(400).json({ error: 'TimeZone parameter is required' });
   }
 
   try {
@@ -521,9 +474,7 @@ app.get('/habits/:habitId/stats', authenticate, (req, res) => {
   getHabitStmt.get(habitId, userId, (err, habitRow) => {
     if (err) {
       console.error('Error fetching habit:', err);
-      return res
-        .status(500)
-        .json({ error: 'Failed to retrieve habit data' });
+      return res.status(500).json({ error: 'Failed to retrieve habit data' });
     }
     if (!habitRow) {
       return res.status(404).json({ error: 'Habit not found' });
@@ -557,10 +508,9 @@ app.get('/habits/:habitId/stats', authenticate, (req, res) => {
             trackerRows.map((row) => {
               // Convert UTC timestamp to locale date string (YYYY-MM-DD)
               const utcDate = new Date(row.timestamp);
-              const localeDateStr = utcDate.toLocaleDateString(
-                'en-CA',
-                { timeZone }
-              ); // 'en-CA' gives YYYY-MM-DD
+              const localeDateStr = utcDate.toLocaleDateString('en-CA', {
+                timeZone,
+              }); // 'en-CA' gives YYYY-MM-DD
               return localeDateStr;
             })
           ),

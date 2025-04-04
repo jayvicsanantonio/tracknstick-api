@@ -1,0 +1,25 @@
+{
+  "env": {
+    "node": true,
+    "es2021": true
+  },
+  "extends": [
+    "airbnb-base",
+    "prettier" // Add prettier here to disable conflicting rules
+  ],
+  "plugins": [
+    "prettier" // Add prettier plugin
+  ],
+  "parserOptions": {
+    "ecmaVersion": 12
+  },
+  "rules": {
+    "prettier/prettier": "error", // Run prettier as an ESLint rule
+    "no-console": "warn", // Example: Warn about console.log
+    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }], // Warn about unused vars, ignore if starts with _
+    "consistent-return": "off", // Allow route handlers to sometimes not return explicitly
+    "func-names": "off", // Allow anonymous functions (common in Node callbacks)
+    "no-shadow": "warn", // Warn about variable shadowing
+    "import/prefer-default-export": "off" // Allow named exports without a default export
+  }
+}
