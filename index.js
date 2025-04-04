@@ -495,6 +495,139 @@ app.post('/habits/:habitId/trackers', authenticate, (req, res) => {
   checkStmt.finalize();
 });
 
+app.get('/habits/:habitId/stats', authenticate, (req, res) => {
+  const habitId = req.params.habitId;
+  const userId = req.userId;
+  const timeZone = req.query.timeZone;
+
+  if (!timeZone) {
+    return res
+      .status(400)
+      .json({ error: 'TimeZone parameter is required' });
+  }
+
+  try {
+    // Validate timezone
+    Intl.DateTimeFormat(undefined, { timeZone });
+  } catch (error) {
+    return res.status(400).json({ error: 'Invalid timeZone format' });
+  }
+
+  // 1. Get Habit Frequency
+  const getHabitStmt = db.prepare(
+    `SELECT frequency FROM habits WHERE id = ? AND user_id = ?`
+  );
+
+  getHabitStmt.get(habitId, userId, (err, habitRow) => {
+    if (err) {
+      console.error('Error fetching habit:', err);
+      return res
+        .status(500)
+        .json({ error: 'Failed to retrieve habit data' });
+    }
+    if (!habitRow) {
+      return res.status(404).json({ error: 'Habit not found' });
+    }
+
+    const frequency = habitRow.frequency.split(','); // e.g., ['Mon', 'Wed', 'Fri']
+
+    // 2. Get All Tracker Timestamps (ordered)
+    const getTrackersStmt = db.prepare(
+      `SELECT timestamp FROM trackers WHERE habit_id = ? AND user_id = ? ORDER BY timestamp DESC`
+    );
+
+    getTrackersStmt.all(habitId, userId, (err, trackerRows) => {
+      if (err) {
+        console.error('Error fetching trackers:', err);
+        return res
+          .status(500)
+          .json({ error: 'Failed to retrieve tracker data' });
+      }
+
+      // 3. Calculate Stats
+      const totalCompletions = trackerRows.length;
+      const lastCompleted =
+        trackerRows.length > 0 ? trackerRows[0].timestamp : null;
+
+      // --- Streak Calculation ---
+      let currentStreak = 0;
+      if (trackerRows.length > 0) {
+        const uniqueCompletionDates = [
+          ...new Set(
+            trackerRows.map((row) => {
+              // Convert UTC timestamp to locale date string (YYYY-MM-DD)
+              const utcDate = new Date(row.timestamp);
+              const localeDateStr = utcDate.toLocaleDateString(
+                'en-CA',
+                { timeZone }
+              ); // 'en-CA' gives YYYY-MM-DD
+              return localeDateStr;
+            })
+          ),
+        ].sort((a, b) => b.localeCompare(a)); // Sort dates descending (most recent first)
+
+        const today = new Date();
+        let currentDate = new Date(
+          today.toLocaleDateString('en-CA', { timeZone })
+        ); // Start checking from today in user's timezone
+
+        for (let i = 0; i < uniqueCompletionDates.length; i++) {
+          const completionDate = new Date(uniqueCompletionDates[i]);
+
+          // Check if the completion date matches the date we are currently checking
+          if (completionDate.getTime() !== currentDate.getTime()) {
+            // If the most recent completion wasn't today, maybe it was yesterday?
+            if (i === 0) {
+              const yesterday = new Date(currentDate);
+              yesterday.setDate(currentDate.getDate() - 1);
+              if (completionDate.getTime() === yesterday.getTime()) {
+                // Most recent completion was yesterday, start checking streak from yesterday
+                currentDate = yesterday;
+              } else {
+                // Most recent completion was neither today nor yesterday, streak is 0
+                break;
+              }
+            } else {
+              // Gap detected, streak broken
+              break;
+            }
+          }
+
+          // Check if the habit was scheduled for this day
+          const dayFormatter = new Intl.DateTimeFormat('en-US', {
+            timeZone,
+            weekday: 'short',
+          });
+          const dayOfWeek = dayFormatter.format(currentDate); // Get day like 'Mon'
+
+          if (frequency.includes(dayOfWeek)) {
+            // Habit was scheduled and completed on this day
+            currentStreak++;
+          } else {
+            // Habit was completed but *not* scheduled for this day.
+            // This shouldn't break the streak according to typical habit tracker logic.
+            // We just need to check the *previous* day now.
+          }
+
+          // Move to the previous day for the next iteration
+          currentDate.setDate(currentDate.getDate() - 1);
+        }
+      }
+      // --- End Streak Calculation ---
+
+      res.json({
+        habit_id: habitId,
+        user_id: userId,
+        streak: currentStreak,
+        total_completions: totalCompletions,
+        last_completed: lastCompleted,
+      });
+    });
+    getTrackersStmt.finalize();
+  });
+  getHabitStmt.finalize();
+});
+
 app.use((req, res, next) => {
   res.status(404).json({ error: 'API Endpoint Not Found' });
 });
