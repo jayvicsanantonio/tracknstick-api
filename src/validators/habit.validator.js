@@ -133,8 +133,7 @@ const manageTracker = [
     .notEmpty()
     .withMessage('Timestamp is required.')
     .isISO8601()
-    .withMessage('Timestamp must be a valid ISO 8601 date string.')
-    .toDate(),
+    .withMessage('Timestamp must be a valid ISO 8601 date string.'),
   body('timeZone')
     .notEmpty()
     .withMessage('TimeZone is required.')
