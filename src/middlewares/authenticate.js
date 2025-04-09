@@ -1,34 +1,37 @@
-// TODO: Move DB access to a userRepository later
-const { dbGet, db } = require('../utils/dbUtils'); // Import dbGet wrapper and raw db
+const { dbGet } = require('../utils/dbUtils'); // Import dbGet wrapper
+const {
+  AuthenticationError,
+  AuthorizationError,
+  AppError, // Import AppError for generic server errors if needed
+} = require('../utils/errors');
 
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
+  // Make the function async
   const apiKey = req.header('X-API-Key');
 
   if (!apiKey) {
-    return res
-      .status(401)
-      .json({ error: 'Missing API Key (X-API-Key header)' });
+    // Pass AuthenticationError to the error handler
+    return next(new AuthenticationError('Missing API Key (X-API-Key header)'));
   }
 
-  // Use async/await with the dbGet wrapper
-  const query = 'SELECT id FROM users WHERE api_key = ?';
-  dbGet(query, [apiKey])
-    .then((row) => {
-      if (!row) {
-        // Use 403 Forbidden for invalid key, 401 is more for missing auth
-        return res.status(403).json({ error: 'Invalid API Key' });
-      }
+  try {
+    // Use await with the dbGet wrapper
+    const query = 'SELECT id FROM users WHERE api_key = ?';
+    const row = await dbGet(query, [apiKey]);
 
-      req.userId = row.id; // Attach user ID to request object
-      next(); // Proceed to the next middleware or route handler
-    })
-    .catch((err) => {
-      console.error('Authentication DB Error:', err);
-      // Pass error to centralized error handler
-      next(new Error('Failed to authenticate API Key due to server error'));
-    });
+    if (!row) {
+      // Use 403 Forbidden for invalid key, pass AuthorizationError
+      return next(new AuthorizationError('Invalid API Key'));
+    }
 
-  // Note: We no longer need db.prepare or finalize here when using the wrappers
+    req.userId = row.id; // Attach user ID to request object
+    next(); // Proceed to the next middleware or route handler
+  } catch (err) {
+    console.error('Authentication DB Error:', err);
+    // Pass the original database error to the centralized error handler
+    // The handler will log it and return a generic 500 response in production
+    next(err);
+  }
 }
 
 module.exports = authenticate;

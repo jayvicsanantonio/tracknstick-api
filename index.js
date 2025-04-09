@@ -3,7 +3,9 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const habitRoutes = require('./src/api/habits.routes'); // Import the new router
+const habitRoutes = require('./src/api/habits.routes'); // Import the habit router
+const errorHandler = require('./src/middlewares/errorHandler'); // Import the centralized error handler
+const { NotFoundError } = require('./src/utils/errors'); // Import NotFoundError for 404s
 
 const app = express();
 const port = process.env.PORT || 3000; // Provide a default port
@@ -34,14 +36,13 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/v1/habits', habitRoutes);
 
 // Centralized 404 handler (after all routes)
+// Creates a NotFoundError and passes it to the main error handler
 app.use((req, res, next) => {
-  res.status(404).json({ error: 'API Endpoint Not Found' });
+  next(new NotFoundError(`Cannot ${req.method} ${req.originalUrl}`));
 });
 
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Internal Server Error' });
-});
+// Centralized Error Handler - Must be the last middleware
+app.use(errorHandler);
 
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);

@@ -54,22 +54,11 @@ const updateHabit = async (req, res, next) => {
     if (icon !== undefined) habitData.icon = icon;
     if (frequency !== undefined) habitData.frequency = frequency;
 
-    const success = await habitService.updateHabit(userId, habitId, habitData);
+    // Service will throw NotFoundError if not found/authorized
+    // Service will throw AppError if update fails unexpectedly
+    await habitService.updateHabit(userId, habitId, habitData);
 
-    if (success === null) {
-      // Service indicated habit not found or not authorized
-      return res
-        .status(404)
-        .json({ error: 'Habit not found or not authorized' });
-    }
-    if (success === false) {
-      // Service indicated update resulted in 0 changes (e.g., data was identical)
-      // We can still return success, or potentially a 304 Not Modified if desired
-      console.warn(
-        `Update for habit ${habitId} resulted in 0 changes (data might be identical).`
-      );
-    }
-
+    // If no error is thrown, the update was successful
     res.status(200).json({ message: 'Habit updated successfully' });
   } catch (error) {
     console.error(
@@ -86,16 +75,11 @@ const deleteHabit = async (req, res, next) => {
   // Param validation is handled by middleware
 
   try {
-    const success = await habitService.deleteHabit(userId, habitId);
+    // Service will throw NotFoundError if not found/authorized
+    // Service will throw AppError if delete fails unexpectedly
+    await habitService.deleteHabit(userId, habitId);
 
-    if (success === null) {
-      // Service indicates habit not found or not authorized
-      return res
-        .status(404)
-        .json({ error: 'Habit not found or not authorized' });
-    }
-    // If success is true, deletion was successful
-
+    // If no error is thrown, the deletion was successful
     res.status(200).json({ message: 'Habit deleted successfully' });
   } catch (error) {
     // Catch errors thrown by the service (e.g., inconsistent state)
@@ -122,14 +106,9 @@ const getTrackers = async (req, res, next) => {
       startDate,
       endDate
     );
+    // Service will throw NotFoundError if not found/authorized
 
-    if (trackers === null) {
-      // Service indicates habit not found or not authorized
-      return res
-        .status(404)
-        .json({ error: 'Habit not found or not authorized' });
-    }
-
+    // If no error, return the trackers
     res.json(trackers);
   } catch (error) {
     console.error(
@@ -156,10 +135,7 @@ const manageTracker = async (req, res, next) => {
       timeZone,
       notes
     );
-
-    if (result.status === 'not_found') {
-      return res.status(404).json({ error: result.message });
-    }
+    // Service will throw NotFoundError if habit not found/authorized
 
     // Determine status code based on action (added or removed)
     const statusCode = result.status === 'added' ? 201 : 200;
@@ -187,15 +163,11 @@ const getHabitStats = async (req, res, next) => {
 
   try {
     // Call the service layer function
+    // Service will throw NotFoundError if not found/authorized
+    // Service will throw BadRequestError for invalid timezone
     const stats = await habitService.getHabitStats(userId, habitId, timeZone);
 
-    if (stats === null) {
-      // Service indicates habit not found or not authorized
-      return res
-        .status(404)
-        .json({ error: 'Habit not found or not authorized' });
-    }
-
+    // If no error, return the stats
     res.json(stats);
   } catch (error) {
     console.error(

@@ -1,5 +1,11 @@
 const habitRepository = require('../repositories/habit.repository');
 const trackerRepository = require('../repositories/tracker.repository');
+const {
+  AppError,
+  BadRequestError,
+  NotFoundError,
+  AuthorizationError, // Although not used directly yet, good to import if needed later
+} = require('../utils/errors');
 // TODO: Create dateUtils file later
 // const { getLocaleDates } = require('../utils/dateUtils');
 
@@ -38,13 +44,18 @@ function getLocaleStartEnd(utcDate, timeZone) {
 }
 
 async function getHabitsForDate(userId, dateString, timeZone) {
-  // Validate inputs (basic validation, more robust can be added)
+  // Validate inputs
   const utcDate = new Date(dateString);
   if (Number.isNaN(utcDate.getTime())) {
-    throw new Error('Invalid date format provided to service');
-    // Or use custom error classes: throw new BadRequestError('Invalid date format');
+    throw new BadRequestError('Invalid date format provided');
   }
-  // Timezone validation happens implicitly in Intl.DateTimeFormat
+  // Basic timezone check (more robust validation could be added)
+  try {
+    // Attempt to use the timezone to see if it's valid
+    new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
+  } catch (e) {
+    throw new BadRequestError('Invalid timeZone format provided');
+  }
 
   // --- Business Logic ---
   const formatter = new Intl.DateTimeFormat('en-US', {
@@ -118,9 +129,7 @@ async function updateHabit(userId, habitId, habitData) {
   // 1. Check if habit exists and belongs to the user
   const existingHabit = await habitRepository.findById(habitId, userId);
   if (!existingHabit) {
-    // Throw a specific error or return null/false
-    // Using null for now, controller can translate to 404
-    return null;
+    throw new NotFoundError('Habit not found or not authorized');
   }
 
   // 2. Call repository to update
@@ -134,10 +143,10 @@ async function updateHabit(userId, habitId, habitData) {
       console.warn(
         `Update service call for habit ${habitId} resulted in 0 changes.`
       );
-      // Decide how to handle - returning false for now
-      return false;
+      // Throw an error as the update unexpectedly failed
+      throw new AppError('Habit update failed unexpectedly', 500);
     }
-    return true; // Indicate success
+    return true; // Indicate success (controller doesn't need this, but good for clarity)
   } catch (error) {
     console.error(
       `Service error updating habit ${habitId} for user ${userId}: ${error.message}`
@@ -150,7 +159,7 @@ async function deleteHabit(userId, habitId) {
   // 1. Check if habit exists and belongs to the user
   const existingHabit = await habitRepository.findById(habitId, userId);
   if (!existingHabit) {
-    return null; // Indicate not found
+    throw new NotFoundError('Habit not found or not authorized');
   }
 
   // IMPORTANT: In a real application, the following two operations
@@ -168,8 +177,11 @@ async function deleteHabit(userId, habitId) {
       console.error(
         `Failed to delete habit ${habitId} in repository after successful check.`
       );
-      // Throw an error because the state is inconsistent
-      throw new Error('Inconsistent state: Habit found but failed to delete.');
+      // Throw an operational error with 500 status
+      throw new AppError(
+        'Inconsistent state: Habit found but failed to delete.',
+        500
+      );
     }
 
     return true; // Indicate success
@@ -185,7 +197,7 @@ async function getTrackersForHabit(userId, habitId, startDate, endDate) {
   // 1. Check if habit exists and belongs to the user
   const existingHabit = await habitRepository.findById(habitId, userId);
   if (!existingHabit) {
-    return null; // Indicate habit not found or not authorized
+    throw new NotFoundError('Habit not found or not authorized');
   }
 
   // 2. Fetch trackers using the repository
@@ -206,20 +218,21 @@ async function getTrackersForHabit(userId, habitId, startDate, endDate) {
 }
 
 async function manageTracker(userId, habitId, timestamp, timeZone, notes) {
-  // 1. Validate inputs (basic validation)
+  // 1. Validate inputs
   const utcDate = new Date(timestamp);
   if (Number.isNaN(utcDate.getTime())) {
-    throw new Error('Invalid timestamp provided to service');
+    throw new BadRequestError('Invalid timestamp format provided');
   }
-  // Timezone validation happens implicitly later
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
+  } catch (e) {
+    throw new BadRequestError('Invalid timeZone format provided');
+  }
 
-  // 2. Check if the habit exists (optional but good practice)
+  // 2. Check if the habit exists and belongs to the user
   const habitExists = await habitRepository.findById(habitId, userId);
   if (!habitExists) {
-    return {
-      status: 'not_found',
-      message: 'Habit not found or not authorized',
-    };
+    throw new NotFoundError('Habit not found or not authorized');
   }
 
   // 3. Calculate locale date boundaries
@@ -243,20 +256,20 @@ async function manageTracker(userId, habitId, timestamp, timeZone, notes) {
         habitId,
         userId
       );
-      return { status: 'removed', message: 'Tracker removed successfully' };
+      // Return an object indicating removal for the controller to interpret
+      return { status: 'removed' };
     } else {
       // 5b. Create new tracker
       const newTrackerId = await trackerRepository.create(
+        // Ensure timestamp is passed correctly
         habitId,
         userId,
         timestamp,
+        timestamp, // Pass the original timestamp string
         notes
       );
-      return {
-        status: 'added',
-        message: 'Tracker added successfully',
-        trackerId: newTrackerId,
-      };
+      // Return an object indicating addition for the controller to interpret
+      return { status: 'added', trackerId: newTrackerId };
     }
   } catch (error) {
     console.error(
@@ -317,10 +330,16 @@ function calculateStreak(trackerRows, frequency, timeZone) {
 }
 
 async function getHabitStats(userId, habitId, timeZone) {
-  // 1. Check if habit exists and get frequency
+  // 1. Check if habit exists and belongs to the user
   const habit = await habitRepository.findById(habitId, userId);
   if (!habit) {
-    return null; // Indicate habit not found or not authorized
+    throw new NotFoundError('Habit not found or not authorized');
+  }
+  // Basic timezone check
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
+  } catch (e) {
+    throw new BadRequestError('Invalid timeZone format provided');
   }
   const frequency = habit.frequency.split(',');
 
