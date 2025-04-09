@@ -143,19 +143,19 @@ _(Note: Test suite setup is pending)_
 
 ## API Documentation
 
-For detailed endpoint specifications, request/response examples, and the full database schema, please see the **[API Documentation](API.md)**.
+For detailed endpoint specifications, request/response examples, and the full database schema, please see the **[API Documentation](api.md)**.
 
 ## Refactoring Overview
 
 A significant refactoring effort was recently completed on this project with the primary goals of improving maintainability, testability, and performance, and establishing a scalable architecture.
 
-Details about the refactoring process, architecture decisions, specific improvements, and learnings can be found in the `/docs/refactoring` directory:
+Details about the refactoring process, architecture decisions, specific improvements, and learnings can be found in the `.clinerules` directory:
 
-- [Architecture Decisions](docs/refactoring/ARCHITECTURE_DECISIONS.md)
-- [Maintainability Improvements](docs/refactoring/MAINTAINABILITY.md)
-- [Enhancements & Future Work](docs/refactoring/ENHANCEMENTS.md)
-- [Performance Optimizations](docs/refactoring/OPTIMIZATIONS.md)
-- [Learnings & Takeaways](docs/refactoring/LEARNINGS.md)
+- [Architecture Decisions](architecture_decisions.md)
+- [Maintainability Improvements](maintainability.md)
+- [Enhancements & Future Work](enhancements.md)
+- [Performance Optimizations](optimizations.md)
+- [Learnings & Takeaways](learnings.md)
 
 ## Contributing
 
