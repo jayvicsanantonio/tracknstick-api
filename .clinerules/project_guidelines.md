@@ -20,8 +20,8 @@ These guidelines ensure consistency, maintainability, and quality across the pro
 
 3.1. **Use `next(error)`:** In controllers and async middleware, wrap asynchronous operations in `try...catch`. Pass caught errors to the `next(error)` function for centralized handling.
 3.2. **Service Layer Errors:** Services should throw specific, custom errors (e.g., `NotFoundError`, `AuthorizationError`, extending a base `AppError` class defined in `utils`) when business rules fail or expected data isn't found. Avoid throwing generic `Error` objects directly from services where possible.
-3.3. **Repository Layer Errors:** Repositories should catch database-specific errors and re-throw them as generic database errors or specific custom errors if applicable, logging the original error for debugging.
-3.4. **Centralized Handler:** Implement a dedicated error-handling middleware (mounted last in `index.js`) to catch all errors passed via `next(error)`. This middleware should: - Log the full error details (especially in development). - Send a standardized JSON error response to the client. - Mask internal error details (like stack traces) in production environments. - Handle custom error types to set appropriate HTTP status codes.
+3.3. **Repository Layer Errors:** Repositories should catch database-specific errors and re-throw them as generic database errors or specific custom errors if applicable, logging the original error for debugging. (Currently throwing generic `Error`).
+3.4. **Centralized Handler:** Implement a dedicated error-handling middleware (`src/middlewares/errorHandler.js`, mounted last in `index.js`) to catch all errors passed via `next(error)`. This middleware should: - Log the error details (URL, method, message, stack in dev). - Send a standardized JSON error response (`{ status, message, errorCode, [errors] }`). - Include a unique `errorCode` string for each error type. - Specifically handle `VALIDATION_ERROR` by including a detailed `errors` array from `express-validator`. - Mask internal error details (like stack traces) in production environments. - Set appropriate HTTP status codes based on the error type.
 
 ## 4. Input Validation
 
