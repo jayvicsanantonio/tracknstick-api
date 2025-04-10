@@ -34,10 +34,54 @@ Base Path: `/api/v1`
     }
     ```
   - **Error Responses:**
-    - `400 Bad Request`: `{"error": "Missing or invalid required fields (name, icon, frequency array)"}`
-    - `401 Unauthorized`: `{"error": "Missing API Key (X-API-Key header)"}`
-    - `403 Forbidden`: `{"error": "Invalid API Key"}`
-    - `500 Internal Server Error`: `{"error": "Failed to create habit"}` (or similar)
+    - `400 Bad Request (Validation Error)`:
+      ```json
+      {
+        "status": "fail",
+        "message": "Input validation failed",
+        "errorCode": "VALIDATION_ERROR",
+        "errors": [
+          {
+            "type": "field",
+            "msg": "Habit name is required.",
+            "path": "name",
+            "location": "body"
+          },
+          {
+            "type": "field",
+            "msg": "Frequency array must only contain valid days: Mon, Tue, Wed, Thu, Fri, Sat, Sun",
+            "path": "frequency",
+            "location": "body",
+            "value": ["Mon", "InvalidDay"]
+          }
+          // ... other validation errors
+        ]
+      }
+      ```
+    - `401 Unauthorized`:
+      ```json
+      {
+        "status": "fail",
+        "message": "Missing API Key (X-API-Key header)",
+        "errorCode": "AUTHENTICATION_FAILED"
+      }
+      ```
+    - `403 Forbidden`:
+      ```json
+      {
+        "status": "fail",
+        "message": "Invalid API Key",
+        "errorCode": "AUTHORIZATION_FAILED"
+      }
+      ```
+    - `500 Internal Server Error`:
+      ```json
+      {
+        "status": "error",
+        "message": "Something went very wrong!", // Generic message in production
+        "errorCode": "INTERNAL_SERVER_ERROR"
+      }
+      ```
 
 - **`GET /habits`**
 
@@ -65,10 +109,33 @@ Base Path: `/api/v1`
     ]
     ```
   - **Error Responses:**
-    - `400 Bad Request`: `{"error": "Date parameter is required"}`, `{"error": "Invalid date format"}`, `{"error": "TimeZone parameter is required"}`, `{"error": "Invalid timeZone format"}`
-    - `401 Unauthorized`: `{"error": "Missing API Key (X-API-Key header)"}`
-    - `403 Forbidden`: `{"error": "Invalid API Key"}`
-    - `500 Internal Server Error`: `{"error": "Failed to retrieve habits"}` (or similar)
+    - `400 Bad Request (Validation Error)`:
+      ```json
+      {
+        "status": "fail",
+        "message": "Input validation failed",
+        "errorCode": "VALIDATION_ERROR",
+        "errors": [
+          {
+            "type": "field",
+            "value": "invalid-date",
+            "msg": "Date must be in YYYY-MM-DD format.",
+            "path": "date",
+            "location": "query"
+          },
+          {
+            "type": "field",
+            "value": "Invalid/Timezone",
+            "msg": "Invalid IANA TimeZone format provided.",
+            "path": "timeZone",
+            "location": "query"
+          }
+        ]
+      }
+      ```
+    - `401 Unauthorized`: (See POST /habits example)
+    - `403 Forbidden`: (See POST /habits example)
+    - `500 Internal Server Error`: (See POST /habits example)
 
 - **`PUT /habits/:habitId`**
 
@@ -91,11 +158,40 @@ Base Path: `/api/v1`
     }
     ```
   - **Error Responses:**
-    - `400 Bad Request`: `{"error": "At least one field (name, icon, frequency) is required for update"}`, `{"error": "Frequency must be a non-empty array if provided"}`
-    - `401 Unauthorized`: `{"error": "Missing API Key (X-API-Key header)"}`
-    - `403 Forbidden`: `{"error": "Invalid API Key"}`
-    - `404 Not Found`: `{"error": "Habit not found or not authorized"}`
-    - `500 Internal Server Error`: `{"error": "Failed to update habit"}` (or similar)
+    - `400 Bad Request (Validation Error)`:
+      ```json
+      {
+        "status": "fail",
+        "message": "Input validation failed",
+        "errorCode": "VALIDATION_ERROR",
+        "errors": [
+          {
+            "type": "field",
+            "msg": "Request body must contain at least one valid field to update (name, icon, frequency).",
+            "path": "",
+            "location": "body"
+          },
+          {
+            "type": "field",
+            "value": [],
+            "msg": "Frequency must be a non-empty array if provided.",
+            "path": "frequency",
+            "location": "body"
+          }
+        ]
+      }
+      ```
+    - `401 Unauthorized`: (See POST /habits example)
+    - `403 Forbidden`: (See POST /habits example)
+    - `404 Not Found`:
+      ```json
+      {
+        "status": "fail",
+        "message": "Habit not found or not authorized",
+        "errorCode": "RESOURCE_NOT_FOUND"
+      }
+      ```
+    - `500 Internal Server Error`: (See POST /habits example)
 
 - **`DELETE /habits/:habitId`**
 
@@ -110,10 +206,10 @@ Base Path: `/api/v1`
     }
     ```
   - **Error Responses:**
-    - `401 Unauthorized`: `{"error": "Missing API Key (X-API-Key header)"}`
-    - `403 Forbidden`: `{"error": "Invalid API Key"}`
-    - `404 Not Found`: `{"error": "Habit not found or not authorized"}`
-    - `500 Internal Server Error`: `{"error": "Failed to delete habit"}` (or similar)
+    - `401 Unauthorized`: (See POST /habits example)
+    - `403 Forbidden`: (See POST /habits example)
+    - `404 Not Found`: (See PUT /habits/:habitId example)
+    - `500 Internal Server Error`: (See POST /habits example)
 
 - **`GET /habits/:habitId/stats`**
 
@@ -134,11 +230,27 @@ Base Path: `/api/v1`
     }
     ```
   - **Error Responses:**
-    - `400 Bad Request`: `{"error": "TimeZone parameter is required"}`, `{"error": "Invalid timeZone format"}`
-    - `401 Unauthorized`: `{"error": "Missing API Key (X-API-Key header)"}`
-    - `403 Forbidden`: `{"error": "Invalid API Key"}`
-    - `404 Not Found`: `{"error": "Habit not found or not authorized"}`
-    - `500 Internal Server Error`: `{"error": "Failed to retrieve habit data"}` (or similar)
+    - `400 Bad Request (Validation Error)`:
+      ```json
+      {
+        "status": "fail",
+        "message": "Input validation failed",
+        "errorCode": "VALIDATION_ERROR",
+        "errors": [
+          {
+            "type": "field",
+            "value": "Invalid/Timezone",
+            "msg": "Invalid IANA TimeZone format provided.",
+            "path": "timeZone",
+            "location": "query"
+          }
+        ]
+      }
+      ```
+    - `401 Unauthorized`: (See POST /habits example)
+    - `403 Forbidden`: (See POST /habits example)
+    - `404 Not Found`: (See PUT /habits/:habitId example)
+    - `500 Internal Server Error`: (See POST /habits example)
 
 ### Trackers
 
@@ -170,11 +282,33 @@ Base Path: `/api/v1`
     }
     ```
   - **Error Responses:**
-    - `400 Bad Request`: `{"error": "Missing required fields: timestamp, timeZone"}`, `{"error": "Invalid timestamp format"}`, `{"error": "Invalid timeZone format"}`
-    - `401 Unauthorized`: `{"error": "Missing API Key (X-API-Key header)"}`
-    - `403 Forbidden`: `{"error": "Invalid API Key"}`
-    - `404 Not Found`: `{"error": "Habit not found or not authorized"}`
-    - `500 Internal Server Error`: `{"error": "Failed to insert tracker"}`, `{"error": "Failed to delete tracker"}` (or similar)
+    - `400 Bad Request (Validation Error)`:
+      ```json
+      {
+        "status": "fail",
+        "message": "Input validation failed",
+        "errorCode": "VALIDATION_ERROR",
+        "errors": [
+          {
+            "type": "field",
+            "value": "not-a-date",
+            "msg": "Timestamp must be a valid ISO 8601 date string.",
+            "path": "timestamp",
+            "location": "body"
+          },
+          {
+            "type": "field",
+            "msg": "TimeZone is required.",
+            "path": "timeZone",
+            "location": "body"
+          }
+        ]
+      }
+      ```
+    - `401 Unauthorized`: (See POST /habits example)
+    - `403 Forbidden`: (See POST /habits example)
+    - `404 Not Found`: (See PUT /habits/:habitId example)
+    - `500 Internal Server Error`: (See POST /habits example)
 
 - **`GET /habits/:habitId/trackers`**
 
@@ -199,11 +333,27 @@ Base Path: `/api/v1`
     ]
     ```
   - **Error Responses:**
-    - `400 Bad Request`: `{"error": "Invalid date format provided"}`
-    - `401 Unauthorized`: `{"error": "Missing API Key (X-API-Key header)"}`
-    - `403 Forbidden`: `{"error": "Invalid API Key"}`
-    - `404 Not Found`: `{"error": "Habit not found or not authorized"}`
-    - `500 Internal Server Error`: `{"error": "Failed to fetch trackers"}` (or similar)
+    - `400 Bad Request (Validation Error)`:
+      ```json
+      {
+        "status": "fail",
+        "message": "Input validation failed",
+        "errorCode": "VALIDATION_ERROR",
+        "errors": [
+          {
+            "type": "field",
+            "value": "not-a-date",
+            "msg": "startDate must be in YYYY-MM-DD format.",
+            "path": "startDate",
+            "location": "query"
+          }
+        ]
+      }
+      ```
+    - `401 Unauthorized`: (See POST /habits example)
+    - `403 Forbidden`: (See POST /habits example)
+    - `404 Not Found`: (See PUT /habits/:habitId example)
+    - `500 Internal Server Error`: (See POST /habits example)
 
 ## Database Schema
 

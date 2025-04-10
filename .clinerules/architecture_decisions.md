@@ -32,13 +32,25 @@ This document outlines the key architectural decisions made during the refactori
 
 ## Authentication Handling
 
-- **Decision:** Kept authentication logic within a dedicated middleware (`src/middlewares/authenticate.js`). Fixed database path resolution issue.
-- **Rationale:** Centralizes authentication logic, making it easy to apply to routes and manage separately. Using an absolute path for the DB connection ensures reliability.
+- **Decision:** Kept authentication logic within a dedicated middleware (`src/middlewares/authenticate.js`). Fixed database path resolution issue. Updated to use custom error classes (`AuthenticationError`, `AuthorizationError`) and `next(error)`.
+- **Rationale:** Centralizes authentication logic, making it easy to apply to routes and manage separately. Using an absolute path for the DB connection ensures reliability. Integrates with the centralized error handling system.
 
-## Error Handling (Initial)
+## Centralized Error Handling
 
-- **Decision:** Implemented basic `try...catch` blocks in controllers and services, passing errors to Express's default error handler via `next(error)`. Added basic 404 handler.
-- **Rationale:** Provides a starting point for error management. Prevents unhandled promise rejections from crashing the server.
-- **Next Steps:** Implement a dedicated centralized error handling middleware and potentially custom error classes for more specific error responses.
+- **Decision:** Implemented a centralized error handling mechanism using custom error classes and a dedicated middleware. Replaced the previous basic error handling.
+- **Rationale:**
+  - **Consistency:** Ensures all error responses follow a standard format (`status`, `message`, `errorCode`, optional `errors` array for validation).
+  - **Maintainability:** Consolidates error handling logic into `src/middlewares/errorHandler.js`.
+  - **Clarity:** Custom error classes (`AppError`, `NotFoundError`, `BadRequestError`, etc. in `src/utils/errors.js`) provide semantic meaning and appropriate HTTP status codes.
+  - **Detailed Validation:** Validation errors (`VALIDATION_ERROR`) now include a detailed array of specific field errors.
+  - **Security:** Prevents leaking internal stack traces in production responses.
+- **Implementation:**
+  - Created custom error classes in `src/utils/errors.js`.
+  - Created `errorHandler` middleware in `src/middlewares/errorHandler.js` to catch errors, log them, and format responses based on error type and environment.
+  - Updated services (`src/services/`) to throw custom errors.
+  - Updated controllers (`src/controllers/`) to consistently use `try...catch` and `next(error)`.
+  - Updated `authenticate` middleware to use custom errors.
+  - Updated `validate` middleware to pass structured validation errors via `next()`.
+  - Registered `errorHandler` as the last middleware in `index.js`.
 
 _(Add other significant architectural decisions here as the project evolves)_
