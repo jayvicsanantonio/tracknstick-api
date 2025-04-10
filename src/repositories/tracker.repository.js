@@ -1,23 +1,30 @@
-const { dbAll, dbGet, dbRun } = require('../utils/dbUtils'); // Import promise wrappers
+const { dbAll, dbGet, dbRun } = require('../utils/dbUtils');
 
+/**
+ * @description Finds tracker entries for multiple habits within a specific ISO date range for a user.
+ * @param {number} userId - The ID of the user.
+ * @param {Array<number>} habitIds - An array of habit IDs.
+ * @param {string} startDateISO - The start date in ISO 8601 format (UTC).
+ * @param {string} endDateISO - The end date in ISO 8601 format (UTC).
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of tracker objects.
+ * @throws {Error} If a database error occurs.
+ */
 async function findTrackersByDateRange(
   userId,
-  habitIds, // Expect an array of habit IDs
+  habitIds,
   startDateISO,
-  endDateISO // Expect ISO string dates
+  endDateISO
 ) {
   if (!habitIds || habitIds.length === 0) {
-    return []; // No habits to check trackers for
+    return [];
   }
 
-  // Create placeholders safely for the IN clause
   const placeholders = habitIds.map(() => '?').join(',');
   const sql = `
-    SELECT id, habit_id, timestamp, notes -- Select only needed fields
+    SELECT id, habit_id, timestamp, notes
     FROM trackers
     WHERE user_id = ? AND habit_id IN (${placeholders}) AND (timestamp BETWEEN ? AND ?)
   `;
-  // Order matters for parameters: userId first, then habitIds, then dates
   const params = [userId, ...habitIds, startDateISO, endDateISO];
 
   try {
@@ -27,15 +34,24 @@ async function findTrackersByDateRange(
     console.error(
       `Error in findTrackersByDateRange repository: ${error.message}`
     );
-    throw new Error('Database error fetching trackers by date range'); // Throw generic error
+    throw new Error('Database error fetching trackers by date range');
   }
 }
 
+/**
+ * @description Finds tracker entries for a specific habit, optionally filtered by a date range (YYYY-MM-DD).
+ * @param {number} habitId - The ID of the habit.
+ * @param {number} userId - The ID of the user.
+ * @param {string} [startDate] - Optional start date string (YYYY-MM-DD).
+ * @param {string} [endDate] - Optional end date string (YYYY-MM-DD).
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of tracker objects.
+ * @throws {Error} If a database error occurs.
+ */
 async function findTrackersByHabitAndDateRange(
   habitId,
   userId,
-  startDate, // Optional start date string (YYYY-MM-DD)
-  endDate // Optional end date string (YYYY-MM-DD)
+  startDate,
+  endDate
 ) {
   let sql = `
     SELECT id, habit_id, user_id, timestamp, notes
@@ -44,8 +60,6 @@ async function findTrackersByHabitAndDateRange(
   `;
   const params = [habitId, userId];
 
-  // Build query dynamically based on date range
-  // Using DATE() function assumes timestamp is stored in a format SQLite understands
   if (startDate && endDate) {
     sql += ` AND DATE(timestamp) BETWEEN DATE(?) AND DATE(?)`;
     params.push(startDate, endDate);
@@ -57,7 +71,6 @@ async function findTrackersByHabitAndDateRange(
     params.push(endDate);
   }
 
-  // Add ordering
   sql += ` ORDER BY timestamp DESC`;
 
   try {
@@ -71,22 +84,30 @@ async function findTrackersByHabitAndDateRange(
   }
 }
 
+/**
+ * @description Finds tracker IDs for a specific habit within a precise ISO date range (used for checking existence).
+ * @param {number} habitId - The ID of the habit.
+ * @param {number} userId - The ID of the user.
+ * @param {string} startDateISO - The start date in ISO 8601 format (UTC).
+ * @param {string} endDateISO - The end date in ISO 8601 format (UTC).
+ * @returns {Promise<Array<{id: number}>>} A promise that resolves to an array of objects containing tracker IDs.
+ * @throws {Error} If a database error occurs.
+ */
 async function findTrackersInDateRange(
   habitId,
   userId,
   startDateISO,
-  endDateISO // Expect ISO string dates
+  endDateISO
 ) {
-  // This is specifically for checking existence within a locale day range
   const sql = `
-    SELECT id -- Only need the ID
+    SELECT id
     FROM trackers
     WHERE habit_id = ? AND user_id = ? AND (timestamp BETWEEN ? AND ?)
   `;
   const params = [habitId, userId, startDateISO, endDateISO];
   try {
     const trackers = await dbAll(sql, params);
-    return trackers; // Returns array of {id: ...} or empty array
+    return trackers;
   } catch (error) {
     console.error(
       `Error in findTrackersInDateRange repository: ${error.message}`
@@ -95,16 +116,23 @@ async function findTrackersInDateRange(
   }
 }
 
+/**
+ * @description Removes specific tracker entries by their IDs for a given habit and user.
+ * @param {Array<number>} trackerIds - An array of tracker IDs to remove.
+ * @param {number} habitId - The ID of the associated habit.
+ * @param {number} userId - The ID of the user.
+ * @returns {Promise<{changes: number}>} A promise that resolves to an object indicating the number of rows changed.
+ * @throws {Error} If a database error occurs.
+ */
 async function removeTrackersByIds(trackerIds, habitId, userId) {
   if (!trackerIds || trackerIds.length === 0) {
-    return { changes: 0 }; // Nothing to remove
+    return { changes: 0 };
   }
   const placeholders = trackerIds.map(() => '?').join(',');
   const sql = `
     DELETE FROM trackers
     WHERE id IN (${placeholders}) AND habit_id = ? AND user_id = ?
   `;
-  // Ensure user owns these trackers for the specific habit
   const params = [...trackerIds, habitId, userId];
   try {
     const result = await dbRun(sql, params);
@@ -115,12 +143,18 @@ async function removeTrackersByIds(trackerIds, habitId, userId) {
   }
 }
 
+/**
+ * @description Removes all tracker entries associated with a specific habit for a user.
+ * @param {number} habitId - The ID of the habit.
+ * @param {number} userId - The ID of the user.
+ * @returns {Promise<{changes: number}>} A promise that resolves to an object indicating the number of rows changed.
+ * @throws {Error} If a database error occurs.
+ */
 async function removeAllByHabit(habitId, userId) {
   const sql = `DELETE FROM trackers WHERE habit_id = ? AND user_id = ?`;
   const params = [habitId, userId];
   try {
     const result = await dbRun(sql, params);
-    // Return the number of changes (can be 0 or more)
     return { changes: result.changes };
   } catch (error) {
     console.error(
@@ -130,26 +164,40 @@ async function removeAllByHabit(habitId, userId) {
   }
 }
 
+/**
+ * @description Creates a new tracker entry for a habit.
+ * @param {number} habitId - The ID of the habit.
+ * @param {number} userId - The ID of the user.
+ * @param {string} timestamp - The timestamp of the tracker entry (ISO 8601 format, UTC).
+ * @param {string} [notes] - Optional notes for the tracker entry.
+ * @returns {Promise<number>} A promise that resolves to the ID of the newly created tracker.
+ * @throws {Error} If a database error occurs.
+ */
 async function create(habitId, userId, timestamp, notes) {
   const sql = `
     INSERT INTO trackers (habit_id, user_id, timestamp, notes)
     VALUES (?, ?, ?, ?)
   `;
-  // Use the original UTC timestamp provided
   const params = [habitId, userId, timestamp, notes || null];
   try {
     const result = await dbRun(sql, params);
-    return result.lastID; // Return the ID of the new tracker
+    return result.lastID;
   } catch (error) {
     console.error(`Error in create tracker repository: ${error.message}`);
     throw new Error('Database error creating tracker');
   }
 }
 
+/**
+ * @description Finds all tracker entries for a specific habit, ordered by timestamp descending.
+ * @param {number} habitId - The ID of the habit.
+ * @param {number} userId - The ID of the user.
+ * @returns {Promise<Array<object>>} A promise that resolves to an array of tracker objects.
+ * @throws {Error} If a database error occurs.
+ */
 async function findAllByHabit(habitId, userId) {
-  // Fetch all trackers for a specific habit, ordered for streak calculation
   const sql = `
-    SELECT id, timestamp, notes -- Select only needed fields
+    SELECT id, timestamp, notes
     FROM trackers
     WHERE habit_id = ? AND user_id = ?
     ORDER BY timestamp DESC
@@ -165,8 +213,6 @@ async function findAllByHabit(habitId, userId) {
     throw new Error('Database error fetching all trackers for habit');
   }
 }
-
-// Add other tracker-related DB functions as needed
 
 module.exports = {
   findTrackersByDateRange,

@@ -1,35 +1,37 @@
-const { dbGet } = require('../utils/dbUtils'); // Import dbGet wrapper
+const { dbGet } = require('../utils/dbUtils');
 const {
   AuthenticationError,
   AuthorizationError,
-  AppError, // Import AppError for generic server errors if needed
+  AppError,
 } = require('../utils/errors');
 
+/**
+ * @description Middleware to authenticate requests using X-API-Key header.
+ * Attaches userId to the request object if successful.
+ * Passes AuthenticationError or AuthorizationError to error handler on failure.
+ * @param {import('express').Request} req - Express request object.
+ * @param {import('express').Response} res - Express response object.
+ * @param {import('express').NextFunction} next - Express next middleware function.
+ */
 async function authenticate(req, res, next) {
-  // Make the function async
   const apiKey = req.header('X-API-Key');
 
   if (!apiKey) {
-    // Pass AuthenticationError to the error handler
     return next(new AuthenticationError('Missing API Key (X-API-Key header)'));
   }
 
   try {
-    // Use await with the dbGet wrapper
     const query = 'SELECT id FROM users WHERE api_key = ?';
     const row = await dbGet(query, [apiKey]);
 
     if (!row) {
-      // Use 403 Forbidden for invalid key, pass AuthorizationError
       return next(new AuthorizationError('Invalid API Key'));
     }
 
-    req.userId = row.id; // Attach user ID to request object
-    next(); // Proceed to the next middleware or route handler
+    req.userId = row.id;
+    next();
   } catch (err) {
     console.error('Authentication DB Error:', err);
-    // Pass the original database error to the centralized error handler
-    // The handler will log it and return a generic 500 response in production
     next(err);
   }
 }

@@ -1,5 +1,5 @@
 const { AppError } = require('../utils/errors');
-const { validationResult } = require('express-validator'); // To check for validation errors if needed, though typically handled before this
+const { validationResult } = require('express-validator');
 
 /**
  * Formats express-validator errors into a user-friendly message.
@@ -8,9 +8,8 @@ const { validationResult } = require('express-validator'); // To check for valid
  */
 const formatValidationErrors = (errors) => {
   if (!errors || !Array.isArray(errors) || errors.length === 0) {
-    return 'Validation failed'; // Default message if format is unexpected
+    return 'Validation failed';
   }
-  // Join messages from different validation errors
   return errors.map((err) => err.msg).join('. ');
 };
 
@@ -22,7 +21,7 @@ const formatValidationErrors = (errors) => {
 const sendErrorDev = (err, res) => {
   res.status(err.statusCode || 500).json({
     status: err.status || 'error',
-    error: err,
+    errorCode: err.errorCode || 'UNKNOWN_ERROR',
     message: err.message,
     stack: err.stack,
   });
@@ -34,21 +33,19 @@ const sendErrorDev = (err, res) => {
  * @param {Response} res - Express response object.
  */
 const sendErrorProd = (err, res) => {
-  // Operational, trusted error: send message to client
   if (err.isOperational) {
     res.status(err.statusCode).json({
       status: err.status,
       message: err.message,
+      errorCode: err.errorCode || 'UNKNOWN_ERROR',
     });
-    // Programming or other unknown error: don't leak error details
   } else {
-    // 1) Log error
     console.error('ERROR 💥:', err);
 
-    // 2) Send generic message
     res.status(500).json({
       status: 'error',
       message: 'Something went very wrong!',
+      errorCode: 'INTERNAL_SERVER_ERROR',
     });
   }
 };
@@ -58,35 +55,30 @@ const sendErrorProd = (err, res) => {
  * Catches errors passed via next(error).
  */
 const errorHandler = (err, req, res, next) => {
-  // Set default status code and status if not already set by a custom error
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 
-  // Log the error regardless of environment
-  // In a real app, use a more sophisticated logger (like Winston)
   console.error(
     `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Error: ${err.message}`
   );
   if (process.env.NODE_ENV !== 'production') {
-    console.error(err.stack); // Log stack trace in dev
+    console.error(err.stack);
   }
 
-  // Handle specific error types before sending response
+  if (err.errorCode === 'VALIDATION_ERROR' && Array.isArray(err.details)) {
+    return res.status(400).json({
+      status: 'fail',
+      message: err.message || 'Input validation failed',
+      errorCode: 'VALIDATION_ERROR',
+      errors: err.details,
+    });
+  }
+
   let errorToSend = err;
 
-  // Note: express-validator errors are typically handled by the `validate` middleware
-  // before reaching here. If they somehow bypass that, this could be a fallback.
-  // However, the primary check should be for our custom AppError types.
-
   if (process.env.NODE_ENV === 'production') {
-    // In production, we might want to transform certain non-operational errors
-    // into operational ones for the client, or handle specific known errors.
-    // Example: Handle a specific database error code if needed.
-    // if (err.code === 'SOME_DB_ERROR_CODE') errorToSend = handleDbError(err);
-
     sendErrorProd(errorToSend, res);
   } else {
-    // In development, send detailed error information
     sendErrorDev(errorToSend, res);
   }
 };

@@ -2,9 +2,8 @@ const { body, query, param } = require('express-validator');
 
 const validDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-// Custom validator for IANA timezone
 const isValidTimeZone = (value) => {
-  if (!value) return false; // Must be provided
+  if (!value) return false;
   try {
     Intl.DateTimeFormat(undefined, { timeZone: value });
     return true;
@@ -13,7 +12,6 @@ const isValidTimeZone = (value) => {
   }
 };
 
-// Validation rules for creating a habit
 const createHabit = [
   body('name')
     .trim()
@@ -35,7 +33,6 @@ const createHabit = [
           `Frequency array must only contain valid days: ${validDays.join(', ')}`
         );
       }
-      // Check for duplicates
       if (new Set(days).size !== days.length) {
         throw new Error('Frequency array cannot contain duplicate days.');
       }
@@ -43,14 +40,13 @@ const createHabit = [
     }),
 ];
 
-// Validation rules for getting habits by date
 const getHabitsByDate = [
   query('date')
     .notEmpty()
     .withMessage('Date query parameter is required.')
     .isISO8601()
     .withMessage('Date must be in YYYY-MM-DD format.')
-    .toDate(), // Convert to date object for potential further validation
+    .toDate(),
   query('timeZone')
     .notEmpty()
     .withMessage('TimeZone query parameter is required.')
@@ -58,12 +54,10 @@ const getHabitsByDate = [
     .withMessage('Invalid IANA TimeZone format provided.'),
 ];
 
-// Validation rules for updating a habit
 const updateHabit = [
   param('habitId')
     .isInt({ gt: 0 })
     .withMessage('Habit ID must be a positive integer.'),
-  // Ensure at least one field is present in the body
   body().custom((value, { req }) => {
     if (Object.keys(req.body).length === 0) {
       throw new Error(
@@ -105,14 +99,12 @@ const updateHabit = [
     }),
 ];
 
-// Validation rules for deleting a habit
 const deleteHabit = [
   param('habitId')
     .isInt({ gt: 0 })
     .withMessage('Habit ID must be a positive integer.'),
 ];
 
-// Validation rules for getting habit stats
 const getHabitStats = [
   param('habitId')
     .isInt({ gt: 0 })
@@ -124,7 +116,6 @@ const getHabitStats = [
     .withMessage('Invalid IANA TimeZone format provided.'),
 ];
 
-// Validation rules for managing (adding/removing) a tracker
 const manageTracker = [
   param('habitId')
     .isInt({ gt: 0 })
@@ -142,7 +133,6 @@ const manageTracker = [
   body('notes').optional({ nullable: true }).trim().isString(),
 ];
 
-// Validation rules for getting trackers
 const getTrackers = [
   param('habitId')
     .isInt({ gt: 0 })
