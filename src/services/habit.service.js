@@ -6,45 +6,8 @@ const {
   NotFoundError,
   AuthorizationError,
 } = require('../utils/errors');
-
-/**
- * Calculates the start and end ISO timestamps for a given UTC date in a specific timezone.
- * @param {Date} utcDate - The date object (assumed UTC or correctly parsed).
- * @param {string} timeZone - The IANA timezone name (e.g., 'America/Los_Angeles').
- * @returns {{localeStartISO: string, localeEndISO: string}} Object containing start and end ISO strings.
- */
-function getLocaleStartEnd(utcDate, timeZone) {
-  const localeDate = new Date(
-    utcDate.toLocaleString('en-US', {
-      timeZone,
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-    })
-  );
-  const localeStart = new Date(
-    localeDate.getFullYear(),
-    localeDate.getMonth(),
-    localeDate.getDate(),
-    0,
-    0,
-    0,
-    0
-  );
-  const localeEnd = new Date(
-    localeDate.getFullYear(),
-    localeDate.getMonth(),
-    localeDate.getDate(),
-    23,
-    59,
-    59,
-    999
-  );
-  return {
-    localeStartISO: localeStart.toISOString(),
-    localeEndISO: localeEnd.toISOString(),
-  };
-}
+const { getLocaleStartEnd } = require('../utils/dateUtils');
+const { calculateStreak } = require('../utils/streakUtils');
 
 /**
  * @description Retrieves habits scheduled for a specific date, including completion status.
@@ -179,7 +142,6 @@ async function deleteHabit(userId, habitId) {
     throw new NotFoundError('Habit not found or not authorized');
   }
 
-  // TODO: Wrap these in a database transaction
   try {
     await trackerRepository.removeAllByHabit(habitId, userId);
     const result = await habitRepository.remove(habitId, userId);
@@ -296,62 +258,6 @@ async function manageTracker(userId, habitId, timestamp, timeZone, notes) {
     );
     throw error;
   }
-}
-
-/**
- * Calculates the current streak for a habit based on tracker entries and frequency.
- * @param {Array<object>} trackerRows - Array of tracker objects, sorted descending by timestamp.
- * @param {Array<string>} frequency - Array of short day names (e.g., ['Mon', 'Wed']).
- * @param {string} timeZone - The IANA timezone name.
- * @returns {number} The calculated current streak.
- */
-// TODO: Move calculateStreak to a utility file (e.g., utils/streakUtils.js)
-function calculateStreak(trackerRows, frequency, timeZone) {
-  if (!trackerRows || trackerRows.length === 0) {
-    return 0;
-  }
-  const uniqueCompletionDates = [
-    ...new Set(
-      trackerRows.map((row) => {
-        const utcDate = new Date(row.timestamp);
-        return utcDate.toLocaleDateString('en-CA', { timeZone });
-      })
-    ),
-  ];
-
-  let currentStreak = 0;
-  const today = new Date();
-  let currentDate = new Date(today.toLocaleDateString('en-CA', { timeZone }));
-
-  for (let i = 0; i < uniqueCompletionDates.length; i++) {
-    const completionDate = new Date(uniqueCompletionDates[i]);
-    const dayFormatter = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      weekday: 'short',
-    });
-
-    if (completionDate.getTime() !== currentDate.getTime()) {
-      if (i === 0) {
-        const yesterday = new Date(currentDate);
-        yesterday.setDate(currentDate.getDate() - 1);
-        if (completionDate.getTime() === yesterday.getTime()) {
-          currentDate = yesterday;
-        } else {
-          break;
-        }
-      } else {
-        break;
-      }
-    }
-
-    const dayOfWeek = dayFormatter.format(currentDate);
-    if (frequency.includes(dayOfWeek)) {
-      currentStreak++;
-    }
-
-    currentDate.setDate(currentDate.getDate() - 1);
-  }
-  return currentStreak;
 }
 
 /**
