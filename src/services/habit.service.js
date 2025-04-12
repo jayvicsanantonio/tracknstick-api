@@ -8,6 +8,7 @@ const {
 } = require('../utils/errors');
 const { getLocaleStartEnd } = require('../utils/dateUtils');
 const { calculateStreak } = require('../utils/streakUtils');
+const { withTransaction } = require('../utils/transactionUtils');
 
 /**
  * @description Retrieves habits scheduled for a specific date, including completion status.
@@ -143,25 +144,26 @@ async function deleteHabit(userId, habitId) {
   }
 
   try {
-    await trackerRepository.removeAllByHabit(habitId, userId);
-    const result = await habitRepository.remove(habitId, userId);
+    await withTransaction(async () => {
+      await trackerRepository.removeAllByHabit(habitId, userId);
+      const result = await habitRepository.remove(habitId, userId);
 
-    if (result.changes === 0) {
-      console.error(
-        `Failed to delete habit ${habitId} in repository after successful check.`
-      );
-      throw new AppError(
-        'Inconsistent state: Habit found but failed to delete.',
-        500
-      );
-    }
-
+      if (result.changes === 0) {
+        console.error(
+          `Failed to delete habit ${habitId} in repository after successful check.`
+        );
+        throw new AppError(
+          'Inconsistent state: Habit found but failed to delete.',
+          500
+        );
+      }
+    });
     return true;
-  } catch (error) {
+  } catch (err) {
     console.error(
-      `Service error deleting habit ${habitId} for user ${userId}: ${error.message}`
+      `Service error deleting habit ${habitId} for user ${userId}: ${err.message}`
     );
-    throw error;
+    throw err;
   }
 }
 
