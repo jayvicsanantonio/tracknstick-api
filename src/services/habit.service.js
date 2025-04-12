@@ -8,6 +8,7 @@ const {
 } = require('../utils/errors');
 const { getLocaleStartEnd } = require('../utils/dateUtils');
 const { calculateStreak } = require('../utils/streakUtils');
+const { dbRun, db } = require('../utils/dbUtils');
 
 /**
  * @description Retrieves habits scheduled for a specific date, including completion status.
@@ -142,27 +143,74 @@ async function deleteHabit(userId, habitId) {
     throw new NotFoundError('Habit not found or not authorized');
   }
 
-  try {
-    await trackerRepository.removeAllByHabit(habitId, userId);
-    const result = await habitRepository.remove(habitId, userId);
+  // Wrap deletion in a transaction
+  return new Promise((resolve, reject) => {
+    db.serialize(() => {
+      db.run('BEGIN TRANSACTION', (beginErr) => {
+        if (beginErr) {
+          console.error('Error beginning transaction:', beginErr.message);
+          return reject(
+            new AppError('Failed to start database transaction', 500)
+          );
+        }
 
-    if (result.changes === 0) {
-      console.error(
-        `Failed to delete habit ${habitId} in repository after successful check.`
-      );
-      throw new AppError(
-        'Inconsistent state: Habit found but failed to delete.',
-        500
-      );
-    }
-
-    return true;
-  } catch (error) {
-    console.error(
-      `Service error deleting habit ${habitId} for user ${userId}: ${error.message}`
-    );
-    throw error;
-  }
+        // Use Promises for sequential execution within transaction
+        trackerRepository
+          .removeAllByHabit(habitId, userId)
+          .then(() => habitRepository.remove(habitId, userId))
+          .then((result) => {
+            if (result.changes === 0) {
+              // This should ideally not happen if findById passed, but handle defensively
+              console.error(
+                `Failed to delete habit ${habitId} in repository after successful check.`
+              );
+              throw new AppError(
+                'Inconsistent state: Habit found but failed to delete.',
+                500
+              );
+            }
+            // Commit transaction if both operations succeed
+            db.run('COMMIT', (commitErr) => {
+              if (commitErr) {
+                console.error(
+                  'Error committing transaction:',
+                  commitErr.message
+                );
+                // Attempt rollback on commit error
+                db.run('ROLLBACK');
+                reject(new AppError('Failed to commit transaction', 500));
+              } else {
+                resolve(true); // Indicate success
+              }
+            });
+          })
+          .catch((err) => {
+            // Rollback transaction on any error during the operations
+            console.error(
+              `Error during delete transaction for habit ${habitId}, user ${userId}:`,
+              err.message
+            );
+            db.run('ROLLBACK', (rollbackErr) => {
+              if (rollbackErr) {
+                console.error(
+                  'Error rolling back transaction:',
+                  rollbackErr.message
+                );
+              }
+              // Reject with the original error or a generic transaction error
+              reject(
+                err instanceof AppError
+                  ? err
+                  : new AppError(
+                      'Failed to delete habit due to database error',
+                      500
+                    )
+              );
+            });
+          });
+      });
+    });
+  });
 }
 
 /**
