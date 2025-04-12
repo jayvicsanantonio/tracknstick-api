@@ -33,7 +33,7 @@ These guidelines ensure consistency, maintainability, and quality across the pro
 5.1. **Repository Abstraction:** All direct database interactions (`dbAll`, `dbGet`, `dbRun`) _must_ reside within the `src/repositories/` files. Services and controllers must not access `dbUtils` or the `db` object directly.
 5.2. **Specific Repository Functions:** Create specific functions in repositories for each distinct query needed (e.g., `findById`, `findByDay`, `create`, `update`). Avoid generic query functions where possible.
 5.3. **Data Ownership:** Ensure repository functions include `user_id` in `WHERE` clauses for queries involving user-specific data (like habits, trackers) to prevent data leakage between users.
-5.4. **Transactions:** For operations involving multiple dependent writes (e.g., deleting a habit and its trackers), implement database transactions within the _service_ layer using the exported `db` object from `dbUtils`.
+5.4. **Transactions:** For operations involving multiple dependent writes (e.g., deleting a habit and its trackers), use the centralized `withTransaction` utility function from `src/utils/transactionUtils.js` within the _service_ layer to ensure atomicity.
 5.5. **Schema Changes:** Manage database schema changes carefully. Update `API.md` and relevant documentation whenever the schema is modified. Consider implementing a migration tool (like `node-sqlite3-migrations` or Knex migrations) in the future.
 
 ## 6. Security

@@ -53,4 +53,12 @@ This document outlines the key architectural decisions made during the refactori
   - Updated `validate` middleware to pass structured validation errors via `next()`.
   - Registered `errorHandler` as the last middleware in `index.js`.
 
+## Database Transactions
+
+- **Decision:** Implemented atomic transactions for operations involving multiple dependent writes (currently `deleteHabit`) using a centralized `withTransaction` utility function (`src/utils/transactionUtils.js`).
+- **Rationale:** Ensures data consistency by automatically rolling back changes if any operation within the transaction fails. Centralizes transaction logic for better maintainability and reusability.
+- **Implementation:**
+  - Created `withTransaction` utility using `async/await` and `dbRun` for `BEGIN`, `COMMIT`, `ROLLBACK`.
+  - Refactored `deleteHabit` service to use `withTransaction`, passing the core deletion logic as an async callback.
+
 _(Add other significant architectural decisions here as the project evolves)_
