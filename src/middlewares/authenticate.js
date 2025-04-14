@@ -2,7 +2,7 @@ const { dbGet } = require('../utils/dbUtils');
 const {
   AuthenticationError,
   AuthorizationError,
-  AppError,
+  DatabaseError, // Import DatabaseError
 } = require('../utils/errors');
 
 /**
@@ -31,8 +31,8 @@ async function authenticate(req, res, next) {
     req.userId = row.id;
     next();
   } catch (err) {
-    console.error('Authentication DB Error:', err);
-    next(err);
+    console.error('Authentication DB Error:', err.message);
+    next(new DatabaseError('Authentication database query failed', err));
   }
 }
 

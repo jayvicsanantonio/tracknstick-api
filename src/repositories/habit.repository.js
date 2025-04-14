@@ -1,4 +1,5 @@
 const { dbAll, dbGet, dbRun } = require('../utils/dbUtils');
+const { DatabaseError } = require('../utils/errors');
 
 /**
  * @description Finds habits for a user scheduled for a specific day of the week.
@@ -19,7 +20,7 @@ async function findHabitsByDay(userId, dayOfWeek) {
     return habits;
   } catch (error) {
     console.error(`Error in findHabitsByDay repository: ${error.message}`);
-    throw new Error('Database error fetching habits by day');
+    throw new DatabaseError('Failed to fetch habits by day', error);
   }
 }
 
@@ -42,7 +43,7 @@ async function findById(habitId, userId) {
     return habit;
   } catch (error) {
     console.error(`Error in findById habit repository: ${error.message}`);
-    throw new Error('Database error fetching habit by ID');
+    throw new DatabaseError('Failed to fetch habit by ID', error);
   }
 }
 
@@ -70,7 +71,7 @@ async function create(userId, { name, icon, frequency }) {
     return result.lastID;
   } catch (error) {
     console.error(`Error in create habit repository: ${error.message}`);
-    throw new Error('Database error creating habit');
+    throw new DatabaseError('Failed to create habit', error);
   }
 }
 
@@ -120,7 +121,7 @@ async function update(habitId, userId, { name, icon, frequency }) {
     return { changes: result.changes };
   } catch (error) {
     console.error(`Error in update habit repository: ${error.message}`);
-    throw new Error('Database error updating habit');
+    throw new DatabaseError('Failed to update habit', error);
   }
 }
 
@@ -139,7 +140,7 @@ async function remove(habitId, userId) {
     return { changes: result.changes };
   } catch (error) {
     console.error(`Error in remove habit repository: ${error.message}`);
-    throw new Error('Database error removing habit');
+    throw new DatabaseError('Failed to remove habit', error);
   }
 }
 
