@@ -12,6 +12,8 @@ This document summarizes key learnings and takeaways from the refactoring proces
 6.  **Incremental Refactoring:** Tackling the refactoring layer by layer (structure -> controllers -> services/repositories) made the process manageable. Trying to change everything at once would have been much harder to debug.
 7.  **Code Formatting Tools:** Integrating ESLint and Prettier early helps maintain consistency and catch minor issues automatically, saving time and effort during development and refactoring.
 8.  **Importance of Clear Commits:** Creating separate commits (and potentially PRs) for distinct stages of the refactoring (e.g., linting setup, structural changes, service layer implementation) makes the history easier to follow and revert if necessary.
+9.  **Environment Variables (`dotenv`):** Using `dotenv` and `.env` files (like `.env.local`) provides a standard and flexible way to manage environment-specific configurations (like database paths, ports) without hardcoding them or committing sensitive information.
+10. **Specific Error Types:** Implementing specific custom error classes (like `DatabaseError`) improves error handling by allowing different layers to catch and handle errors based on their type, providing better context than generic `Error` objects and enabling more controlled responses from the centralized handler.
 
 ## Challenges Encountered
 
@@ -21,6 +23,6 @@ This document summarizes key learnings and takeaways from the refactoring proces
 
 ## Future Considerations
 
-- Proactively implement robust validation and centralized error handling early in development.
+- Proactively implement robust validation early in development. (Centralized error handling is now implemented and refined).
 - Consider using a more feature-rich database client or ORM (like Knex.js or Sequelize) even for SQLite projects to simplify queries, migrations, and promise handling, potentially avoiding the need for custom wrappers.
 - Establish clear testing strategies (unit, integration) alongside development rather than adding them only after refactoring.

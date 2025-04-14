@@ -20,8 +20,8 @@ These guidelines ensure consistency, maintainability, and quality across the pro
 
 3.1. **Use `next(error)`:** In controllers and async middleware, wrap asynchronous operations in `try...catch`. Pass caught errors to the `next(error)` function for centralized handling.
 3.2. **Service Layer Errors:** Services should throw specific, custom errors (e.g., `NotFoundError`, `AuthorizationError`, extending a base `AppError` class defined in `utils`) when business rules fail or expected data isn't found. Avoid throwing generic `Error` objects directly from services where possible.
-3.3. **Repository Layer Errors:** Repositories should catch database-specific errors and re-throw them as generic database errors or specific custom errors if applicable, logging the original error for debugging. (Currently throwing generic `Error`).
-3.4. **Centralized Handler:** Implement a dedicated error-handling middleware (`src/middlewares/errorHandler.js`, mounted last in `index.js`) to catch all errors passed via `next(error)`. This middleware should: - Log the error details (URL, method, message, stack in dev). - Send a standardized JSON error response (`{ status, message, errorCode, [errors] }`). - Include a unique `errorCode` string for each error type. - Specifically handle `VALIDATION_ERROR` by including a detailed `errors` array from `express-validator`. - Mask internal error details (like stack traces) in production environments. - Set appropriate HTTP status codes based on the error type.
+3.3. **Repository Layer Errors:** Repositories (and other modules performing direct DB operations like `authenticate.js`) should catch database-specific errors. They should log the original error and re-throw a specific `DatabaseError` (defined in `src/utils/errors.js`), passing the original error for context. This allows the centralized handler to manage the response appropriately.
+3.4. **Centralized Handler:** Implement a dedicated error-handling middleware (`src/middlewares/errorHandler.js`, mounted last in `index.js`) to catch all errors passed via `next(error)`. This middleware should: - Log the error details (URL, method, message, stack in dev, original error if available). - Send a standardized JSON error response (`{ status, message, errorCode, [errors] }`). - Include a unique `errorCode` string for each error type. - Specifically handle `VALIDATION_ERROR` by including a detailed `errors` array from `express-validator`. - Mask internal error details (like stack traces) and use a generic `INTERNAL_SERVER_ERROR` code/message for all 500 errors in production environments. - Set appropriate HTTP status codes based on the error type.
 
 ## 4. Input Validation
 
@@ -66,8 +66,8 @@ These guidelines ensure consistency, maintainability, and quality across the pro
 
 ## 10. Environment & Configuration
 
-10.1. **Environment Variables:** Use `.env` files for all environment-specific configurations (ports, database paths, API keys, secrets). Access variables via `process.env`. Never commit `.env` files to Git (ensure it's in `.gitignore`).
-10.2. **`NODE_ENV`:** Utilize `process.env.NODE_ENV` (e.g., 'development', 'production', 'test') to control environment-specific behavior (like error detail levels, logging verbosity).
+10.1. **Environment Variables:** Use `.env` files (e.g., `.env`, `.env.local`, `.env.production`) for environment-specific configurations (ports, database paths, API keys, secrets), loaded via `dotenv`. Access variables via `process.env`. Use `.env.local` for local development overrides. Never commit `.env` or `.env.local` files to Git (ensure they are in `.gitignore`).
+10.2. **`NODE_ENV`:** Utilize `process.env.NODE_ENV` (e.g., 'development', 'production', 'test') to control environment-specific behavior (like error detail levels, logging verbosity). Set this in your `.env` files or system environment.
 
 ## 11. General
 

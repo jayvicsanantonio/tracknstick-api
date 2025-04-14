@@ -20,20 +20,23 @@ This document outlines the key architectural decisions made during the refactori
 
 ## Database Abstraction
 
-- **Decision:** Introduced a Repository layer to abstract direct database calls (`sqlite3` driver) from controllers and services. Centralized DB connection and promise wrappers in `src/utils/dbUtils.js`.
+- **Decision:** Introduced a Repository layer to abstract direct database calls (`sqlite3` driver) from controllers and services. Centralized DB connection, promise wrappers, and schema initialization in `src/utils/dbUtils.js`. Configured database path using `dotenv` and `DATABASE_PATH` environment variable.
 - **Rationale:**
   - **Decoupling:** Reduces dependency on the specific database driver (`sqlite3`) throughout the application. Makes potential future database migrations easier.
   - **Consistency:** Ensures database interactions are handled consistently.
   - **Testability:** Repositories can be mocked when testing services.
+  - **Configuration:** Allows flexible database path configuration per environment.
 - **Implementation:**
   - Created `HabitRepository` and `TrackerRepository`.
   - Used `async/await` with promise wrappers (`dbAll`, `dbGet`, `dbRun`) for cleaner asynchronous code.
-  - Centralized database connection and schema initialization in `dbUtils.js`.
+  - Centralized database connection (using `process.env.DATABASE_PATH`) and schema initialization in `dbUtils.js`.
+  - Added `dotenv` dependency and configured it in `index.js`.
+  - Added `.env.local` (ignored by git) for local configuration.
 
 ## Authentication Handling
 
-- **Decision:** Kept authentication logic within a dedicated middleware (`src/middlewares/authenticate.js`). Fixed database path resolution issue. Updated to use custom error classes (`AuthenticationError`, `AuthorizationError`) and `next(error)`.
-- **Rationale:** Centralizes authentication logic, making it easy to apply to routes and manage separately. Using an absolute path for the DB connection ensures reliability. Integrates with the centralized error handling system.
+- **Decision:** Kept authentication logic within a dedicated middleware (`src/middlewares/authenticate.js`). Updated to use custom error classes (`AuthenticationError`, `AuthorizationError`, `DatabaseError`) and `next(error)`.
+- **Rationale:** Centralizes authentication logic, making it easy to apply to routes and manage separately. Integrates with the centralized error handling system, providing specific error types for authentication, authorization, and database failures during lookup.
 
 ## Centralized Error Handling
 
@@ -45,11 +48,12 @@ This document outlines the key architectural decisions made during the refactori
   - **Detailed Validation:** Validation errors (`VALIDATION_ERROR`) now include a detailed array of specific field errors.
   - **Security:** Prevents leaking internal stack traces in production responses.
 - **Implementation:**
-  - Created custom error classes in `src/utils/errors.js`.
-  - Created `errorHandler` middleware in `src/middlewares/errorHandler.js` to catch errors, log them, and format responses based on error type and environment.
-  - Updated services (`src/services/`) to throw custom errors.
+  - Created custom error classes (`AppError`, `BadRequestError`, `AuthenticationError`, `AuthorizationError`, `NotFoundError`, `DatabaseError`) in `src/utils/errors.js`.
+  - Created `errorHandler` middleware in `src/middlewares/errorHandler.js` to catch errors, log them, and format responses based on error type and environment (ensuring generic 500 responses in production).
+  - Updated services (`src/services/`) to throw appropriate custom errors.
   - Updated controllers (`src/controllers/`) to consistently use `try...catch` and `next(error)`.
-  - Updated `authenticate` middleware to use custom errors.
+  - Updated repositories (`src/repositories/`) to catch DB errors and throw `DatabaseError`.
+  - Updated `authenticate` middleware to use custom errors, including `DatabaseError`.
   - Updated `validate` middleware to pass structured validation errors via `next()`.
   - Registered `errorHandler` as the last middleware in `index.js`.
 
