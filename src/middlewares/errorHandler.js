@@ -33,16 +33,27 @@ const sendErrorDev = (err, res) => {
  * @param {Response} res - Express response object.
  */
 const sendErrorProd = (err, res) => {
-  if (err.isOperational) {
+  // For 500 errors in production, always send a generic message
+  if (err.statusCode === 500) {
+    console.error('ERROR 💥:', err); // Log the detailed error server-side
+    res.status(500).json({
+      status: 'error',
+      message: 'Something went very wrong!',
+      errorCode: 'INTERNAL_SERVER_ERROR', // Use a generic code for all 500s in prod
+    });
+  }
+  // For operational errors (like 4xx), send specific details
+  else if (err.isOperational) {
     res.status(err.statusCode).json({
       status: err.status,
       message: err.message,
       errorCode: err.errorCode || 'UNKNOWN_ERROR',
     });
-  } else {
-    console.error('ERROR 💥:', err);
-
-    res.status(500).json({
+  }
+  // For unexpected non-operational, non-500 errors (should be rare)
+  else {
+    console.error('UNEXPECTED ERROR 💥:', err);
+    res.status(err.statusCode || 500).json({
       status: 'error',
       message: 'Something went very wrong!',
       errorCode: 'INTERNAL_SERVER_ERROR',

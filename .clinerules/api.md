@@ -74,11 +74,11 @@ Base Path: `/api/v1`
         "errorCode": "AUTHORIZATION_FAILED"
       }
       ```
-    - `500 Internal Server Error`:
+    - `500 Internal Server Error`: (Generic response in production)
       ```json
       {
         "status": "error",
-        "message": "Something went very wrong!", // Generic message in production
+        "message": "Something went very wrong!",
         "errorCode": "INTERNAL_SERVER_ERROR"
       }
       ```
@@ -135,7 +135,7 @@ Base Path: `/api/v1`
       ```
     - `401 Unauthorized`: (See POST /habits example)
     - `403 Forbidden`: (See POST /habits example)
-    - `500 Internal Server Error`: (See POST /habits example)
+    - `500 Internal Server Error`: (Generic response in production, see POST /habits example)
 
 - **`PUT /habits/:habitId`**
 
@@ -191,7 +191,7 @@ Base Path: `/api/v1`
         "errorCode": "RESOURCE_NOT_FOUND"
       }
       ```
-    - `500 Internal Server Error`: (See POST /habits example)
+    - `500 Internal Server Error`: (Generic response in production, see POST /habits example)
 
 - **`DELETE /habits/:habitId`**
 
@@ -209,7 +209,7 @@ Base Path: `/api/v1`
     - `401 Unauthorized`: (See POST /habits example)
     - `403 Forbidden`: (See POST /habits example)
     - `404 Not Found`: (See PUT /habits/:habitId example)
-    - `500 Internal Server Error`: (See POST /habits example)
+    - `500 Internal Server Error`: (Generic response in production, see POST /habits example)
 
 - **`GET /habits/:habitId/stats`**
 
@@ -250,7 +250,7 @@ Base Path: `/api/v1`
     - `401 Unauthorized`: (See POST /habits example)
     - `403 Forbidden`: (See POST /habits example)
     - `404 Not Found`: (See PUT /habits/:habitId example)
-    - `500 Internal Server Error`: (See POST /habits example)
+    - `500 Internal Server Error`: (Generic response in production, see POST /habits example)
 
 ### Trackers
 
@@ -308,7 +308,7 @@ Base Path: `/api/v1`
     - `401 Unauthorized`: (See POST /habits example)
     - `403 Forbidden`: (See POST /habits example)
     - `404 Not Found`: (See PUT /habits/:habitId example)
-    - `500 Internal Server Error`: (See POST /habits example)
+    - `500 Internal Server Error`: (Generic response in production, see POST /habits example)
 
 - **`GET /habits/:habitId/trackers`**
 
@@ -353,7 +353,7 @@ Base Path: `/api/v1`
     - `401 Unauthorized`: (See POST /habits example)
     - `403 Forbidden`: (See POST /habits example)
     - `404 Not Found`: (See PUT /habits/:habitId example)
-    - `500 Internal Server Error`: (See POST /habits example)
+    - `500 Internal Server Error`: (Generic response in production, see POST /habits example)
 
 ## Database Schema
 

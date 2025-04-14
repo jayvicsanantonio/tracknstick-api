@@ -29,7 +29,7 @@ Originally, the `authenticate` middleware existed in a top-level `middlewares/` 
 ## Implementation Steps
 
 1.  **Create `src/middlewares/` Directory:** This directory was created as part of the overall structure setup.
-2.  **Move `authenticate.js`:** The existing `middlewares/authenticate.js` file was moved to `src/middlewares/authenticate.js`. Its internal `require('../../db')` path was updated (though this will change again when repositories are fully integrated). The logic was also updated to use the `dbGet` promise wrapper from `dbUtils.js`.
+2.  **Move `authenticate.js`:** The existing `middlewares/authenticate.js` file was moved to `src/middlewares/authenticate.js`. Its internal logic was updated to use the `dbGet` promise wrapper from `dbUtils.js` and to handle errors consistently: throwing `AuthenticationError` or `AuthorizationError` for credential issues, and wrapping database lookup errors in `DatabaseError` before passing to `next()`.
 3.  **Install `express-validator`:** The necessary package was installed via `npm install express-validator`.
 4.  **Create Validator Definitions (`src/validators/habit.validator.js`):** Specific validation rule chains (e.g., `createHabit`, `getHabitsByDate`) were defined using `express-validator` functions (`body`, `query`, `param`, `custom`).
 5.  **Create Validation Middleware (`src/middlewares/validate.js`):**

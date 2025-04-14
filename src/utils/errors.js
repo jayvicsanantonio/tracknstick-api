@@ -64,10 +64,32 @@ class NotFoundError extends AppError {
   }
 }
 
+/**
+ * Error for internal database issues.
+ * Status code: 500
+ * Error code: DATABASE_ERROR
+ */
+class DatabaseError extends AppError {
+  /**
+   * Creates an instance of DatabaseError.
+   * @param {string} [message='Database operation failed'] - The error message.
+   * @param {Error} [originalError=null] - The original error caught from the database driver.
+   */
+  constructor(message = 'Database operation failed', originalError = null) {
+    super(message, 500, 'DATABASE_ERROR');
+    this.originalError = originalError; // Store original error for logging
+    // Database errors are typically not 'operational' from the client's perspective
+    // but represent server-side issues. The base class defaults to true,
+    // but we might override if needed, though the 500 status usually implies 'error' status.
+    // this.isOperational = false; // Optional: Mark as non-operational if desired
+  }
+}
+
 module.exports = {
   AppError,
   BadRequestError,
   AuthenticationError,
   AuthorizationError,
   NotFoundError,
+  DatabaseError, // Add the new error class here
 };
