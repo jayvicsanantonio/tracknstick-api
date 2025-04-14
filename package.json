@@ -7,7 +7,10 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "lint": "eslint . --ext .js",
     "lint:fix": "eslint . --ext .js --fix",
-    "format": "prettier --write \"**/*.js\""
+    "format": "prettier --write \"**/*.js\"",
+    "db:migrate": "knex migrate:latest",
+    "db:rollback": "knex migrate:rollback",
+    "db:make-migration": "knex migrate:make"
   },
   "repository": {
     "type": "git",
@@ -29,6 +32,7 @@
     "express": "^4.21.2",
     "express-validator": "^7.2.1",
     "helmet": "^8.0.0",
+    "knex": "^3.1.0",
     "nodemon": "^3.1.9",
     "sqlite3": "^5.1.7"
   },

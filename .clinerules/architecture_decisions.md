@@ -65,4 +65,19 @@ This document outlines the key architectural decisions made during the refactori
   - Created `withTransaction` utility using `async/await` and `dbRun` for `BEGIN`, `COMMIT`, `ROLLBACK`.
   - Refactored `deleteHabit` service to use `withTransaction`, passing the core deletion logic as an async callback.
 
+## Schema Migrations (Knex.js)
+
+- **Decision:** Adopted Knex.js for managing database schema migrations. Removed the previous manual schema initialization from `dbUtils.js`.
+- **Rationale:**
+  - **Consistency & Version Control:** Provides a structured, version-controlled way to manage schema changes across different environments and developers.
+  - **Automation:** Allows schema updates to be automated during deployment.
+  - **Reliability:** Reduces the risk of manual errors when applying schema changes.
+- **Implementation:**
+  - Installed `knex` and `sqlite3` dependencies.
+  - Initialized Knex (`knexfile.js`, `db/migrations` directory).
+  - Configured `knexfile.js` for the development environment using `sqlite3` and environment variables.
+  - Created an initial migration (`initial_schema.js`) reflecting the existing schema.
+  - Removed old `initializeSchema` function from `dbUtils.js`.
+  - Added npm scripts (`db:migrate`, `db:rollback`, `db:make-migration`) for easier management.
+
 _(Add other significant architectural decisions here as the project evolves)_
