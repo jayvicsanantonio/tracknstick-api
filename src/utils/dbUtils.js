@@ -2,7 +2,11 @@ const sqlite3 = require('sqlite3').verbose();
 const { promisify } = require('util');
 const path = require('path');
 
-const dbPath = path.resolve(__dirname, '../../tracknstick.db');
+console.log(`process.env.DATABASE_PATH: ${process.env.DATABASE_PATH}`);
+const dbPath = process.env.DATABASE_PATH
+  ? path.resolve(process.env.DATABASE_PATH)
+  : path.resolve(__dirname, '../../tracknstick.db');
+
 console.log(`Attempting to connect to database at: ${dbPath}`);
 
 const db = new sqlite3.Database(dbPath, (err) => {
