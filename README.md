@@ -87,6 +87,10 @@ erDiagram
 
 All API endpoints require an API key for authentication. The API key must be sent in the `X-API-Key` header with each request.
 
+## Rate Limiting
+
+To prevent abuse, API requests are rate-limited. By default, each IP address is allowed 100 requests per 15-minute window. If the limit is exceeded, a `429 Too Many Requests` error will be returned.
+
 ## Prerequisites
 
 - Node.js (v16 or later recommended)
