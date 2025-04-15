@@ -7,7 +7,7 @@ This is a RESTful API for a habit tracker application built with Node.js, Expres
 - Create, Read, Update, and Delete (CRUD) habits.
 - Track habit completions for specific dates (toggle on/off).
 - Retrieve habit statistics (streak, total completions, last completed date).
-- Secure endpoints using API Key authentication.
+- Secure endpoints using Clerk JWT authentication.
 
 ## Tech Stack
 
@@ -60,7 +60,6 @@ erDiagram
     USERS {
         INTEGER id PK
         TEXT clerk_user_id UK "Clerk User ID"
-        TEXT api_key UK "API Key"
     }
 
     HABITS {
@@ -85,7 +84,7 @@ erDiagram
 
 ## Authentication
 
-All API endpoints require an API key for authentication. The API key must be sent in the `X-API-Key` header with each request.
+API endpoints are protected using Clerk. Requests must include a valid JWT session token obtained from your Clerk frontend application in the `Authorization: Bearer <token>` header. The backend verifies this token using the `@clerk/express` middleware.
 
 ## Rate Limiting
 
@@ -108,24 +107,40 @@ To prevent abuse, API requests are rate-limited. By default, each IP address is 
     npm install
     ```
 3.  **Set up environment variables:**
+
     - Create a `.env` file in the project root.
     - Add the following variables (adjust values as needed):
-      ```dotenv
       PORT=3000
       NODE_ENV=development
-      # Add any other necessary environment variables
+
+      # Clerk API Keys (Get from Clerk Dashboard)
+
+      CLERK_SECRET_KEY=sk_test_YOUR_SECRET_KEY_HERE
+      CLERK_PUBLISHABLE_KEY=pk_test_YOUR_PUBLISHABLE_KEY_HERE
+
+      # Optional: Database Path
+
+      # DATABASE_PATH=./tracknstick.db
+
+      # Optional: Rate Limiting
+
+      # RATE_LIMIT_WINDOW_MS=900000
+
+      # RATE_LIMIT_MAX_REQUESTS=100
+
       ```
+
+      ```
+
+    - **Important:** Replace the placeholder Clerk keys with your actual keys.
+
 4.  **Database Setup:**
     - The database schema is managed using Knex migrations.
     - Run the following command to create the database file (if it doesn't exist) and apply all pending migrations:
       ```bash
       npm run db:migrate
       ```
-    - **Important:** After setting up the database, you must manually add at least one user record with an API key to the `users` table to authenticate requests. Use a tool like DB Browser for SQLite or the `sqlite3` CLI:
-      ```bash
-      # Example using sqlite3 CLI (replace with your actual Clerk ID and desired API key)
-      sqlite3 tracknstick.db "INSERT INTO users (clerk_user_id, api_key) VALUES ('user_your_clerk_id', 'your-secure-api-key');"
-      ```
+    - **Important:** When a user authenticates via Clerk for the first time against the backend, you might need logic (currently _not_ implemented) to create a corresponding record in the local `users` table using their Clerk User ID (`req.auth.userId`). The `api_key` column is no longer used for authentication.
 
 ## Running the Application
 

@@ -1,5 +1,5 @@
 const express = require('express');
-const authenticate = require('../middlewares/authenticate');
+const { clerkMiddleware } = require('@clerk/express');
 const habitController = require('../controllers/habit.controller');
 const validate = require('../middlewares/validate');
 const habitValidation = require('../validators/habit.validator');
@@ -8,49 +8,49 @@ const router = express.Router();
 
 router.get(
   '/',
-  authenticate,
+  clerkMiddleware(),
   validate(habitValidation.getHabitsByDate),
   habitController.getHabits
 );
 
 router.post(
   '/',
-  authenticate,
+  clerkMiddleware(),
   validate(habitValidation.createHabit),
   habitController.createHabit
 );
 
 router.put(
   '/:habitId',
-  authenticate,
+  clerkMiddleware(),
   validate(habitValidation.updateHabit),
   habitController.updateHabit
 );
 
 router.delete(
   '/:habitId',
-  authenticate,
+  clerkMiddleware(),
   validate(habitValidation.deleteHabit),
   habitController.deleteHabit
 );
 
 router.get(
   '/:habitId/trackers',
-  authenticate,
+  clerkMiddleware(),
   validate(habitValidation.getTrackers),
   habitController.getTrackers
 );
 
 router.post(
   '/:habitId/trackers',
-  authenticate,
+  clerkMiddleware(),
   validate(habitValidation.manageTracker),
   habitController.manageTracker
 );
 
 router.get(
   '/:habitId/stats',
-  authenticate,
+  clerkMiddleware(),
   validate(habitValidation.getHabitStats),
   habitController.getHabitStats
 );

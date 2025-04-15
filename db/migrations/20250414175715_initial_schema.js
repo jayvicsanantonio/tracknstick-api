@@ -7,7 +7,6 @@ exports.up = function (knex) {
     .createTable('users', function (table) {
       table.increments('id').primary();
       table.string('clerk_user_id').notNullable().unique();
-      table.string('api_key').notNullable().unique();
     })
     .createTable('habits', function (table) {
       table.increments('id').primary();
