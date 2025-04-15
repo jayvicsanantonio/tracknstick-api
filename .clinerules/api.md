@@ -4,7 +4,7 @@ This document provides details about the API endpoints and database schema for t
 
 ## Authentication
 
-All API endpoints require an API key for authentication. The API key should be sent in the `X-API-Key` header with each request.
+All API endpoints require authentication via Clerk. Requests must include a valid JWT session token obtained from your Clerk frontend application in the `Authorization: Bearer <token>` header. The backend verifies this token using the `@clerk/express` middleware.
 
 ## Endpoints
 
@@ -15,7 +15,7 @@ Base Path: `/api/v1`
 - **`POST /habits`**
 
   - **Description:** Creates a new habit for the authenticated user.
-  - **Authentication:** Requires `X-API-Key` header.
+  - **Authentication:** Requires `Authorization: Bearer <token>` header (Clerk JWT).
   - **Request Body:**
     ```json
     {
@@ -58,19 +58,19 @@ Base Path: `/api/v1`
         ]
       }
       ```
-    - `401 Unauthorized`:
+    - `401 Unauthorized`: (Clerk middleware response if token is missing, invalid, or expired)
       ```json
       {
         "status": "fail",
-        "message": "Missing API Key (X-API-Key header)",
-        "errorCode": "AUTHENTICATION_FAILED"
+        "message": "Unauthenticated", // Example message, actual may vary slightly
+        "errorCode": "AUTHENTICATION_FAILED" // Or similar Clerk error code
       }
       ```
-    - `403 Forbidden`:
+    - `403 Forbidden`: (Potentially if Clerk roles/permissions were used and failed, though not currently implemented)
       ```json
       {
         "status": "fail",
-        "message": "Invalid API Key",
+        "message": "Forbidden",
         "errorCode": "AUTHORIZATION_FAILED"
       }
       ```
@@ -86,7 +86,7 @@ Base Path: `/api/v1`
 - **`GET /habits`**
 
   - **Description:** Retrieves a list of habits scheduled for a specific date for the authenticated user.
-  - **Authentication:** Requires `X-API-Key` header.
+  - **Authentication:** Requires `Authorization: Bearer <token>` header (Clerk JWT).
   - **Query Parameters:**
     - `date` (string, required): The target date in "YYYY-MM-DD" format.
     - `timeZone` (string, required): The user's IANA timezone name (e.g., "America/Los_Angeles").
@@ -140,7 +140,7 @@ Base Path: `/api/v1`
 - **`PUT /habits/:habitId`**
 
   - **Description:** Updates an existing habit for the authenticated user.
-  - **Authentication:** Requires `X-API-Key` header.
+  - **Authentication:** Requires `Authorization: Bearer <token>` header (Clerk JWT).
   - **Path Parameters:**
     - `:habitId` (integer, required): ID of the habit to update.
   - **Request Body:** (Provide at least one field)
@@ -196,7 +196,7 @@ Base Path: `/api/v1`
 - **`DELETE /habits/:habitId`**
 
   - **Description:** Deletes a specific habit and all its associated trackers for the authenticated user.
-  - **Authentication:** Requires `X-API-Key` header.
+  - **Authentication:** Requires `Authorization: Bearer <token>` header (Clerk JWT).
   - **Path Parameters:**
     - `:habitId` (integer, required): ID of the habit to delete.
   - **Success Response (200 OK):**
@@ -214,7 +214,7 @@ Base Path: `/api/v1`
 - **`GET /habits/:habitId/stats`**
 
   - **Description:** Retrieves statistics for a specific habit for the authenticated user.
-  - **Authentication:** Requires `X-API-Key` header.
+  - **Authentication:** Requires `Authorization: Bearer <token>` header (Clerk JWT).
   - **Path Parameters:**
     - `:habitId` (integer, required): ID of the habit.
   - **Query Parameters:**
@@ -257,7 +257,7 @@ Base Path: `/api/v1`
 - **`POST /habits/:habitId/trackers`**
 
   - **Description:** Adds or removes a tracker entry for a specific habit on a specific date (determined by timestamp and timezone). This acts as a toggle.
-  - **Authentication:** Requires `X-API-Key` header.
+  - **Authentication:** Requires `Authorization: Bearer <token>` header (Clerk JWT).
   - **Path Parameters:**
     - `:habitId` (integer, required): ID of the habit to track/untrack.
   - **Request Body:**
@@ -313,7 +313,7 @@ Base Path: `/api/v1`
 - **`GET /habits/:habitId/trackers`**
 
   - **Description:** Retrieves tracker entries for a specific habit, optionally filtered by a date range.
-  - **Authentication:** Requires `X-API-Key` header.
+  - **Authentication:** Requires `Authorization: Bearer <token>` header (Clerk JWT).
   - **Path Parameters:**
     - `:habitId` (integer, required): ID of the habit.
   - **Query Parameters:**
@@ -359,11 +359,11 @@ Base Path: `/api/v1`
 
 **`users` table:**
 
-| Column          | Data Type | Constraints                | Description                |
-| --------------- | --------- | -------------------------- | -------------------------- |
-| `id`            | INTEGER   | PRIMARY KEY, AUTOINCREMENT | Unique user identifier     |
-| `clerk_user_id` | TEXT      | UNIQUE, NOT NULL           | User ID from Clerk         |
-| `api_key`       | TEXT      | UNIQUE, NOT NULL           | API Key for authentication |
+| Column          | Data Type | Constraints                | Description                                |
+| --------------- | --------- | -------------------------- | ------------------------------------------ |
+| `id`            | INTEGER   | PRIMARY KEY, AUTOINCREMENT | Unique user identifier                     |
+| `clerk_user_id` | TEXT      | UNIQUE, NOT NULL           | User ID from Clerk                         |
+| `api_key`       | TEXT      | UNIQUE, NULL               | API Key (Deprecated - Removed from schema) |
 
 **`habits` table:**
 

@@ -38,7 +38,7 @@ These guidelines ensure consistency, maintainability, and quality across the pro
 
 ## 6. Security
 
-6.1. **Authentication:** Ensure the `authenticate` middleware is applied to all protected routes.
+6.1. **Authentication:** Use the `requireAuth` middleware from `@clerk/express` to protect routes. Ensure requests include a valid Clerk JWT in the `Authorization: Bearer <token>` header. Access the authenticated user ID via `req.auth.userId`.
 6.2. **Authorization:** Verify data ownership within service or repository layers (e.g., ensuring a user can only modify/delete their own habits). Do not rely solely on IDs passed in the request path/body.
 6.3. **Input Sanitization:** While `express-validator` helps, be mindful of potential security risks. Use parameterized queries (as handled by `sqlite3` placeholders `?`) to prevent SQL injection. Avoid constructing SQL queries directly with user input.
 6.4. **Dependencies:** Keep dependencies updated (`npm update`). Regularly audit dependencies for known vulnerabilities (`npm audit`).

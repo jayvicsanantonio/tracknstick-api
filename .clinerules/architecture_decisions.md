@@ -33,10 +33,20 @@ This document outlines the key architectural decisions made during the refactori
   - Added `dotenv` dependency and configured it in `index.js`.
   - Added `.env.local` (ignored by git) for local configuration.
 
-## Authentication Handling
+## Authentication Handling (Clerk Integration)
 
-- **Decision:** Kept authentication logic within a dedicated middleware (`src/middlewares/authenticate.js`). Refactored to use `UserRepository` instead of direct database access (`dbGet`). Continues to use custom error classes (`AuthenticationError`, `AuthorizationError`) and passes `DatabaseError` from the repository via `next(error)`.
-- **Rationale:** Centralizes authentication logic while adhering better to the layered architecture by delegating database access to the repository layer. Integrates with the centralized error handling system.
+- **Decision:** Replaced the custom API Key authentication with Clerk JWT validation using the `@clerk/express` package. The `requireAuth()` middleware is now applied to protected routes.
+- **Rationale:** Aligns with standard security practices for SPAs using an external identity provider. Leverages Clerk's robust session management and short-lived JWTs, enhancing security compared to static API keys. Simplifies frontend logic by removing the need to manage API keys.
+- **Implementation:**
+  - Installed `@clerk/express`.
+  - Added `CLERK_SECRET_KEY` and `CLERK_PUBLISHABLE_KEY` to environment variables (`.env`).
+  - Applied `requireAuth()` middleware directly within the API router file (`src/api/habits.routes.js`) for protected routes.
+  - Updated controllers (`habit.controller.js`) to use `req.auth.userId` provided by Clerk middleware.
+  - Re-introduced `UserRepository` with `findOrCreateByClerkId` function.
+  - Updated service layer (`habit.service.js`) to use `UserRepository` to get the internal integer user ID based on the `clerkUserId` before calling other repositories.
+  - Removed the old custom `authenticate.js` middleware.
+  - Updated documentation (`README.md`, `api.md`, `project_guidelines.md`) accordingly.
+  - **Note:** The `api_key` column in the `users` table is now deprecated for authentication purposes. A future migration could remove it.
 
 ## Centralized Error Handling
 
