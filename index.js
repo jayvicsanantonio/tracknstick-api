@@ -3,6 +3,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
 const habitRoutes = require('./src/api/habits.routes');
 const errorHandler = require('./src/middlewares/errorHandler');
 const { NotFoundError } = require('./src/utils/errors');
@@ -28,6 +29,15 @@ app.use(
 app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+const limiter = rateLimit({
+  windowMs: process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000,
+  max: process.env.RATE_LIMIT_MAX_REQUESTS || 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: `Too many requests from this IP, please try again after ${Math.round(rateLimitWindowMs / 60000)} minutes`,
+});
+app.use('/api', limiter);
 
 app.use('/api/v1/habits', habitRoutes);
 

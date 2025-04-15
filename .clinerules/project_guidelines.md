@@ -43,7 +43,7 @@ These guidelines ensure consistency, maintainability, and quality across the pro
 6.3. **Input Sanitization:** While `express-validator` helps, be mindful of potential security risks. Use parameterized queries (as handled by `sqlite3` placeholders `?`) to prevent SQL injection. Avoid constructing SQL queries directly with user input.
 6.4. **Dependencies:** Keep dependencies updated (`npm update`). Regularly audit dependencies for known vulnerabilities (`npm audit`).
 6.5. **Helmet:** Ensure `helmet` middleware is used in `index.js` for basic security headers.
-6.6. **Rate Limiting:** Consider adding rate limiting middleware (e.g., `express-rate-limit`) for production environments to prevent abuse.
+6.6. **Rate Limiting:** Basic rate limiting (`express-rate-limit`) is applied globally in `index.js` to prevent abuse. Adjust configuration as needed for specific environments or routes.
 
 ## 7. Testing
 
