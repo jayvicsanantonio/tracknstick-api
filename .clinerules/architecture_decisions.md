@@ -27,7 +27,7 @@ This document outlines the key architectural decisions made during the refactori
   - **Testability:** Repositories can be mocked when testing services.
   - **Configuration:** Allows flexible database path configuration per environment.
 - **Implementation:**
-  - Created `HabitRepository` and `TrackerRepository`.
+  - Created `HabitRepository`, `TrackerRepository`, and `UserRepository`.
   - Used `async/await` with promise wrappers (`dbAll`, `dbGet`, `dbRun`) for cleaner asynchronous code.
   - Centralized database connection (using `process.env.DATABASE_PATH`) and schema initialization in `dbUtils.js`.
   - Added `dotenv` dependency and configured it in `index.js`.
@@ -35,8 +35,8 @@ This document outlines the key architectural decisions made during the refactori
 
 ## Authentication Handling
 
-- **Decision:** Kept authentication logic within a dedicated middleware (`src/middlewares/authenticate.js`). Updated to use custom error classes (`AuthenticationError`, `AuthorizationError`, `DatabaseError`) and `next(error)`.
-- **Rationale:** Centralizes authentication logic, making it easy to apply to routes and manage separately. Integrates with the centralized error handling system, providing specific error types for authentication, authorization, and database failures during lookup.
+- **Decision:** Kept authentication logic within a dedicated middleware (`src/middlewares/authenticate.js`). Refactored to use `UserRepository` instead of direct database access (`dbGet`). Continues to use custom error classes (`AuthenticationError`, `AuthorizationError`) and passes `DatabaseError` from the repository via `next(error)`.
+- **Rationale:** Centralizes authentication logic while adhering better to the layered architecture by delegating database access to the repository layer. Integrates with the centralized error handling system.
 
 ## Centralized Error Handling
 

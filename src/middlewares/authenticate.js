@@ -1,9 +1,5 @@
-const { dbGet } = require('../utils/dbUtils');
-const {
-  AuthenticationError,
-  AuthorizationError,
-  DatabaseError, // Import DatabaseError
-} = require('../utils/errors');
+const userRepository = require('../repositories/user.repository');
+const { AuthenticationError, AuthorizationError } = require('../utils/errors');
 
 /**
  * @description Middleware to authenticate requests using X-API-Key header.
@@ -21,18 +17,17 @@ async function authenticate(req, res, next) {
   }
 
   try {
-    const query = 'SELECT id FROM users WHERE api_key = ?';
-    const row = await dbGet(query, [apiKey]);
+    const user = await userRepository.findByApiKey(apiKey);
 
-    if (!row) {
+    if (!user) {
       return next(new AuthorizationError('Invalid API Key'));
     }
 
-    req.userId = row.id;
+    req.userId = user.id;
     next();
   } catch (err) {
-    console.error('Authentication DB Error:', err.message);
-    next(new DatabaseError('Authentication database query failed', err));
+    console.error('Authentication failed due to database error:', err.message);
+    next(err);
   }
 }
 

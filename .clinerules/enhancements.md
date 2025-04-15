@@ -28,5 +28,3 @@ This document outlines enhancements made during the refactoring and identifies a
     - For larger applications, consider implementing a dependency injection container to manage the instantiation and wiring of services and repositories.
 5.  **User Management Integration:**
     - If integrating with Clerk or another authentication provider, implement logic to create the corresponding user record in the local `users` table upon first authentication or sign-up.
-6.  **UserRepository:**
-    - Create a `UserRepository` to handle user-related database operations (e.g., finding user by API key), moving this logic out of the `authenticate` middleware to better adhere to the layered architecture.
