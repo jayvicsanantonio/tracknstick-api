@@ -111,9 +111,13 @@ All API endpoints require an API key for authentication. The API key must be sen
       NODE_ENV=development
       # Add any other necessary environment variables
       ```
-4.  **Database Setup & API Key:**
-    - The SQLite database file (`tracknstick.db`) and tables will be created automatically when the application first starts (via `src/utils/dbUtils.js`).
-    - **Important:** You must manually add at least one user record with an API key to the `users` table to authenticate requests. Use a tool like DB Browser for SQLite or the `sqlite3` CLI:
+4.  **Database Setup:**
+    - The database schema is managed using Knex migrations.
+    - Run the following command to create the database file (if it doesn't exist) and apply all pending migrations:
+      ```bash
+      npm run db:migrate
+      ```
+    - **Important:** After setting up the database, you must manually add at least one user record with an API key to the `users` table to authenticate requests. Use a tool like DB Browser for SQLite or the `sqlite3` CLI:
       ```bash
       # Example using sqlite3 CLI (replace with your actual Clerk ID and desired API key)
       sqlite3 tracknstick.db "INSERT INTO users (clerk_user_id, api_key) VALUES ('user_your_clerk_id', 'your-secure-api-key');"
@@ -140,6 +144,23 @@ npm test
 ```
 
 _(Note: Test suite setup is pending)_
+
+## Database Migrations
+
+Database schema changes are managed using Knex.js.
+
+- **Apply Migrations:** To apply all pending migrations and bring the database schema up to date:
+  ```bash
+  npm run db:migrate
+  ```
+- **Rollback Last Migration:** To undo the most recently applied migration batch:
+  ```bash
+  npm run db:rollback
+  ```
+- **Create New Migration:** To generate a new migration file (replace `<migration_name>`):
+  ```bash
+  npm run db:make-migration -- <migration_name>
+  ```
 
 ## API Documentation
 

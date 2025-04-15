@@ -34,7 +34,7 @@ These guidelines ensure consistency, maintainability, and quality across the pro
 5.2. **Specific Repository Functions:** Create specific functions in repositories for each distinct query needed (e.g., `findById`, `findByDay`, `create`, `update`). Avoid generic query functions where possible.
 5.3. **Data Ownership:** Ensure repository functions include `user_id` in `WHERE` clauses for queries involving user-specific data (like habits, trackers) to prevent data leakage between users.
 5.4. **Transactions:** For operations involving multiple dependent writes (e.g., deleting a habit and its trackers), use the centralized `withTransaction` utility function from `src/utils/transactionUtils.js` within the _service_ layer to ensure atomicity.
-5.5. **Schema Changes:** Manage database schema changes carefully. Update `API.md` and relevant documentation whenever the schema is modified. Consider implementing a migration tool (like `node-sqlite3-migrations` or Knex migrations) in the future.
+5.5. **Schema Changes:** Use Knex migrations (`db/migrations/`) to manage all database schema changes. Create new migrations using `npm run db:make-migration -- <name>` and apply them using `npm run db:migrate`. Update `API.md` and relevant documentation whenever the schema is modified.
 
 ## 6. Security
 
