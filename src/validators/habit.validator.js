@@ -155,6 +155,20 @@ const getTrackers = [
     }),
 ];
 
+const getProgressOverview = [
+  query('month')
+    .notEmpty()
+    .withMessage('Month query parameter is required.')
+    .isISO8601()
+    .withMessage('Month must be in YYYY-MM format.')
+    .toDate(),
+  query('timeZone')
+    .notEmpty()
+    .withMessage('TimeZone query parameter is required.')
+    .custom(isValidTimeZone)
+    .withMessage('Invalid IANA TimeZone format provided.'),
+];
+
 module.exports = {
   createHabit,
   getHabitsByDate,
@@ -163,4 +177,5 @@ module.exports = {
   getHabitStats,
   manageTracker,
   getTrackers,
+  getProgressOverview,
 };

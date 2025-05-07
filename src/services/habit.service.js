@@ -1,12 +1,7 @@
 const habitRepository = require('../repositories/habit.repository');
 const trackerRepository = require('../repositories/tracker.repository');
 const userRepository = require('../repositories/user.repository');
-const {
-  AppError,
-  BadRequestError,
-  NotFoundError,
-  AuthorizationError,
-} = require('../utils/errors');
+const { AppError, BadRequestError, NotFoundError } = require('../utils/errors');
 const { getLocaleStartEnd } = require('../utils/dateUtils');
 const { calculateStreak } = require('../utils/streakUtils');
 const { withTransaction } = require('../utils/transactionUtils');
@@ -270,15 +265,14 @@ async function manageTracker(clerkUserId, habitId, timestamp, timeZone, notes) {
         internalUserId
       );
       return { status: 'removed' };
-    } else {
-      const newTrackerId = await trackerRepository.create(
-        habitId,
-        internalUserId,
-        timestamp,
-        notes
-      );
-      return { status: 'added', trackerId: newTrackerId };
     }
+    const newTrackerId = await trackerRepository.create(
+      habitId,
+      internalUserId,
+      timestamp,
+      notes
+    );
+    return { status: 'added', trackerId: newTrackerId };
   } catch (error) {
     console.error(
       `Service error managing tracker for habit ${habitId}, user ${clerkUserId} (internal ID: ${internalUserId}): ${error.message}`
@@ -337,6 +331,75 @@ async function getHabitStats(clerkUserId, habitId, timeZone) {
   }
 }
 
+/**
+ * @description Returns progress overview for a user for a given month.
+ * @param {string} clerkUserId - The Clerk User ID of the user.
+ * @param {string} month - The target month in YYYY-MM format.
+ * @param {string} timeZone - The IANA timezone name.
+ * @returns {Promise<object>} An object with currentStreak, longestStreak, and days (array of { date, completionPct })
+ */
+async function getProgressOverview(clerkUserId, month, timeZone) {
+  const internalUserId =
+    await userRepository.findOrCreateByClerkId(clerkUserId);
+  const [year, monthNum] = month.split('-').map(Number);
+  if (!year || !monthNum || monthNum < 1 || monthNum > 12) {
+    throw new BadRequestError('Invalid month format. Use YYYY-MM.');
+  }
+  const start = new Date(Date.UTC(year, monthNum - 1, 1));
+  const end = new Date(Date.UTC(year, monthNum, 0, 23, 59, 59, 999));
+  const trackers = await trackerRepository.findTrackersByDateRange(
+    internalUserId,
+    [],
+    start.toISOString(),
+    end.toISOString()
+  );
+  const completedByDay = {};
+  trackers.forEach((tracker) => {
+    const localDate = new Date(tracker.timestamp).toLocaleDateString('en-CA', {
+      timeZone,
+    });
+    if (!completedByDay[localDate]) completedByDay[localDate] = new Set();
+    completedByDay[localDate].add(tracker.habit_id);
+  });
+  const habits = await habitRepository.findAllByUser(internalUserId);
+  const habitIds = habits.map((h) => h.id);
+  const days = [];
+  let currentStreak = 0;
+  let longestStreak = 0;
+  let tempStreak = 0;
+  let streakStart = null;
+  for (let d = 1; d <= end.getUTCDate(); d += 1) {
+    const dateObj = new Date(Date.UTC(year, monthNum - 1, d));
+    const dateStr = dateObj.toLocaleDateString('en-CA', { timeZone });
+    const completed = completedByDay[dateStr]
+      ? completedByDay[dateStr].size
+      : 0;
+    const completionRate = habitIds.length
+      ? Math.round((completed / habitIds.length) * 100)
+      : 0;
+    days.push({ date: dateStr, completionRate });
+    if (completionRate > 0) {
+      tempStreak += 1;
+      if (tempStreak > longestStreak) longestStreak = tempStreak;
+      if (!streakStart) streakStart = d;
+    } else {
+      tempStreak = 0;
+      streakStart = null;
+    }
+  }
+  const today = new Date().toLocaleDateString('en-CA', { timeZone });
+  currentStreak = 0;
+  for (let i = days.length - 1; i >= 0; i -= 1) {
+    if (days[i].completionRate > 0 && days[i].date <= today) currentStreak += 1;
+    else break;
+  }
+  return {
+    currentStreak,
+    longestStreak,
+    days,
+  };
+}
+
 module.exports = {
   getHabitsForDate,
   createHabit,
@@ -345,4 +408,5 @@ module.exports = {
   getTrackersForHabit,
   manageTracker,
   getHabitStats,
+  getProgressOverview,
 };

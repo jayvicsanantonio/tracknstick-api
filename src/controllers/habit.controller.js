@@ -6,7 +6,7 @@ const habitService = require('../services/habit.service');
  * @access Private
  */
 const getHabits = async (req, res, next) => {
-  const userId = req.auth.userId;
+  const { userId } = req.auth;
   const { date, timeZone } = req.query;
 
   try {
@@ -24,7 +24,7 @@ const getHabits = async (req, res, next) => {
  * @access Private
  */
 const createHabit = async (req, res, next) => {
-  const userId = req.auth.userId;
+  const { userId } = req.auth;
   const { name, icon, frequency } = req.body;
 
   try {
@@ -49,7 +49,7 @@ const createHabit = async (req, res, next) => {
  * @access Private
  */
 const updateHabit = async (req, res, next) => {
-  const userId = req.auth.userId;
+  const { userId } = req.auth;
   const { habitId } = req.params;
   const { name, icon, frequency } = req.body;
 
@@ -77,7 +77,7 @@ const updateHabit = async (req, res, next) => {
  * @access Private
  */
 const deleteHabit = async (req, res, next) => {
-  const userId = req.auth.userId;
+  const { userId } = req.auth;
   const { habitId } = req.params;
 
   try {
@@ -99,7 +99,7 @@ const deleteHabit = async (req, res, next) => {
  * @access Private
  */
 const getTrackers = async (req, res, next) => {
-  const userId = req.auth.userId;
+  const { userId } = req.auth;
   const { habitId } = req.params;
   const { startDate, endDate } = req.query;
 
@@ -127,7 +127,7 @@ const getTrackers = async (req, res, next) => {
  * @access Private
  */
 const manageTracker = async (req, res, next) => {
-  const userId = req.auth.userId;
+  const { userId } = req.auth;
   const { habitId } = req.params;
   const { timestamp, timeZone, notes } = req.body;
 
@@ -160,7 +160,7 @@ const manageTracker = async (req, res, next) => {
  * @access Private
  */
 const getHabitStats = async (req, res, next) => {
-  const userId = req.auth.userId;
+  const { userId } = req.auth;
   const { habitId } = req.params;
   const { timeZone } = req.query;
 
@@ -177,6 +177,30 @@ const getHabitStats = async (req, res, next) => {
   }
 };
 
+/**
+ * @description Get progress overview for a user for a given month.
+ * @route GET /api/v1/progress/overview
+ * @access Private
+ */
+const getProgressOverview = async (req, res, next) => {
+  const { userId } = req.auth;
+  const { month, timeZone } = req.query;
+  try {
+    const overview = await habitService.getProgressOverview(
+      userId,
+      month,
+      timeZone
+    );
+    res.json(overview);
+  } catch (error) {
+    console.error(
+      `Error in getProgressOverview controller for user ${userId}:`,
+      error
+    );
+    next(error);
+  }
+};
+
 module.exports = {
   getHabits,
   createHabit,
@@ -185,4 +209,5 @@ module.exports = {
   getTrackers,
   manageTracker,
   getHabitStats,
+  getProgressOverview,
 };
