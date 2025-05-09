@@ -55,4 +55,11 @@ router.get(
   habitController.getHabitStats
 );
 
+router.get(
+  '/progress/overview',
+  clerkMiddleware(),
+  validate(habitValidation.getProgressOverview),
+  habitController.getProgressOverview
+);
+
 module.exports = router;

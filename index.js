@@ -13,7 +13,7 @@ const port = process.env.PORT || 3000;
 
 app.use(
   cors({
-    origin: function (origin, callback) {
+    origin(origin, callback) {
       if (!origin) return callback(null, true);
       if (
         process.env.NODE_ENV === 'development' &&
@@ -32,7 +32,7 @@ app.use(express.urlencoded({ extended: true }));
 
 const limiter = rateLimit({
   windowMs: process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000,
-  max: process.env.RATE_LIMIT_MAX_REQUESTS || 100,
+  max: process.env.RATE_LIMIT_MAX_REQUESTS || 1000000,
   standardHeaders: true,
   legacyHeaders: false,
   message: `Too many requests from this IP, please try again after ${Math.round((process.env.RATE_LIMIT_WINDOW_MS || 900000) / 60000)} minutes`,
