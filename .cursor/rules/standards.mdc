@@ -1,0 +1,56 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+name: TrackNStick API Standards
+description: Standards, conventions, and guidelines for the TrackNStick API codebase
+globs: "**/*.js"
+alwaysApply: true
+---
+
+# TrackNStick API Coding Standards
+
+## Project Organization
+- Follow the established folder structure with controllers, services, repositories, validators, middlewares, and utils
+- Keep the Express route definitions in the api/ directory
+- Store database related files in db/ directory
+
+## Naming Conventions
+- Use camelCase for variables, functions, and module exports
+- Use PascalCase for class names
+- Use snake_case for database table and column names
+- API endpoints should use kebab-case for paths
+
+## Code Style
+- Maintain consistent spacing and indentation (2 spaces)
+- Follow ESLint and Prettier configurations
+- Use async/await for asynchronous operations, not callbacks
+- Use destructuring where appropriate
+
+## API Design
+- Follow RESTful principles for endpoint design
+- Validate all request data using express-validator
+- Implement proper error handling with appropriate HTTP status codes
+- Use repositories for database operations and services for business logic
+- Controllers should be thin and delegate to services
+
+## Security
+- Always sanitize user inputs
+- Use Clerk for authentication
+- Use helmet for security headers
+- Implement rate limiting for all endpoints
+
+## Database
+- Use Knex.js migrations for all schema changes
+- Include up and down migrations for rollback capability
+- Document complex database operations with comments
+
+## Documentation
+- Use JSDoc comments for all functions and methods
+- Each route should include a comment describing request/response format
+- Document any non-obvious logic with clear comments
+- Update CHANGELOG.md with all significant changes to the codebase
+- CHANGELOG.md should follow the Keep a Changelog format (https://keepachangelog.com)
+- Organize CHANGELOG.md entries by version and change type (Added, Changed, Deprecated, Removed, Fixed, Security)
