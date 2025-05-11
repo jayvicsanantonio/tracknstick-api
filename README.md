@@ -166,7 +166,7 @@ _(Note: Test suite setup is pending)_
 
 ## Database Migrations
 
-Database schema changes are managed using Knex.js.
+Database schema changes are managed using Knex.
 
 - **Apply Migrations:** To apply all pending migrations and bring the database schema up to date:
   ```bash
@@ -183,19 +183,19 @@ Database schema changes are managed using Knex.js.
 
 ## API Documentation
 
-For detailed endpoint specifications, request/response examples, and the full database schema, please see the **[API Documentation](.clinerules/api.md)**.
+For detailed endpoint specifications, request/response examples, and the full database schema, please see the **[API Documentation](docs/api/implementation.md)**.
 
 ## Refactoring Overview
 
 A significant refactoring effort was recently completed on this project with the primary goals of improving maintainability, testability, and performance, and establishing a scalable architecture.
 
-Details about the refactoring process, architecture decisions, specific improvements, and learnings can be found in the `.clinerules` directory:
+Details about the refactoring process, architecture decisions, specific improvements, and learnings can be found in the `docs` directory:
 
-- [Architecture Decisions](.clinerules/architecture_decisions.md)
-- [Maintainability Improvements](.clinerules/maintainability.md)
-- [Enhancements & Future Work](.clinerules/enhancements.md)
-- [Performance Optimizations](.clinerules/optimizations.md)
-- [Learnings & Takeaways](.clinerules/learnings.md)
+- [Architecture Decisions](docs/architecture/decisions.md)
+- [Maintainability Improvements](docs/development/maintainability.md)
+- [Enhancements & Future Work](docs/development/enhancements.md)
+- [Performance Optimizations](docs/development/optimizations.md)
+- [Learnings & Takeaways](docs/development/learnings.md)
 
 ## Contributing
 

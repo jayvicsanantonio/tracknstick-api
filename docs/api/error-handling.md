@@ -1,6 +1,6 @@
-# Refactoring: Centralized Error Handling Implementation
+# Error Handling Implementation
 
-This document details the implementation of the centralized error handling mechanism, addressing item #2 in `.clinerules/enhancements.md` and aligning with Guideline #3 in `.clinerules/project_guidelines.md`.
+This document details the implementation of the centralized error handling mechanism, addressing item #2 in `docs/development/enhancements.md` and aligning with Guideline #3 in `docs/development/guidelines.md`.
 
 ## Goal
 

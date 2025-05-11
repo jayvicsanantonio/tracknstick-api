@@ -53,9 +53,9 @@ These guidelines ensure consistency, maintainability, and quality across the pro
 
 ## 8. Documentation
 
-8.1. **`API.md`:** Keep `API.md` within `.clinerules/` updated with accurate endpoint specifications, request/response formats, and the database schema. This is the source of truth for API consumers.
-8.2. **`README.md`:** Maintain `.clinerules/README.md` as the high-level project overview and setup guide, linking to other relevant documentation within `.clinerules/`.
-8.3. **Refactoring Docs:** Update files within `.clinerules/` (e.g., `architecture_decisions.md`) as further significant architectural changes or refactoring efforts occur.
+8.1. **API Documentation:** Keep `docs/api/implementation.md` updated with accurate endpoint specifications, request/response formats, and the database schema. This is the source of truth for API consumers.
+8.2. **README.md:** Maintain `docs/README.md` as the high-level project overview and setup guide, linking to other relevant documentation within `docs/`.
+8.3. **Refactoring Docs:** Update files within `docs/` (e.g., `docs/architecture/decisions.md`) as further significant architectural changes or refactoring efforts occur.
 8.4. **Code Comments:** Use JSDoc-style comments for functions, especially in services and utils, to explain parameters, return values, and purpose.
 
 ## 9. Commits & Pull Requests
