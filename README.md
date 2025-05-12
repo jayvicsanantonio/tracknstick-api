@@ -183,6 +183,15 @@ Database schema changes are managed using Knex.
 
 For detailed endpoint specifications, request/response examples, and the full database schema, please see the **[API Documentation](docs/api/implementation.md)**.
 
+Additional documentation can be found in the `docs` directory:
+
+- [Architecture Decisions](docs/architecture/decisions.md)
+- [Coding Standards](docs/development/coding-standards.md)
+- [Maintainability Improvements](docs/development/maintainability.md)
+- [Enhancements & Future Work](docs/development/enhancements.md)
+- [Performance Optimizations](docs/development/optimizations.md)
+- [Learnings & Takeaways](docs/development/learnings.md)
+
 ## Refactoring Overview
 
 A significant refactoring effort was recently completed on this project with the primary goals of improving maintainability, testability, and performance, and establishing a scalable architecture.

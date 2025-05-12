@@ -322,12 +322,12 @@ async function getHabitStats(clerkUserId, habitId, timeZone) {
     );
 
     return {
-      habit_id: habitId,
-      user_id: internalUserId,
+      habitId,
+      internalUserId,
       streak,
       longestStreak,
-      total_completions: totalCompletions,
-      last_completed: lastCompleted,
+      totalCompletions,
+      lastCompleted,
     };
   } catch (error) {
     console.error(
