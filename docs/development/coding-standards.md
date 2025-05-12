@@ -46,11 +46,6 @@ This document outlines the coding standards and best practices for the TracknSti
 
 ## Comments and Documentation
 
-- Each file should start with a brief 2-line comment explaining its purpose:
-  ```typescript
-  // ABOUTME: This file handles user authentication and session management
-  // ABOUTME: It integrates with Clerk for JWT-based authentication
-  ```
 - Use JSDoc comments for public functions and classes
 - Keep comments evergreen - avoid temporal context or references to recent changes
 - Document complex business logic or non-obvious code decisions

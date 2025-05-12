@@ -407,12 +407,12 @@ async function trackHabitCompletion(
     );
 
     return {
-      habit_id: habitId,
-      user_id: internalUserId,
+      habitId,
+      internalUserId,
       streak,
       longestStreak,
-      total_completions: trackers.length,
-      last_completed: timestamp,
+      totalCompletions: trackers.length,
+      lastCompleted: timestamp,
     };
   });
 }
