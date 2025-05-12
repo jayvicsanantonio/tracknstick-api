@@ -110,6 +110,8 @@ To prevent abuse, API requests are rate-limited. By default, each IP address is 
 
     - Create a `.env` file in the project root.
     - Add the following variables (adjust values as needed):
+
+      ```bash
       PORT=3000
       NODE_ENV=development
 
@@ -120,16 +122,12 @@ To prevent abuse, API requests are rate-limited. By default, each IP address is 
 
       # Optional: Database Path
 
-      # DATABASE_PATH=./tracknstick.db
+      DATABASE_PATH=./tracknstick.db
 
       # Optional: Rate Limiting
 
-      # RATE_LIMIT_WINDOW_MS=900000
-
-      # RATE_LIMIT_MAX_REQUESTS=100
-
-      ```
-
+      RATE_LIMIT_WINDOW_MS=900000
+      RATE_LIMIT_MAX_REQUESTS=100
       ```
 
     - **Important:** Replace the placeholder Clerk keys with your actual keys.
