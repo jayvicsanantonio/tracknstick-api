@@ -4,6 +4,7 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const logger = require('./src/utils/logger');
 const habitRoutes = require('./src/api/habits.routes');
 const errorHandler = require('./src/middlewares/errorHandler');
 const { NotFoundError } = require('./src/utils/errors');
@@ -48,5 +49,5 @@ app.use((req, res, next) => {
 app.use(errorHandler);
 
 app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+  logger.info(`Server listening on port ${port}`);
 });
