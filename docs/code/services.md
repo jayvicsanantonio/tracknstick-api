@@ -30,7 +30,7 @@ As a key part of the layered architecture, we introduced a dedicated Service lay
 5.  **Introduce Repository Calls:** Instead of making direct database calls, service functions were updated to call functions on the newly created Repository layer (`habit.repository.js`, `tracker.repository.js`). Services orchestrate these calls (e.g., fetching a habit, then fetching its trackers).
 6.  **Handle Repository Results:** Service functions process the data returned by repositories (e.g., checking if a habit was found, formatting data for the controller).
 7.  **Error Handling:** Implemented `try...catch` blocks around repository calls. Services were updated to throw specific custom errors (`NotFoundError`, `BadRequestError`, etc.) instead of returning `null` or generic errors, allowing the centralized error handler to manage responses.
-8.  **Extract Helper Functions:** Pure utility functions used within the service (like `getLocaleStartEnd`, `calculateStreak`) were extracted into separate files within `src/utils/` to improve separation and reusability.
+8.  **Extract Helper Functions:** Pure utility functions used within the service (like `getLocaleStartEnd`, `calculateCurrentStreak`) were extracted into separate files within `src/utils/` to improve separation and reusability.
 9.  **Update Controllers:** Controllers were updated to import and call the relevant service functions instead of containing the business logic themselves. Controller error handling was simplified to use `try...catch` and `next(error)`.
 
 ## Benefits Achieved

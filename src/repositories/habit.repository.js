@@ -10,7 +10,7 @@ const { DatabaseError } = require('../utils/errors');
  */
 async function findHabitsByDay(userId, dayOfWeek) {
   const sql = `
-    SELECT id, name, icon, frequency, streak, total_completions, last_completed
+    SELECT id, name, icon, frequency, streak, longest_streak, total_completions, last_completed
     FROM habits
     WHERE user_id = ? AND (',' || frequency || ',') LIKE ?
   `;
@@ -33,7 +33,7 @@ async function findHabitsByDay(userId, dayOfWeek) {
  */
 async function findById(habitId, userId) {
   const sql = `
-    SELECT id, name, icon, frequency, streak, total_completions, last_completed
+    SELECT id, name, icon, frequency, streak, longest_streak, total_completions, last_completed
     FROM habits
     WHERE id = ? AND user_id = ?
   `;
@@ -144,10 +144,53 @@ async function remove(habitId, userId) {
   }
 }
 
+/**
+ * @description Updates streak information for a habit.
+ * @param {number} habitId - The ID of the habit.
+ * @param {number} userId - The ID of the user.
+ * @param {object} stats - The updated stats.
+ * @param {number} stats.streak - The current streak.
+ * @param {number} stats.longestStreak - The longest streak.
+ * @param {number} stats.totalCompletions - The total number of completions.
+ * @param {string} stats.lastCompleted - The timestamp of the last completion.
+ * @returns {Promise<{changes: number}>} A promise that resolves to an object indicating the number of rows changed.
+ * @throws {Error} If a database error occurs.
+ */
+async function updateStats(
+  habitId,
+  userId,
+  { streak, longestStreak, totalCompletions, lastCompleted }
+) {
+  const sql = `
+    UPDATE habits 
+    SET streak = ?,
+        longest_streak = ?,
+        total_completions = ?,
+        last_completed = ?
+    WHERE id = ? AND user_id = ?
+  `;
+  const params = [
+    streak,
+    longestStreak,
+    totalCompletions,
+    lastCompleted,
+    habitId,
+    userId,
+  ];
+  try {
+    const result = await dbRun(sql, params);
+    return { changes: result.changes };
+  } catch (error) {
+    console.error(`Error in updateStats habit repository: ${error.message}`);
+    throw new DatabaseError('Failed to update habit stats', error);
+  }
+}
+
 module.exports = {
   findHabitsByDay,
   findById,
   create,
   update,
   remove,
+  updateStats,
 };

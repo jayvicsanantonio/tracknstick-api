@@ -94,16 +94,16 @@ The `streakUtils.js` module contains functions for calculating habit streaks.
 
 ### Key Functions
 
-- `calculateStreak(completions, frequency)`: Calculates the current streak for a habit based on completion history and frequency.
+- `calculateCurrentStreak(completions, frequency)`: Calculates the current streak for a habit based on completion history and frequency.
 - `isStreakMaintained(lastCompletionDate, frequency)`: Determines if a streak is still active based on last completion date.
 
 ### Usage Example
 
 ```javascript
-const { calculateStreak } = require('../utils/streakUtils');
+const { calculateCurrentStreak } = require('../utils/streakUtils');
 
 // Calculate streak for a habit
-const streak = calculateStreak(habitCompletions, habit.frequency);
+const streak = calculateCurrentStreak(habitCompletions, habit.frequency);
 ```
 
 ## Error Utilities (`errors.js`)
