@@ -6,7 +6,7 @@
  * @param {string} timeZone - The IANA timezone name.
  * @returns {number} The calculated current streak.
  */
-function calculateStreak(trackerRows, frequency, timeZone) {
+function calculateCurrentStreak(trackerRows, frequency, timeZone) {
   if (!trackerRows || trackerRows.length === 0) {
     return 0;
   }
@@ -14,7 +14,9 @@ function calculateStreak(trackerRows, frequency, timeZone) {
   try {
     Intl.DateTimeFormat(undefined, { timeZone });
   } catch (ex) {
-    console.error(`Invalid timeZone provided to calculateStreak: ${timeZone}`);
+    console.error(
+      `Invalid timeZone provided to calculateCurrentStreak: ${timeZone}`
+    );
     return 0;
   }
 
@@ -36,7 +38,7 @@ function calculateStreak(trackerRows, frequency, timeZone) {
     weekday: 'short',
   });
 
-  for (let i = 0; i < uniqueCompletionDates.length; i++) {
+  for (let i = 0; i < uniqueCompletionDates.length; i += 1) {
     const completionDate = new Date(uniqueCompletionDates[i]);
 
     if (completionDate.getTime() !== currentDate.getTime()) {
@@ -55,7 +57,7 @@ function calculateStreak(trackerRows, frequency, timeZone) {
 
     const dayOfWeek = dayFormatter.format(currentDate);
     if (frequency.includes(dayOfWeek)) {
-      currentStreak++;
+      currentStreak += 1;
     }
 
     currentDate.setDate(currentDate.getDate() - 1);
@@ -63,6 +65,41 @@ function calculateStreak(trackerRows, frequency, timeZone) {
   return currentStreak;
 }
 
+/**
+ * Updates streak information for a habit based on completion status.
+ * This function should be called whenever a habit is completed or missed.
+ * @param {Array<object>} trackerRows - Array of tracker objects { timestamp: string }, sorted by timestamp descending.
+ * @param {Array<string>} frequency - Array of short day names (e.g., ['Mon', 'Wed']).
+ * @param {string} timeZone - The IANA timezone name.
+ * @param {object} currentStats - Current habit stats { streak: number, longestStreak: number }.
+ * @returns {object} Updated stats { streak: number, longestStreak: number }.
+ */
+function updateStreakInfo(trackerRows, frequency, timeZone, currentStats) {
+  if (!trackerRows || trackerRows.length === 0) {
+    return { streak: 0, longestStreak: currentStats.longestStreak };
+  }
+
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone });
+  } catch (ex) {
+    console.error(`Invalid timeZone provided to updateStreakInfo: ${timeZone}`);
+    return currentStats;
+  }
+
+  const currentStreak = calculateCurrentStreak(
+    trackerRows,
+    frequency,
+    timeZone
+  );
+  const longestStreak = Math.max(currentStreak, currentStats.longestStreak);
+
+  return {
+    streak: currentStreak,
+    longestStreak,
+  };
+}
+
 module.exports = {
-  calculateStreak,
+  calculateCurrentStreak,
+  updateStreakInfo,
 };

@@ -11,7 +11,7 @@ This document outlines enhancements made during the refactoring and identifies a
 5.  **Code Quality Tooling:** Integrated ESLint and Prettier for automated code linting and formatting, enforcing consistency and catching potential issues.
 6.  **Clearer Routing:** Defined routes using `express.Router` in `src/api/habits.routes.js`, separating routing logic from the main application setup.
 7.  **Refined Centralized Error Handling:** Implemented a dedicated error-handling middleware (`src/middlewares/errorHandler.js`) and custom error classes (`src/utils/errors.js`). Refined repositories and authentication middleware to throw specific `DatabaseError`. Ensured generic 500 responses in production.
-8.  **Utility Function Extraction:** Extracted helper functions (`getLocaleStartEnd`, `calculateStreak`) from the service layer into dedicated utility files (`src/utils/dateUtils.js`, `src/utils/streakUtils.js`) for better separation and reusability.
+8.  **Utility Function Extraction:** Extracted helper functions (`getLocaleStartEnd`, `calculateCurrentStreak`) from the service layer into dedicated utility files (`src/utils/dateUtils.js`, `src/utils/streakUtils.js`) for better separation and reusability.
 9.  **Database Transactions:** Implemented atomic transactions for the `deleteHabit` operation using a centralized `withTransaction` utility (`src/utils/transactionUtils.js`) to ensure data consistency.
 10. **Schema Migrations (Knex.js):** Set up Knex.js to manage database schema changes, created an initial migration reflecting the existing schema, and removed old manual initialization code.
 

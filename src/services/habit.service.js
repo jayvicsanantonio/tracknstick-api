@@ -3,7 +3,7 @@ const trackerRepository = require('../repositories/tracker.repository');
 const userRepository = require('../repositories/user.repository');
 const { AppError, BadRequestError, NotFoundError } = require('../utils/errors');
 const { getLocaleStartEnd } = require('../utils/dateUtils');
-const { calculateStreak } = require('../utils/streakUtils');
+const { updateStreakInfo } = require('../utils/streakUtils');
 const { withTransaction } = require('../utils/transactionUtils');
 
 /**
@@ -314,12 +314,18 @@ async function getHabitStats(clerkUserId, habitId, timeZone) {
 
     const totalCompletions = trackers.length;
     const lastCompleted = trackers.length > 0 ? trackers[0].timestamp : null;
-    const currentStreak = calculateStreak(trackers, frequency, timeZone);
+    const { streak, longestStreak } = updateStreakInfo(
+      trackers,
+      frequency,
+      timeZone,
+      { streak: habit.streak, longestStreak: habit.longest_streak }
+    );
 
     return {
       habit_id: habitId,
       user_id: internalUserId,
-      streak: currentStreak,
+      streak,
+      longestStreak,
       total_completions: totalCompletions,
       last_completed: lastCompleted,
     };
@@ -329,6 +335,86 @@ async function getHabitStats(clerkUserId, habitId, timeZone) {
     );
     throw error;
   }
+}
+
+/**
+ * @description Records a habit completion and updates streak information.
+ * @param {string} clerkUserId - The Clerk User ID of the user.
+ * @param {number} habitId - The ID of the habit.
+ * @param {string} timestamp - The timestamp of completion (ISO 8601).
+ * @param {string} timeZone - The IANA timezone name.
+ * @param {string} [notes] - Optional notes about the completion.
+ * @returns {Promise<object>} A promise that resolves to the updated habit stats.
+ * @throws {NotFoundError} If the habit is not found or not authorized.
+ * @throws {BadRequestError} If the timestamp or timeZone is invalid.
+ * @throws {Error} If a database error occurs.
+ */
+async function trackHabitCompletion(
+  clerkUserId,
+  habitId,
+  timestamp,
+  timeZone,
+  notes = null
+) {
+  const internalUserId =
+    await userRepository.findOrCreateByClerkId(clerkUserId);
+
+  const habit = await habitRepository.findById(habitId, internalUserId);
+  if (!habit) {
+    throw new NotFoundError('Habit not found or not authorized');
+  }
+
+  try {
+    new Date(timestamp).toISOString();
+    new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
+  } catch (e) {
+    throw new BadRequestError('Invalid timestamp or timeZone format provided');
+  }
+
+  return withTransaction(async (db) => {
+    await trackerRepository.create(
+      habitId,
+      internalUserId,
+      timestamp,
+      notes,
+      db
+    );
+
+    const trackers = await trackerRepository.findAllByHabit(
+      habitId,
+      internalUserId,
+      db
+    );
+    const frequency = habit.frequency.split(',');
+
+    const { streak, longestStreak } = updateStreakInfo(
+      trackers,
+      frequency,
+      timeZone,
+      { streak: habit.streak, longestStreak: habit.longest_streak }
+    );
+
+    await habitRepository.updateStats(
+      habitId,
+      internalUserId,
+      {
+        streak,
+        longestStreak,
+        totalCompletions: trackers.length,
+        lastCompleted: timestamp,
+      },
+      db
+    );
+
+    return {
+      habit_id: habitId,
+      user_id: internalUserId,
+      streak,
+      longestStreak,
+      total_completions: trackers.length,
+      last_completed: timestamp,
+    };
+  });
 }
 
 /**
@@ -408,5 +494,6 @@ module.exports = {
   getTrackersForHabit,
   manageTracker,
   getHabitStats,
+  trackHabitCompletion,
   getProgressOverview,
 };
