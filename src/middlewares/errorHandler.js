@@ -1,5 +1,7 @@
-const { AppError } = require('../utils/errors');
 const { validationResult } = require('express-validator');
+const { AppError } = require('../utils/errors');
+const logger = require('../utils/logger');
+const { NotFoundError } = require('../utils/errors');
 
 /**
  * Formats express-validator errors into a user-friendly message.
@@ -35,7 +37,7 @@ const sendErrorDev = (err, res) => {
 const sendErrorProd = (err, res) => {
   // For 500 errors in production, always send a generic message
   if (err.statusCode === 500) {
-    console.error('ERROR 💥:', err); // Log the detailed error server-side
+    logger.error('ERROR 💥:', { error: err, stack: err.stack }); // Log the detailed error server-side
     res.status(500).json({
       status: 'error',
       message: 'Something went very wrong!',
@@ -52,7 +54,7 @@ const sendErrorProd = (err, res) => {
   }
   // For unexpected non-operational, non-500 errors (should be rare)
   else {
-    console.error('UNEXPECTED ERROR 💥:', err);
+    logger.error('UNEXPECTED ERROR 💥:', { error: err, stack: err.stack });
     res.status(err.statusCode || 500).json({
       status: 'error',
       message: 'Something went very wrong!',
@@ -69,12 +71,10 @@ const errorHandler = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
   err.status = err.status || 'error';
 
-  console.error(
-    `[${new Date().toISOString()}] ${req.method} ${req.originalUrl} - Error: ${err.message}`
-  );
-  if (process.env.NODE_ENV !== 'production') {
-    console.error(err.stack);
-  }
+  logger.error(`[${req.method}] ${req.originalUrl} - Error: ${err.message}`, {
+    error: err,
+    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
+  });
 
   if (err.errorCode === 'VALIDATION_ERROR' && Array.isArray(err.details)) {
     return res.status(400).json({
@@ -85,7 +85,7 @@ const errorHandler = (err, req, res, next) => {
     });
   }
 
-  let errorToSend = err;
+  const errorToSend = err;
 
   if (process.env.NODE_ENV === 'production') {
     sendErrorProd(errorToSend, res);

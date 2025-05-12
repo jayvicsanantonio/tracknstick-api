@@ -1,24 +1,25 @@
 const sqlite3 = require('sqlite3').verbose();
 const { promisify } = require('util');
 const path = require('path');
+const logger = require('./logger');
 
 const dbPath = process.env.DATABASE_PATH
   ? path.resolve(process.env.DATABASE_PATH)
   : path.resolve(__dirname, '../../tracknstick.db');
 
-console.log(`Attempting to connect to database at: ${dbPath}`);
+logger.info(`Attempting to connect to database at: ${dbPath}`);
 
 const db = new sqlite3.Database(dbPath, (err) => {
   if (err) {
-    console.error(`Error opening database at ${dbPath}:`, err.message);
+    logger.error(`Error opening database at ${dbPath}:`, { error: err });
     process.exit(1);
   } else {
-    console.log('Database connected successfully.');
+    logger.info('Database connected successfully.');
     db.run('PRAGMA foreign_keys = ON;', (pragmaErr) => {
       if (pragmaErr) {
-        console.error('Error enabling foreign keys', pragmaErr.message);
+        logger.error('Error enabling foreign keys', { error: pragmaErr });
       } else {
-        console.log('Foreign key constraints enabled.');
+        logger.info('Foreign key constraints enabled.');
       }
     });
   }
@@ -34,18 +35,17 @@ const dbGet = promisify(db.get).bind(db);
  * @returns {Promise<{lastID: number, changes: number}>} A promise resolving with lastID and changes count.
  * @throws {Error} If a database error occurs.
  */
-const dbRun = (sql, params = []) => {
-  return new Promise((resolve, reject) => {
+const dbRun = (sql, params = []) =>
+  new Promise((resolve, reject) => {
     db.run(sql, params, function (err) {
       if (err) {
-        console.error('DB Run Error:', sql, params, err);
+        logger.error('DB Run Error:', { sql, params, error: err });
         reject(err);
       } else {
         resolve({ lastID: this.lastID, changes: this.changes });
       }
     });
   });
-};
 
 module.exports = {
   db,
