@@ -1,19 +1,4 @@
-const { validationResult } = require('express-validator');
-const { AppError } = require('../utils/errors');
 const logger = require('../utils/logger');
-const { NotFoundError } = require('../utils/errors');
-
-/**
- * Formats express-validator errors into a user-friendly message.
- * @param {Array} errors - Array of validation errors from express-validator.
- * @returns {string} - A formatted error message string.
- */
-const formatValidationErrors = (errors) => {
-  if (!errors || !Array.isArray(errors) || errors.length === 0) {
-    return 'Validation failed';
-  }
-  return errors.map((err) => err.msg).join('. ');
-};
 
 /**
  * Sends an error response in development environment (includes stack trace).
@@ -67,30 +52,31 @@ const sendErrorProd = (err, res) => {
  * Global error handling middleware.
  * Catches errors passed via next(error).
  */
-const errorHandler = (err, req, res, next) => {
-  err.statusCode = err.statusCode || 500;
-  err.status = err.status || 'error';
+const errorHandler = (err, req, res, _next) => {
+  const error = {
+    ...err,
+    statusCode: err.statusCode || 500,
+    status: err.status || 'error',
+  };
 
-  logger.error(`[${req.method}] ${req.originalUrl} - Error: ${err.message}`, {
-    error: err,
-    stack: process.env.NODE_ENV !== 'production' ? err.stack : undefined,
+  logger.error(`[${req.method}] ${req.originalUrl} - Error: ${error.message}`, {
+    error,
+    stack: process.env.NODE_ENV !== 'production' ? error.stack : undefined,
   });
 
-  if (err.errorCode === 'VALIDATION_ERROR' && Array.isArray(err.details)) {
+  if (error.errorCode === 'VALIDATION_ERROR' && Array.isArray(error.details)) {
     return res.status(400).json({
       status: 'fail',
-      message: err.message || 'Input validation failed',
+      message: error.message || 'Input validation failed',
       errorCode: 'VALIDATION_ERROR',
-      errors: err.details,
+      errors: error.details,
     });
   }
 
-  const errorToSend = err;
-
   if (process.env.NODE_ENV === 'production') {
-    sendErrorProd(errorToSend, res);
+    sendErrorProd(error, res);
   } else {
-    sendErrorDev(errorToSend, res);
+    sendErrorDev(error, res);
   }
 };
 

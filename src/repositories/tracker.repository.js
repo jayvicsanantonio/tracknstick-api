@@ -1,5 +1,6 @@
-const { dbAll, dbGet, dbRun } = require('../utils/dbUtils');
+const { dbAll, dbRun } = require('../utils/dbUtils');
 const { DatabaseError } = require('../utils/errors');
+const logger = require('../utils/logger');
 
 /**
  * @description Finds tracker entries for multiple habits within a specific ISO date range for a user.
@@ -32,7 +33,7 @@ async function findTrackersByDateRange(
     const trackers = await dbAll(sql, params);
     return trackers;
   } catch (error) {
-    console.error(
+    logger.error(
       `Error in findTrackersByDateRange repository: ${error.message}`
     );
     throw new DatabaseError('Failed to fetch trackers by date range', error);
@@ -78,7 +79,7 @@ async function findTrackersByHabitAndDateRange(
     const trackers = await dbAll(sql, params);
     return trackers;
   } catch (error) {
-    console.error(
+    logger.error(
       `Error in findTrackersByHabitAndDateRange repository: ${error.message}`
     );
     throw new DatabaseError(
@@ -113,7 +114,7 @@ async function findTrackersInDateRange(
     const trackers = await dbAll(sql, params);
     return trackers;
   } catch (error) {
-    console.error(
+    logger.error(
       `Error in findTrackersInDateRange repository: ${error.message}`
     );
     throw new DatabaseError(
@@ -145,7 +146,7 @@ async function removeTrackersByIds(trackerIds, habitId, userId) {
     const result = await dbRun(sql, params);
     return { changes: result.changes };
   } catch (error) {
-    console.error(`Error in removeTrackersByIds repository: ${error.message}`);
+    logger.error(`Error in removeTrackersByIds repository: ${error.message}`);
     throw new DatabaseError('Failed to remove trackers by IDs', error);
   }
 }
@@ -164,7 +165,7 @@ async function removeAllByHabit(habitId, userId) {
     const result = await dbRun(sql, params);
     return { changes: result.changes };
   } catch (error) {
-    console.error(
+    logger.error(
       `Error in removeAllByHabit tracker repository: ${error.message}`
     );
     throw new DatabaseError('Failed to remove trackers by habit', error);
@@ -190,7 +191,7 @@ async function create(habitId, userId, timestamp, notes) {
     const result = await dbRun(sql, params);
     return result.lastID;
   } catch (error) {
-    console.error(`Error in create tracker repository: ${error.message}`);
+    logger.error(`Error in create tracker repository: ${error.message}`);
     throw new DatabaseError('Failed to create tracker', error);
   }
 }
@@ -214,7 +215,7 @@ async function findAllByHabit(habitId, userId) {
     const trackers = await dbAll(sql, params);
     return trackers;
   } catch (error) {
-    console.error(
+    logger.error(
       `Error in findAllByHabit tracker repository: ${error.message}`
     );
     throw new DatabaseError('Failed to fetch all trackers for habit', error);

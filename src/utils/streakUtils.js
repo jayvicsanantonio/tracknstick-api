@@ -1,3 +1,5 @@
+const logger = require('./logger');
+
 /**
  * Calculates the current streak for a habit based on tracker entries and frequency.
  * Assumes trackerRows are sorted descending by timestamp.
@@ -14,7 +16,7 @@ function calculateCurrentStreak(trackerRows, frequency, timeZone) {
   try {
     Intl.DateTimeFormat(undefined, { timeZone });
   } catch (ex) {
-    console.error(
+    logger.error(
       `Invalid timeZone provided to calculateCurrentStreak: ${timeZone}`
     );
     return 0;
@@ -82,7 +84,7 @@ function updateStreakInfo(trackerRows, frequency, timeZone, currentStats) {
   try {
     Intl.DateTimeFormat(undefined, { timeZone });
   } catch (ex) {
-    console.error(`Invalid timeZone provided to updateStreakInfo: ${timeZone}`);
+    logger.error(`Invalid timeZone provided to updateStreakInfo: ${timeZone}`);
     return currentStats;
   }
 

@@ -1,6 +1,3 @@
-// ABOUTME: This file sets up a centralized logging system using Winston
-// ABOUTME: It provides different log levels and formats for development and production environments
-
 const winston = require('winston');
 const path = require('path');
 

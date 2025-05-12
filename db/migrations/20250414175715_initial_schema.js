@@ -2,13 +2,13 @@
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.up = function (knex) {
-  return knex.schema
-    .createTable('users', function (table) {
+exports.up = (knex) =>
+  knex.schema
+    .createTable('users', (table) => {
       table.increments('id').primary();
       table.string('clerk_user_id').notNullable().unique();
     })
-    .createTable('habits', function (table) {
+    .createTable('habits', (table) => {
       table.increments('id').primary();
       table.integer('user_id').notNullable();
       table.string('name').notNullable();
@@ -26,7 +26,7 @@ exports.up = function (knex) {
 
       table.index(['user_id', 'frequency'], 'idx_habits_user_frequency');
     })
-    .createTable('trackers', function (table) {
+    .createTable('trackers', (table) => {
       table.increments('id').primary();
       table.integer('habit_id').notNullable();
       table.integer('user_id').notNullable();
@@ -49,15 +49,13 @@ exports.up = function (knex) {
         'idx_trackers_habit_user_ts'
       );
     });
-};
 
 /**
  * @param { import("knex").Knex } knex
  * @returns { Promise<void> }
  */
-exports.down = function (knex) {
-  return knex.schema
+exports.down = (knex) =>
+  knex.schema
     .dropTableIfExists('trackers')
     .dropTableIfExists('habits')
     .dropTableIfExists('users');
-};

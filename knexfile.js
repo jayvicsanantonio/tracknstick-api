@@ -1,11 +1,12 @@
 require('dotenv').config();
 const path = require('path');
+const logger = require('./src/utils/logger');
 
 const dbPath = process.env.DATABASE_PATH
   ? path.resolve(process.env.DATABASE_PATH)
   : path.resolve(__dirname, './tracknstick.db');
 
-console.log(`Knex using database at: ${dbPath}`);
+logger.info(`Knex using database at: ${dbPath}`);
 
 /**
  * @type { Object.<string, import("knex").Knex.Config> }
