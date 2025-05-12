@@ -1,4 +1,5 @@
 const habitService = require('../services/habit.service');
+const logger = require('../utils/logger');
 
 /**
  * @description Get habits scheduled for a specific date.
@@ -13,7 +14,9 @@ const getHabits = async (req, res, next) => {
     const habits = await habitService.getHabitsForDate(userId, date, timeZone);
     res.json(habits);
   } catch (error) {
-    console.error(`Error in getHabits controller for user ${userId}:`, error);
+    logger.error(`Error in getHabits controller for user ${userId}:`, {
+      error,
+    });
     next(error);
   }
 };
@@ -38,7 +41,9 @@ const createHabit = async (req, res, next) => {
       habitId: result.habitId,
     });
   } catch (error) {
-    console.error(`Error in createHabit controller for user ${userId}:`, error);
+    logger.error(`Error in createHabit controller for user ${userId}:`, {
+      error,
+    });
     next(error);
   }
 };
@@ -63,9 +68,9 @@ const updateHabit = async (req, res, next) => {
 
     res.status(200).json({ message: 'Habit updated successfully' });
   } catch (error) {
-    console.error(
+    logger.error(
       `Error in updateHabit controller for user ${userId}, habit ${habitId}:`,
-      error
+      { error }
     );
     next(error);
   }
@@ -85,9 +90,9 @@ const deleteHabit = async (req, res, next) => {
 
     res.status(200).json({ message: 'Habit deleted successfully' });
   } catch (error) {
-    console.error(
+    logger.error(
       `Error in deleteHabit controller for user ${userId}, habit ${habitId}:`,
-      error
+      { error }
     );
     next(error);
   }
@@ -113,9 +118,9 @@ const getTrackers = async (req, res, next) => {
 
     res.json(trackers);
   } catch (error) {
-    console.error(
+    logger.error(
       `Error in getTrackers controller for user ${userId}, habit ${habitId}:`,
-      error
+      { error }
     );
     next(error);
   }
@@ -146,9 +151,9 @@ const manageTracker = async (req, res, next) => {
       ...(result.trackerId && { trackerId: result.trackerId }),
     });
   } catch (error) {
-    console.error(
+    logger.error(
       `Error in manageTracker controller for user ${userId}, habit ${habitId}:`,
-      error
+      { error }
     );
     next(error);
   }
@@ -169,9 +174,9 @@ const getHabitStats = async (req, res, next) => {
 
     res.json(stats);
   } catch (error) {
-    console.error(
+    logger.error(
       `Error in getHabitStats controller for user ${userId}, habit ${habitId}:`,
-      error
+      { error }
     );
     next(error);
   }
@@ -193,9 +198,9 @@ const getProgressOverview = async (req, res, next) => {
     );
     res.json(overview);
   } catch (error) {
-    console.error(
+    logger.error(
       `Error in getProgressOverview controller for user ${userId}:`,
-      error
+      { error }
     );
     next(error);
   }

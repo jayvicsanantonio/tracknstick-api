@@ -1,5 +1,6 @@
 const { dbAll, dbGet, dbRun } = require('../utils/dbUtils');
 const { DatabaseError } = require('../utils/errors');
+const logger = require('../utils/logger');
 
 /**
  * @description Finds habits for a user scheduled for a specific day of the week.
@@ -19,7 +20,9 @@ async function findHabitsByDay(userId, dayOfWeek) {
     const habits = await dbAll(sql, params);
     return habits;
   } catch (error) {
-    console.error(`Error in findHabitsByDay repository: ${error.message}`);
+    logger.error(`Error in findHabitsByDay repository: ${error.message}`, {
+      error,
+    });
     throw new DatabaseError('Failed to fetch habits by day', error);
   }
 }
@@ -42,7 +45,9 @@ async function findById(habitId, userId) {
     const habit = await dbGet(sql, params);
     return habit;
   } catch (error) {
-    console.error(`Error in findById habit repository: ${error.message}`);
+    logger.error(`Error in findById habit repository: ${error.message}`, {
+      error,
+    });
     throw new DatabaseError('Failed to fetch habit by ID', error);
   }
 }
@@ -70,7 +75,9 @@ async function create(userId, { name, icon, frequency }) {
     const result = await dbRun(sql, params);
     return result.lastID;
   } catch (error) {
-    console.error(`Error in create habit repository: ${error.message}`);
+    logger.error(`Error in create habit repository: ${error.message}`, {
+      error,
+    });
     throw new DatabaseError('Failed to create habit', error);
   }
 }
@@ -107,7 +114,7 @@ async function update(habitId, userId, { name, icon, frequency }) {
   }
 
   if (updateFields.length === 0) {
-    console.warn('Update called with no fields to update.');
+    logger.warn('Update called with no fields to update.');
     return { changes: 0 };
   }
 
@@ -120,7 +127,9 @@ async function update(habitId, userId, { name, icon, frequency }) {
     const result = await dbRun(sql, updateParams);
     return { changes: result.changes };
   } catch (error) {
-    console.error(`Error in update habit repository: ${error.message}`);
+    logger.error(`Error in update habit repository: ${error.message}`, {
+      error,
+    });
     throw new DatabaseError('Failed to update habit', error);
   }
 }
@@ -139,7 +148,9 @@ async function remove(habitId, userId) {
     const result = await dbRun(sql, params);
     return { changes: result.changes };
   } catch (error) {
-    console.error(`Error in remove habit repository: ${error.message}`);
+    logger.error(`Error in remove habit repository: ${error.message}`, {
+      error,
+    });
     throw new DatabaseError('Failed to remove habit', error);
   }
 }
@@ -181,7 +192,9 @@ async function updateStats(
     const result = await dbRun(sql, params);
     return { changes: result.changes };
   } catch (error) {
-    console.error(`Error in updateStats habit repository: ${error.message}`);
+    logger.error(`Error in updateStats habit repository: ${error.message}`, {
+      error,
+    });
     throw new DatabaseError('Failed to update habit stats', error);
   }
 }

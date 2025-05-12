@@ -1,4 +1,5 @@
 const { dbRun } = require('./dbUtils'); // Assuming dbRun handles BEGIN, COMMIT, ROLLBACK
+const logger = require('./logger');
 
 /**
  * Executes a series of database operations within a transaction.
@@ -17,16 +18,14 @@ async function withTransaction(operations) {
     await dbRun('COMMIT');
     return result;
   } catch (err) {
-    console.error('Transaction failed. Rolling back. Original error:', err);
+    logger.error('Transaction failed. Rolling back.', { error: err });
     try {
       await dbRun('ROLLBACK');
     } catch (rollbackErr) {
-      console.error(
-        'FATAL: Failed to rollback transaction after error. Rollback Error:',
-        rollbackErr,
-        'Original Error:',
-        err
-      );
+      logger.error('FATAL: Failed to rollback transaction after error.', {
+        rollbackError: rollbackErr,
+        originalError: err,
+      });
       throw rollbackErr;
     }
     throw err;

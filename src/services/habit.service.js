@@ -5,6 +5,7 @@ const { AppError, BadRequestError, NotFoundError } = require('../utils/errors');
 const { getLocaleStartEnd } = require('../utils/dateUtils');
 const { updateStreakInfo } = require('../utils/streakUtils');
 const { withTransaction } = require('../utils/transactionUtils');
+const logger = require('../utils/logger');
 
 /**
  * @description Retrieves habits scheduled for a specific date, including completion status.
@@ -89,8 +90,9 @@ async function createHabit(clerkUserId, habitData) {
     const newHabitId = await habitRepository.create(internalUserId, habitData);
     return { habitId: newHabitId };
   } catch (error) {
-    console.error(
-      `Service error creating habit for user ${clerkUserId} (internal ID: ${internalUserId}): ${error.message}`
+    logger.error(
+      `Service error creating habit for user ${clerkUserId} (internal ID: ${internalUserId}): ${error.message}`,
+      { error }
     );
     throw error;
   }
@@ -125,15 +127,16 @@ async function updateHabit(clerkUserId, habitId, habitData) {
       habitData
     );
     if (result.changes === 0) {
-      console.warn(
+      logger.warn(
         `Update service call for habit ${habitId} (user ${internalUserId}) resulted in 0 changes.`
       );
       throw new AppError('Habit update failed unexpectedly', 500);
     }
     return true;
   } catch (error) {
-    console.error(
-      `Service error updating habit ${habitId} for user ${clerkUserId} (internal ID: ${internalUserId}): ${error.message}`
+    logger.error(
+      `Service error updating habit ${habitId} for user ${clerkUserId} (internal ID: ${internalUserId}): ${error.message}`,
+      { error }
     );
     throw error;
   }
@@ -163,7 +166,7 @@ async function deleteHabit(clerkUserId, habitId) {
       const result = await habitRepository.remove(habitId, internalUserId);
 
       if (result.changes === 0) {
-        console.error(
+        logger.error(
           `Failed to delete habit ${habitId} in repository after successful check.`
         );
         throw new AppError(
@@ -174,8 +177,9 @@ async function deleteHabit(clerkUserId, habitId) {
     });
     return true;
   } catch (err) {
-    console.error(
-      `Service error deleting habit ${habitId} for user ${clerkUserId} (internal ID: ${internalUserId}): ${err.message}`
+    logger.error(
+      `Service error deleting habit ${habitId} for user ${clerkUserId} (internal ID: ${internalUserId}): ${err.message}`,
+      { error: err }
     );
     throw err;
   }
@@ -209,8 +213,9 @@ async function getTrackersForHabit(clerkUserId, habitId, startDate, endDate) {
     );
     return trackers;
   } catch (error) {
-    console.error(
-      `Service error fetching trackers for habit ${habitId}, user ${clerkUserId} (internal ID: ${internalUserId}): ${error.message}`
+    logger.error(
+      `Service error fetching trackers for habit ${habitId}, user ${clerkUserId} (internal ID: ${internalUserId}): ${error.message}`,
+      { error }
     );
     throw error;
   }
@@ -274,8 +279,9 @@ async function manageTracker(clerkUserId, habitId, timestamp, timeZone, notes) {
     );
     return { status: 'added', trackerId: newTrackerId };
   } catch (error) {
-    console.error(
-      `Service error managing tracker for habit ${habitId}, user ${clerkUserId} (internal ID: ${internalUserId}): ${error.message}`
+    logger.error(
+      `Service error managing tracker for habit ${habitId}, user ${clerkUserId} (internal ID: ${internalUserId}): ${error.message}`,
+      { error }
     );
     throw error;
   }
@@ -330,8 +336,9 @@ async function getHabitStats(clerkUserId, habitId, timeZone) {
       lastCompleted,
     };
   } catch (error) {
-    console.error(
-      `Service error calculating stats for habit ${habitId}, user ${clerkUserId} (internal ID: ${internalUserId}): ${error.message}`
+    logger.error(
+      `Service error calculating stats for habit ${habitId}, user ${clerkUserId} (internal ID: ${internalUserId}): ${error.message}`,
+      { error }
     );
     throw error;
   }
@@ -431,59 +438,72 @@ async function getProgressOverview(clerkUserId, month, timeZone) {
   if (!year || !monthNum || monthNum < 1 || monthNum > 12) {
     throw new BadRequestError('Invalid month format. Use YYYY-MM.');
   }
-  const start = new Date(Date.UTC(year, monthNum - 1, 1));
-  const end = new Date(Date.UTC(year, monthNum, 0, 23, 59, 59, 999));
-  const trackers = await trackerRepository.findTrackersByDateRange(
-    internalUserId,
-    [],
-    start.toISOString(),
-    end.toISOString()
-  );
-  const completedByDay = {};
-  trackers.forEach((tracker) => {
-    const localDate = new Date(tracker.timestamp).toLocaleDateString('en-CA', {
-      timeZone,
+
+  try {
+    const start = new Date(Date.UTC(year, monthNum - 1, 1));
+    const end = new Date(Date.UTC(year, monthNum, 0, 23, 59, 59, 999));
+    const trackers = await trackerRepository.findTrackersByDateRange(
+      internalUserId,
+      [],
+      start.toISOString(),
+      end.toISOString()
+    );
+    const completedByDay = {};
+    trackers.forEach((tracker) => {
+      const localDate = new Date(tracker.timestamp).toLocaleDateString(
+        'en-CA',
+        {
+          timeZone,
+        }
+      );
+      if (!completedByDay[localDate]) completedByDay[localDate] = new Set();
+      completedByDay[localDate].add(tracker.habit_id);
     });
-    if (!completedByDay[localDate]) completedByDay[localDate] = new Set();
-    completedByDay[localDate].add(tracker.habit_id);
-  });
-  const habits = await habitRepository.findAllByUser(internalUserId);
-  const habitIds = habits.map((h) => h.id);
-  const days = [];
-  let currentStreak = 0;
-  let longestStreak = 0;
-  let tempStreak = 0;
-  let streakStart = null;
-  for (let d = 1; d <= end.getUTCDate(); d += 1) {
-    const dateObj = new Date(Date.UTC(year, monthNum - 1, d));
-    const dateStr = dateObj.toLocaleDateString('en-CA', { timeZone });
-    const completed = completedByDay[dateStr]
-      ? completedByDay[dateStr].size
-      : 0;
-    const completionRate = habitIds.length
-      ? Math.round((completed / habitIds.length) * 100)
-      : 0;
-    days.push({ date: dateStr, completionRate });
-    if (completionRate > 0) {
-      tempStreak += 1;
-      if (tempStreak > longestStreak) longestStreak = tempStreak;
-      if (!streakStart) streakStart = d;
-    } else {
-      tempStreak = 0;
-      streakStart = null;
+    const habits = await habitRepository.findAllByUser(internalUserId);
+    const habitIds = habits.map((h) => h.id);
+    const days = [];
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let tempStreak = 0;
+    let streakStart = null;
+    for (let d = 1; d <= end.getUTCDate(); d += 1) {
+      const dateObj = new Date(Date.UTC(year, monthNum - 1, d));
+      const dateStr = dateObj.toLocaleDateString('en-CA', { timeZone });
+      const completed = completedByDay[dateStr]
+        ? completedByDay[dateStr].size
+        : 0;
+      const completionRate = habitIds.length
+        ? Math.round((completed / habitIds.length) * 100)
+        : 0;
+      days.push({ date: dateStr, completionRate });
+      if (completionRate > 0) {
+        tempStreak += 1;
+        if (tempStreak > longestStreak) longestStreak = tempStreak;
+        if (!streakStart) streakStart = d;
+      } else {
+        tempStreak = 0;
+        streakStart = null;
+      }
     }
+    const today = new Date().toLocaleDateString('en-CA', { timeZone });
+    currentStreak = 0;
+    for (let i = days.length - 1; i >= 0; i -= 1) {
+      if (days[i].completionRate > 0 && days[i].date <= today)
+        currentStreak += 1;
+      else break;
+    }
+    return {
+      currentStreak,
+      longestStreak,
+      days,
+    };
+  } catch (error) {
+    logger.error(
+      `Error in getProgressOverview for user ${clerkUserId} (internal ID: ${internalUserId}): ${error.message}`,
+      { error }
+    );
+    throw error;
   }
-  const today = new Date().toLocaleDateString('en-CA', { timeZone });
-  currentStreak = 0;
-  for (let i = days.length - 1; i >= 0; i -= 1) {
-    if (days[i].completionRate > 0 && days[i].date <= today) currentStreak += 1;
-    else break;
-  }
-  return {
-    currentStreak,
-    longestStreak,
-    days,
-  };
 }
 
 module.exports = {

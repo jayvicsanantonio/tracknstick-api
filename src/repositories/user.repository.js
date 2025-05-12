@@ -1,5 +1,6 @@
 const { dbGet, dbRun } = require('../utils/dbUtils');
 const { DatabaseError } = require('../utils/errors');
+const logger = require('../utils/logger');
 
 /**
  * @description Finds a user by their Clerk User ID.
@@ -13,7 +14,7 @@ async function findByClerkId(clerkUserId) {
     const user = await dbGet(sql, [clerkUserId]);
     return user;
   } catch (error) {
-    console.error(`Error in findByClerkId repository: ${error.message}`);
+    logger.error(`Error in findByClerkId repository: ${error.message}`);
     throw new DatabaseError('Failed to fetch user by Clerk ID', error);
   }
 }
@@ -30,12 +31,12 @@ async function create(clerkUserId) {
     const result = await dbRun(sql, [clerkUserId]);
     return result.lastID;
   } catch (error) {
-    console.error(`Error in create user repository: ${error.message}`);
+    logger.error(`Error in create user repository: ${error.message}`);
     if (
       error.code === 'SQLITE_CONSTRAINT' &&
       error.message.includes('UNIQUE constraint failed: users.clerk_user_id')
     ) {
-      console.warn(
+      logger.warn(
         `User with clerk_user_id ${clerkUserId} likely already exists.`
       );
       const existingUser = await findByClerkId(clerkUserId);
@@ -56,7 +57,7 @@ async function findOrCreateByClerkId(clerkUserId) {
   if (existingUser) {
     return existingUser.id;
   }
-  console.log(`Creating new user record for Clerk ID: ${clerkUserId}`);
+  logger.info(`Creating new user record for Clerk ID: ${clerkUserId}`);
   const newUserId = await create(clerkUserId);
   return newUserId;
 }
