@@ -211,3 +211,4 @@ _(Add contribution guidelines if applicable)_
 ## License
 
 _(Add license information if applicable, e.g., ISC)_
+# Enable pre-commit linting
