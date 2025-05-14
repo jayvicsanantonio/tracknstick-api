@@ -63,11 +63,6 @@ async function getHabitsForDate(clerkUserId, dateString, timeZone) {
     icon: habit.icon,
     frequency: habit.frequency.split(','),
     completed: completedHabitIds.has(habit.id),
-    stats: {
-      totalCompletions: habit.total_completions,
-      streak: habit.streak,
-      lastCompleted: habit.last_completed,
-    },
   }));
 
   return results;
