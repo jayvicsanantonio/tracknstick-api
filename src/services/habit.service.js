@@ -63,6 +63,8 @@ async function getHabitsForDate(clerkUserId, dateString, timeZone) {
     icon: habit.icon,
     frequency: habit.frequency.split(','),
     completed: completedHabitIds.has(habit.id),
+    startDate: habit.start_date,
+    endDate: habit.end_date,
   }));
 
   return results;
@@ -75,6 +77,8 @@ async function getHabitsForDate(clerkUserId, dateString, timeZone) {
  * @param {string} habitData.name - The name of the habit.
  * @param {string} [habitData.icon] - The icon for the habit.
  * @param {Array<string>} habitData.frequency - The frequency of the habit.
+ * @param {string} habitData.startDate - Required start date for the habit (YYYY-MM-DD).
+ * @param {string} [habitData.endDate] - Optional end date for the habit (YYYY-MM-DD).
  * @returns {Promise<{habitId: number}>} A promise that resolves to an object containing the new habit ID.
  * @throws {Error} If a database error occurs.
  */
@@ -101,6 +105,8 @@ async function createHabit(clerkUserId, habitData) {
  * @param {string} [habitData.name] - The new name.
  * @param {string} [habitData.icon] - The new icon.
  * @param {Array<string>} [habitData.frequency] - The new frequency.
+ * @param {string} [habitData.startDate] - Optional new start date for the habit (YYYY-MM-DD).
+ * @param {string} [habitData.endDate] - Optional new end date for the habit (YYYY-MM-DD).
  * @returns {Promise<boolean>} A promise that resolves to true if successful.
  * @throws {NotFoundError} If the habit is not found or not authorized.
  * @throws {AppError} If the update fails unexpectedly.

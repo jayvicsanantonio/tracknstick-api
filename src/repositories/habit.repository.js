@@ -11,7 +11,7 @@ const logger = require('../utils/logger');
  */
 async function findHabitsByDay(userId, dayOfWeek) {
   const sql = `
-    SELECT id, name, icon, frequency, streak, longest_streak, total_completions, last_completed
+    SELECT id, name, icon, frequency, streak, longest_streak, total_completions, last_completed, start_date, end_date
     FROM habits
     WHERE user_id = ? AND (',' || frequency || ',') LIKE ?
   `;
@@ -36,7 +36,7 @@ async function findHabitsByDay(userId, dayOfWeek) {
  */
 async function findById(habitId, userId) {
   const sql = `
-    SELECT id, name, icon, frequency, streak, longest_streak, total_completions, last_completed
+    SELECT id, name, icon, frequency, streak, longest_streak, total_completions, last_completed, start_date, end_date
     FROM habits
     WHERE id = ? AND user_id = ?
   `;
@@ -59,18 +59,20 @@ async function findById(habitId, userId) {
  * @param {string} habitData.name - The name of the habit.
  * @param {string} [habitData.icon] - The icon for the habit.
  * @param {Array<string>|string} habitData.frequency - The frequency of the habit (array or comma-separated string).
+ * @param {string} habitData.startDate - The date when the habit should start.
+ * @param {string} [habitData.endDate] - The date when the habit should end.
  * @returns {Promise<number>} A promise that resolves to the ID of the newly created habit.
  * @throws {Error} If a database error occurs.
  */
-async function create(userId, { name, icon, frequency }) {
+async function create(userId, { name, icon, frequency, startDate, endDate }) {
   const frequencyString = Array.isArray(frequency)
     ? frequency.join(',')
     : frequency;
   const sql = `
-    INSERT INTO habits (user_id, name, icon, frequency, streak, total_completions, last_completed)
-    VALUES (?, ?, ?, ?, 0, 0, NULL)
+    INSERT INTO habits (user_id, name, icon, frequency, streak, total_completions, last_completed, start_date, end_date)
+    VALUES (?, ?, ?, ?, 0, 0, NULL, ?, ?)
   `;
-  const params = [userId, name, icon, frequencyString];
+  const params = [userId, name, icon, frequencyString, startDate, endDate];
   try {
     const result = await dbRun(sql, params);
     return result.lastID;
@@ -90,10 +92,16 @@ async function create(userId, { name, icon, frequency }) {
  * @param {string} [habitData.name] - The new name of the habit.
  * @param {string} [habitData.icon] - The new icon for the habit.
  * @param {Array<string>|string} [habitData.frequency] - The new frequency of the habit.
+ * @param {string} [habitData.startDate] - The new start date for the habit.
+ * @param {string} [habitData.endDate] - The new end date for the habit.
  * @returns {Promise<{changes: number}>} A promise that resolves to an object indicating the number of rows changed.
  * @throws {Error} If a database error occurs.
  */
-async function update(habitId, userId, { name, icon, frequency }) {
+async function update(
+  habitId,
+  userId,
+  { name, icon, frequency, startDate, endDate }
+) {
   const updateFields = [];
   const updateParams = [];
 
@@ -111,6 +119,14 @@ async function update(habitId, userId, { name, icon, frequency }) {
       : frequency;
     updateFields.push('frequency = ?');
     updateParams.push(frequencyString);
+  }
+  if (startDate !== undefined) {
+    updateFields.push('start_date = ?');
+    updateParams.push(startDate);
+  }
+  if (endDate !== undefined) {
+    updateFields.push('end_date = ?');
+    updateParams.push(endDate);
   }
 
   if (updateFields.length === 0) {

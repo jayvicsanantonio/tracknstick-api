@@ -28,13 +28,15 @@ const getHabits = async (req, res, next) => {
  */
 const createHabit = async (req, res, next) => {
   const { userId } = req.auth;
-  const { name, icon, frequency } = req.body;
+  const { name, icon, frequency, startDate, endDate } = req.body;
 
   try {
     const result = await habitService.createHabit(userId, {
       name,
       icon,
       frequency,
+      startDate,
+      endDate,
     });
     res.status(201).json({
       message: 'Habit created successfully',
@@ -56,13 +58,15 @@ const createHabit = async (req, res, next) => {
 const updateHabit = async (req, res, next) => {
   const { userId } = req.auth;
   const { habitId } = req.params;
-  const { name, icon, frequency } = req.body;
+  const { name, icon, frequency, startDate, endDate } = req.body;
 
   try {
     const habitData = {};
     if (name !== undefined) habitData.name = name;
     if (icon !== undefined) habitData.icon = icon;
     if (frequency !== undefined) habitData.frequency = frequency;
+    if (startDate !== undefined) habitData.startDate = startDate;
+    if (endDate !== undefined) habitData.endDate = endDate;
 
     await habitService.updateHabit(userId, habitId, habitData);
 
