@@ -1,6 +1,3 @@
-// ABOUTME: API implementation for Cloudflare Workers
-// ABOUTME: Direct implementation for TrackNStick API
-
 /**
  * Database operations for habits
  */
@@ -38,11 +35,16 @@ const HabitsDB = {
   async create(db, data) {
     const { name, icon, frequency, userId } = data;
 
+    // Convert frequency array to string for D1 storage
+    const frequencyString = Array.isArray(frequency)
+      ? frequency.join(',')
+      : frequency;
+
     const result = await db
       .prepare(
         'INSERT INTO habits (name, icon, frequency, user_id, streak, total_completions) VALUES (?, ?, ?, ?, 0, 0)'
       )
-      .bind(name, icon, frequency, userId)
+      .bind(name, icon, frequencyString, userId)
       .run();
 
     return {
@@ -61,9 +63,15 @@ const HabitsDB = {
    * @returns {Promise<Object|null>} Updated habit or null
    */
   async update(db, id, data) {
+    // Process frequency if it exists in the data
+    const processedData = { ...data };
+    if (processedData.frequency && Array.isArray(processedData.frequency)) {
+      processedData.frequency = processedData.frequency.join(',');
+    }
+
     // Build SET part of query dynamically
-    const fields = Object.keys(data);
-    const values = Object.values(data);
+    const fields = Object.keys(processedData);
+    const values = Object.values(processedData);
 
     if (fields.length === 0) return null;
 
@@ -112,7 +120,12 @@ async function handleHabitsRoutes(request, env, headers) {
     // GET /api/v1/habits
     if (request.method === 'GET' && path === '/api/v1/habits') {
       const habits = await HabitsDB.list(env.DB);
-      return new Response(JSON.stringify(habits), { headers });
+      // Transform frequency string back to array for consistent API
+      const processedHabits = habits.map((habit) => ({
+        ...habit,
+        frequency: habit.frequency ? habit.frequency.split(',') : [],
+      }));
+      return new Response(JSON.stringify(processedHabits), { headers });
     }
 
     // GET /api/v1/habits/:id
@@ -124,14 +137,33 @@ async function handleHabitsRoutes(request, env, headers) {
           headers,
         });
       }
-      return new Response(JSON.stringify(habit), { headers });
+      // Transform frequency string back to array
+      const processedHabit = {
+        ...habit,
+        frequency: habit.frequency ? habit.frequency.split(',') : [],
+      };
+      return new Response(JSON.stringify(processedHabit), { headers });
     }
 
     // POST /api/v1/habits
     if (request.method === 'POST' && path === '/api/v1/habits') {
       const data = await request.json();
       const newHabit = await HabitsDB.create(env.DB, data);
-      return new Response(JSON.stringify(newHabit), {
+
+      // Make sure frequency is returned as array for consistent API
+      let frequencyArray = [];
+      if (Array.isArray(newHabit.frequency)) {
+        frequencyArray = newHabit.frequency;
+      } else if (newHabit.frequency) {
+        frequencyArray = newHabit.frequency.split(',');
+      }
+
+      const processedHabit = {
+        ...newHabit,
+        frequency: frequencyArray,
+      };
+
+      return new Response(JSON.stringify(processedHabit), {
         status: 201,
         headers,
       });
@@ -147,7 +179,12 @@ async function handleHabitsRoutes(request, env, headers) {
           headers,
         });
       }
-      return new Response(JSON.stringify(updated), { headers });
+      // Make sure frequency is returned as array
+      const processedHabit = {
+        ...updated,
+        frequency: updated.frequency ? updated.frequency.split(',') : [],
+      };
+      return new Response(JSON.stringify(processedHabit), { headers });
     }
 
     // DELETE /api/v1/habits/:id

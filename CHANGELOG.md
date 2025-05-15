@@ -29,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated validators to handle and validate the new date fields
 - Extended API to accept and return these new fields in create/update operations
 
+### Fixed
+
+- Fixed D1_TYPE_ERROR in Cloudflare Worker when creating habits
+  - Converted frequency arrays to comma-separated strings before D1 database storage
+  - Added proper transformation of frequency data between array and string formats
+  - Ensured consistent API response format between Express server and Cloudflare Worker
+
 ## [1.1.0] - 2025-05-13
 
 ### Added
