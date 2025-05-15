@@ -38,6 +38,21 @@ const createHabit = [
       }
       return true;
     }),
+  body('startDate')
+    .notEmpty()
+    .withMessage('startDate is required.')
+    .isISO8601()
+    .withMessage('startDate must be in YYYY-MM-DD format.'),
+  body('endDate')
+    .optional()
+    .isISO8601()
+    .withMessage('endDate must be in YYYY-MM-DD format.')
+    .custom((value, { req }) => {
+      if (value && req.body.startDate && value < req.body.startDate) {
+        throw new Error('endDate cannot be earlier than startDate.');
+      }
+      return true;
+    }),
 ];
 
 const getHabitsByDate = [
@@ -61,16 +76,18 @@ const updateHabit = [
   body().custom((value, { req }) => {
     if (Object.keys(req.body).length === 0) {
       throw new Error(
-        'Request body must contain at least one field to update (name, icon, frequency).'
+        'Request body must contain at least one field to update (name, icon, frequency, startDate, endDate).'
       );
     }
     if (
       req.body.name === undefined &&
       req.body.icon === undefined &&
-      req.body.frequency === undefined
+      req.body.frequency === undefined &&
+      req.body.startDate === undefined &&
+      req.body.endDate === undefined
     ) {
       throw new Error(
-        'Request body must contain at least one valid field to update (name, icon, frequency).'
+        'Request body must contain at least one valid field to update (name, icon, frequency, startDate, endDate).'
       );
     }
     return true;
@@ -94,6 +111,20 @@ const updateHabit = [
       }
       if (new Set(days).size !== days.length) {
         throw new Error('Frequency array cannot contain duplicate days.');
+      }
+      return true;
+    }),
+  body('startDate')
+    .optional()
+    .isISO8601()
+    .withMessage('startDate must be in YYYY-MM-DD format.'),
+  body('endDate')
+    .optional()
+    .isISO8601()
+    .withMessage('endDate must be in YYYY-MM-DD format.')
+    .custom((value, { req }) => {
+      if (value && req.body.startDate && value < req.body.startDate) {
+        throw new Error('endDate cannot be earlier than startDate.');
       }
       return true;
     }),
