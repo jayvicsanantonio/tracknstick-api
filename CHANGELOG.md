@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated validators to handle and validate the new date fields
 - Extended API to accept and return these new fields in create/update operations
 
-## [1.1.0] - 2025-05-15
+## [1.1.0] - 2025-05-13
 
 ### Added
 
