@@ -4,7 +4,7 @@
  */
 exports.up = function (knex) {
   return knex.schema.table('habits', (table) => {
-    table.date('start_date').nullable();
+    table.date('start_date').notNullable().defaultTo(knex.fn.now());
     table.date('end_date').nullable();
   });
 };
