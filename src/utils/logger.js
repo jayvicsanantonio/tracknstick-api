@@ -1,5 +1,4 @@
 import winston from 'winston';
-import path from 'path';
 
 // Define log levels
 const levels = {
@@ -31,35 +30,29 @@ const format = winston.format.combine(
   )
 );
 
-// Define which transports to use based on environment
-const transports = [
-  // Always log to console
-  new winston.transports.Console(),
-  // Log all errors to a separate file
-  new winston.transports.File({
-    filename: path.join('logs', 'error.log'),
-    level: 'error',
-  }),
-];
+// Determine if we're in a Cloudflare Workers environment
+const isCloudflareWorker = 
+  typeof navigator !== 'undefined' && 
+  navigator.userAgent === 'Cloudflare-Workers';
 
-// In production, also log all levels to a combined file
-if (process.env.NODE_ENV === 'production') {
-  transports.push(
-    new winston.transports.File({
-      filename: path.join('logs', 'combined.log'),
-    })
-  );
-}
+// This determines if we're in a browser-like environment where File transport won't work
+const isBrowserEnv = 
+  typeof window !== 'undefined' || 
+  isCloudflareWorker || 
+  typeof process === 'undefined';
 
-// Create the logger instance
+// Create the logger with appropriate transports
 const logger = winston.createLogger({
-  level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
+  level: process.env?.NODE_ENV === 'development' ? 'debug' : 'info',
   levels,
   format,
-  transports,
+  transports: [
+    // Always use console transport
+    new winston.transports.Console()
+  ],
 });
 
-// Create a stream object for Morgan middleware
+// Create a stream object for HTTP logging middleware
 logger.stream = {
   write: (message) => logger.http(message.trim()),
 };
