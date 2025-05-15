@@ -48,7 +48,7 @@ export const withAuth = (controllerFn) => {
     // Set auth in context for the controller to use
     c.set('userId', auth.userId);
 
-    return await controllerFn(c);
+    return controllerFn(c);
   };
 };
 

@@ -47,7 +47,7 @@ const validate = (schema, source = 'json') => {
       }
 
       // Add validated data to context for handlers to use
-      const validatedData = c.get('validated');
+      const validatedData = c.get('validated') ?? {};
 
       c.set('validated', { ...validatedData, ...result.data });
 

@@ -42,9 +42,19 @@ const createHabitSchema = z.object({
       message: 'endDate must be in YYYY-MM-DD format.',
     })
     .optional()
-    .refine((endDate, ctx) => !endDate || endDate >= ctx.data.startDate, {
-      message: 'endDate cannot be earlier than startDate.',
-    }),
+    .refine(
+      (endDate, ctx) => {
+        if (!endDate) return true;
+
+        const startTs = new Date(ctx.data.startDate).getTime();
+        const endTs = new Date(endDate).getTime();
+
+        return endTs >= startTs;
+      },
+      {
+        message: 'endDate cannot be earlier than startDate.',
+      }
+    ),
 });
 
 const getHabitsByDateSchema = z.object({
@@ -81,7 +91,7 @@ const updateHabitSchema = z
         { message: 'endDate cannot be earlier than startDate.' }
       ),
   })
-  .refine((data) => Object.keys(data).length > 0, {
+  .refine((data) => Object.values(data).some((v) => v !== undefined), {
     message:
       'Request body must contain at least one field to update (name, icon, frequency, startDate, endDate).',
     path: ['body'],
@@ -90,10 +100,16 @@ const updateHabitSchema = z
 const habitIdParamSchema = z.object({
   habitId: z
     .string()
-    .refine((id) => !isNaN(parseInt(id)) && parseInt(id) > 0, {
-      message: 'Habit ID must be a positive integer.',
-    })
-    .transform((id) => parseInt(id)),
+    .refine(
+      (id) => {
+        const n = parseInt(id, 10);
+        return !isNaN(n) && n > 0;
+      },
+      {
+        message: 'Habit ID must be a positive integer.',
+      }
+    )
+    .transform((id) => parseInt(id, 10)),
 });
 
 const getHabitStatsSchema = z.object({

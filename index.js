@@ -27,7 +27,7 @@ app.use(
       ) {
         return origin;
       }
-      return null; // Will send 403 Forbidden
+      return undefined;
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
