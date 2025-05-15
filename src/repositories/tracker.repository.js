@@ -1,6 +1,6 @@
-const { dbAll, dbRun } = require('../utils/dbUtils');
-const { DatabaseError } = require('../utils/errors');
-const logger = require('../utils/logger');
+import { dbAll, dbRun } from '../utils/dbUtils.js';
+import { DatabaseError } from '../utils/errors/index.js';
+import logger from '../utils/logger.js';
 
 /**
  * @description Finds tracker entries for multiple habits within a specific ISO date range for a user.
@@ -222,7 +222,7 @@ async function findAllByHabit(habitId, userId) {
   }
 }
 
-module.exports = {
+export {
   findTrackersByDateRange,
   findTrackersByHabitAndDateRange,
   findTrackersInDateRange,

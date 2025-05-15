@@ -1,4 +1,4 @@
-const AppError = require('./base');
+import AppError from './base.js';
 
 /**
  * Error for bad requests (e.g., invalid input).
@@ -11,4 +11,4 @@ class BadRequestError extends AppError {
   }
 }
 
-module.exports = BadRequestError;
+export default BadRequestError;

@@ -1,4 +1,4 @@
-const AppError = require('./base');
+import AppError from './base.js';
 
 /**
  * Error for missing or invalid authentication credentials.
@@ -11,4 +11,4 @@ class AuthenticationError extends AppError {
   }
 }
 
-module.exports = AuthenticationError;
+export default AuthenticationError;

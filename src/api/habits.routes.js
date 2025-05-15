@@ -1,8 +1,8 @@
-const express = require('express');
-const { clerkMiddleware } = require('@clerk/express');
-const habitController = require('../controllers/habit.controller');
-const validate = require('../middlewares/validate');
-const habitValidation = require('../validators/habit.validator');
+import express from 'express';
+import { clerkMiddleware } from '@clerk/express';
+import * as habitController from '../controllers/habit.controller.js';
+import validate from '../middlewares/validate.js';
+import habitValidation from '../validators/habit.validator.js';
 
 const router = express.Router();
 
@@ -62,4 +62,4 @@ router.get(
   habitController.getProgressOverview
 );
 
-module.exports = router;
+export default router;

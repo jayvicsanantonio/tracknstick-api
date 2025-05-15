@@ -1,4 +1,4 @@
-const AppError = require('./base');
+import AppError from './base.js';
 
 /**
  * Error for when a requested resource is not found.
@@ -11,4 +11,4 @@ class NotFoundError extends AppError {
   }
 }
 
-module.exports = NotFoundError;
+export default NotFoundError;

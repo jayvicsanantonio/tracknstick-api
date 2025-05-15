@@ -1,4 +1,4 @@
-const { body, query, param } = require('express-validator');
+import { body, query, param } from 'express-validator';
 
 const validDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -200,7 +200,7 @@ const getProgressOverview = [
     .withMessage('Invalid IANA TimeZone format provided.'),
 ];
 
-module.exports = {
+export default {
   createHabit,
   getHabitsByDate,
   updateHabit,

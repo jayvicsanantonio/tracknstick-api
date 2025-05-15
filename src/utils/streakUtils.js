@@ -1,4 +1,4 @@
-const logger = require('./logger');
+import logger from './logger.js';
 
 /**
  * Calculates the current streak for a habit based on tracker entries and frequency.
@@ -101,7 +101,4 @@ function updateStreakInfo(trackerRows, frequency, timeZone, currentStats) {
   };
 }
 
-module.exports = {
-  calculateCurrentStreak,
-  updateStreakInfo,
-};
+export { calculateCurrentStreak, updateStreakInfo };

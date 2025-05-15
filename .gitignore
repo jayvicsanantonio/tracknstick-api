@@ -40,3 +40,6 @@ dist/
 build/
 
 *.db
+
+# Cloudflare Workers
+.wrangler

@@ -1,11 +1,11 @@
-const AppError = require('./base');
-const BadRequestError = require('./badRequest');
-const AuthenticationError = require('./authentication');
-const AuthorizationError = require('./authorization');
-const NotFoundError = require('./notFound');
-const DatabaseError = require('./database');
+import AppError from './base.js';
+import BadRequestError from './badRequest.js';
+import AuthenticationError from './authentication.js';
+import AuthorizationError from './authorization.js';
+import NotFoundError from './notFound.js';
+import DatabaseError from './database.js';
 
-module.exports = {
+export {
   AppError,
   BadRequestError,
   AuthenticationError,
