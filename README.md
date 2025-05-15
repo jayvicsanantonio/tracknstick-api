@@ -13,7 +13,8 @@ This is a RESTful API for a habit tracker application built with Node.js, Expres
 
 - **Backend:** Node.js
 - **Framework:** Hono.js
-- **Database:** SQLite
+- **Database:** SQLite (local development), Cloudflare D1 (production)
+- **Deployment:** Cloudflare Workers
 - **Authentication:** Clerk (@hono/clerk-auth)
 - **Validation:** Zod
 - **Linting/Formatting:** ESLint, Prettier
@@ -223,6 +224,56 @@ Detailed migration documentation can be found in the `/docs/migration/` director
 - [Migration Guide](docs/migration/MIGRATION_GUIDE.md)
 - [Migration Log](docs/migration/MIGRATION_LOG.md)
 - [Migration Steps](docs/migration/MIGRATION_STEPS.md)
+
+## Deployment
+
+### Cloudflare Workers Deployment
+
+This API can be deployed to Cloudflare Workers for improved performance, scalability, and reduced latency.
+
+#### Prerequisites
+
+- [Cloudflare account](https://dash.cloudflare.com/sign-up)
+- [Wrangler CLI](https://developers.cloudflare.com/workers/wrangler/) installed (`npm install -g wrangler`)
+
+#### Deployment Steps
+
+1. **Login to Cloudflare** (if you haven't already):
+   ```bash
+   npx wrangler login
+   ```
+
+2. **Deploy the worker**:
+   ```bash
+   npm run deploy
+   # or
+   npx wrangler deploy
+   ```
+
+3. **View your deployed application**:
+   Once deployment is complete, you'll receive a URL where your API is hosted (e.g., `https://tracknstick-api.username.workers.dev`)
+
+#### Database Setup
+
+The application uses Cloudflare D1 database when deployed to Workers. To manage your D1 database:
+
+- **Create a new database** (first time only):
+  ```bash
+  npx wrangler d1 create tracknstick-db
+  ```
+
+- **Apply migrations**:
+  ```bash
+  npx wrangler d1 migrations apply tracknstick-db
+  ```
+
+#### Environment Variables
+
+Environment variables for Cloudflare Workers are defined in the `wrangler.toml` file under the `[vars]` section. Secret values should be added using:
+
+```bash
+npx wrangler secret put SECRET_NAME
+```
 
 ## Contributing
 

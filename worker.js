@@ -1,4 +1,4 @@
-import app from './index.js';
+import app from './worker-entry.js';
 
 export default {
   async fetch(request, env, ctx) {
