@@ -29,17 +29,17 @@
   "homepage": "https://github.com/jayvicsanantonio/tracknstick-api#readme",
   "description": "",
   "dependencies": {
-    "@clerk/express": "^1.4.5",
+    "@clerk/backend": "^1.6.0",
+    "@hono/clerk-auth": "^2.0.0",
+    "@hono/node-server": "^1.5.0",
     "cors": "^2.8.5",
     "dotenv": "^16.5.0",
-    "express": "^4.21.2",
-    "express-rate-limit": "^7.5.0",
-    "express-validator": "^7.2.1",
-    "helmet": "^8.0.0",
+    "hono": "^4.2.0",
     "knex": "^3.1.0",
     "nodemon": "^3.1.9",
     "sqlite3": "^5.1.7",
-    "winston": "^3.17.0"
+    "winston": "^3.17.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "eslint": "^8.57.1",
@@ -47,6 +47,7 @@
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-prettier": "^5.2.6",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "wrangler": "^4.14.4"
   }
 }

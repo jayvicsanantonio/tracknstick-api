@@ -1,7 +1,8 @@
-import { body, query, param } from 'express-validator';
+import { z } from 'zod';
 
 const validDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+// Helper to validate timezone
 const isValidTimeZone = (value) => {
   if (!value) return false;
   try {
@@ -12,201 +13,146 @@ const isValidTimeZone = (value) => {
   }
 };
 
-const createHabit = [
-  body('name')
-    .trim()
-    .notEmpty()
-    .withMessage('Habit name is required.')
-    .isString()
-    .withMessage('Habit name must be a string.'),
-  body('icon')
-    .optional()
-    .trim()
-    .isString()
-    .withMessage('Icon must be a string.'),
-  body('frequency')
-    .isArray({ min: 1 })
-    .withMessage('Frequency is required and must be a non-empty array.')
-    .custom((days) => {
-      if (!days.every((day) => validDays.includes(day))) {
-        throw new Error(
-          `Frequency array must only contain valid days: ${validDays.join(', ')}`
-        );
-      }
-      if (new Set(days).size !== days.length) {
-        throw new Error('Frequency array cannot contain duplicate days.');
-      }
-      return true;
-    }),
-  body('startDate')
-    .notEmpty()
-    .withMessage('startDate is required.')
-    .isISO8601()
-    .withMessage('startDate must be in YYYY-MM-DD format.'),
-  body('endDate')
-    .optional()
-    .isISO8601()
-    .withMessage('endDate must be in YYYY-MM-DD format.')
-    .custom((value, { req }) => {
-      if (value && req.body.startDate && value < req.body.startDate) {
-        throw new Error('endDate cannot be earlier than startDate.');
-      }
-      return true;
-    }),
-];
+// Common schema components
+const timeZoneSchema = z.string().refine(isValidTimeZone, {
+  message: 'Invalid IANA TimeZone format provided.',
+});
 
-const getHabitsByDate = [
-  query('date')
-    .notEmpty()
-    .withMessage('Date query parameter is required.')
-    .isISO8601()
-    .withMessage('Date must be in YYYY-MM-DD format.')
-    .toDate(),
-  query('timeZone')
-    .notEmpty()
-    .withMessage('TimeZone query parameter is required.')
-    .custom(isValidTimeZone)
-    .withMessage('Invalid IANA TimeZone format provided.'),
-];
+const frequencySchema = z
+  .array(z.string())
+  .min(1, 'Frequency is required and must be a non-empty array.')
+  .refine((days) => days.every((day) => validDays.includes(day)), {
+    message: `Frequency array must only contain valid days: ${validDays.join(', ')}`,
+  })
+  .refine((days) => new Set(days).size === days.length, {
+    message: 'Frequency array cannot contain duplicate days.',
+  });
 
-const updateHabit = [
-  param('habitId')
-    .isInt({ gt: 0 })
-    .withMessage('Habit ID must be a positive integer.'),
-  body().custom((value, { req }) => {
-    if (Object.keys(req.body).length === 0) {
-      throw new Error(
-        'Request body must contain at least one field to update (name, icon, frequency, startDate, endDate).'
-      );
-    }
-    if (
-      req.body.name === undefined &&
-      req.body.icon === undefined &&
-      req.body.frequency === undefined &&
-      req.body.startDate === undefined &&
-      req.body.endDate === undefined
-    ) {
-      throw new Error(
-        'Request body must contain at least one valid field to update (name, icon, frequency, startDate, endDate).'
-      );
-    }
-    return true;
+// Validation schemas
+const createHabitSchema = z.object({
+  name: z.string().trim().min(1, 'Habit name is required.'),
+  icon: z.string().trim().optional(),
+  frequency: frequencySchema,
+  startDate: z.string().refine((date) => !isNaN(new Date(date).getTime()), {
+    message: 'startDate must be in YYYY-MM-DD format.',
   }),
-  body('name')
+  endDate: z
+    .string()
+    .refine((date) => !isNaN(new Date(date).getTime()), {
+      message: 'endDate must be in YYYY-MM-DD format.',
+    })
     .optional()
-    .trim()
-    .notEmpty()
-    .withMessage('Habit name cannot be empty if provided.')
-    .isString(),
-  body('icon').optional().trim().isString(),
-  body('frequency')
-    .optional()
-    .isArray({ min: 1 })
-    .withMessage('Frequency must be a non-empty array if provided.')
-    .custom((days) => {
-      if (!days.every((day) => validDays.includes(day))) {
-        throw new Error(
-          `Frequency array must only contain valid days: ${validDays.join(', ')}`
-        );
-      }
-      if (new Set(days).size !== days.length) {
-        throw new Error('Frequency array cannot contain duplicate days.');
-      }
-      return true;
+    .refine((endDate, ctx) => !endDate || endDate >= ctx.data.startDate, {
+      message: 'endDate cannot be earlier than startDate.',
     }),
-  body('startDate')
-    .optional()
-    .isISO8601()
-    .withMessage('startDate must be in YYYY-MM-DD format.'),
-  body('endDate')
-    .optional()
-    .isISO8601()
-    .withMessage('endDate must be in YYYY-MM-DD format.')
-    .custom((value, { req }) => {
-      if (value && req.body.startDate && value < req.body.startDate) {
-        throw new Error('endDate cannot be earlier than startDate.');
-      }
-      return true;
+});
+
+const getHabitsByDateSchema = z.object({
+  date: z.string().refine((date) => !isNaN(new Date(date).getTime()), {
+    message: 'Date must be in YYYY-MM-DD format.',
+  }),
+  timeZone: timeZoneSchema,
+});
+
+const updateHabitSchema = z
+  .object({
+    name: z
+      .string()
+      .trim()
+      .min(1, 'Habit name cannot be empty if provided.')
+      .optional(),
+    icon: z.string().trim().optional(),
+    frequency: frequencySchema.optional(),
+    startDate: z
+      .string()
+      .refine((date) => !isNaN(new Date(date).getTime()), {
+        message: 'startDate must be in YYYY-MM-DD format.',
+      })
+      .optional(),
+    endDate: z
+      .string()
+      .refine((date) => !isNaN(new Date(date).getTime()), {
+        message: 'endDate must be in YYYY-MM-DD format.',
+      })
+      .optional()
+      .refine(
+        (endDate, ctx) =>
+          !endDate || !ctx.data.startDate || endDate >= ctx.data.startDate,
+        { message: 'endDate cannot be earlier than startDate.' }
+      ),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message:
+      'Request body must contain at least one field to update (name, icon, frequency, startDate, endDate).',
+    path: ['body'],
+  });
+
+const habitIdParamSchema = z.object({
+  habitId: z
+    .string()
+    .refine((id) => !isNaN(parseInt(id)) && parseInt(id) > 0, {
+      message: 'Habit ID must be a positive integer.',
+    })
+    .transform((id) => parseInt(id)),
+});
+
+const getHabitStatsSchema = z.object({
+  timeZone: timeZoneSchema,
+});
+
+const manageTrackerSchema = z.object({
+  timestamp: z
+    .string()
+    .refine((timestamp) => !isNaN(new Date(timestamp).getTime()), {
+      message: 'Timestamp must be a valid ISO 8601 date string.',
     }),
-];
+  timeZone: timeZoneSchema,
+  notes: z.string().optional().nullable(),
+});
 
-const deleteHabit = [
-  param('habitId')
-    .isInt({ gt: 0 })
-    .withMessage('Habit ID must be a positive integer.'),
-];
+const getTrackersSchema = z
+  .object({
+    startDate: z
+      .string()
+      .refine((date) => !isNaN(new Date(date).getTime()), {
+        message: 'startDate must be in YYYY-MM-DD format.',
+      })
+      .optional()
+      .transform((date) => (date ? new Date(date) : undefined)),
+    endDate: z
+      .string()
+      .refine((date) => !isNaN(new Date(date).getTime()), {
+        message: 'endDate must be in YYYY-MM-DD format.',
+      })
+      .optional()
+      .transform((date) => (date ? new Date(date) : undefined)),
+  })
+  .refine(
+    (data) =>
+      !data.startDate || !data.endDate || data.endDate >= data.startDate,
+    {
+      message: 'endDate cannot be earlier than startDate.',
+      path: ['endDate'],
+    }
+  );
 
-const getHabitStats = [
-  param('habitId')
-    .isInt({ gt: 0 })
-    .withMessage('Habit ID must be a positive integer.'),
-  query('timeZone')
-    .notEmpty()
-    .withMessage('TimeZone query parameter is required.')
-    .custom(isValidTimeZone)
-    .withMessage('Invalid IANA TimeZone format provided.'),
-];
-
-const manageTracker = [
-  param('habitId')
-    .isInt({ gt: 0 })
-    .withMessage('Habit ID must be a positive integer.'),
-  body('timestamp')
-    .notEmpty()
-    .withMessage('Timestamp is required.')
-    .isISO8601()
-    .withMessage('Timestamp must be a valid ISO 8601 date string.'),
-  body('timeZone')
-    .notEmpty()
-    .withMessage('TimeZone is required.')
-    .custom(isValidTimeZone)
-    .withMessage('Invalid IANA TimeZone format provided.'),
-  body('notes').optional({ nullable: true }).trim().isString(),
-];
-
-const getTrackers = [
-  param('habitId')
-    .isInt({ gt: 0 })
-    .withMessage('Habit ID must be a positive integer.'),
-  query('startDate')
-    .optional()
-    .isISO8601()
-    .withMessage('startDate must be in YYYY-MM-DD format.')
-    .toDate(),
-  query('endDate')
-    .optional()
-    .isISO8601()
-    .withMessage('endDate must be in YYYY-MM-DD format.')
-    .toDate()
-    .custom((value, { req }) => {
-      if (req.query.startDate && value < req.query.startDate) {
-        throw new Error('endDate cannot be earlier than startDate.');
-      }
-      return true;
-    }),
-];
-
-const getProgressOverview = [
-  query('month')
-    .notEmpty()
-    .withMessage('Month query parameter is required.')
-    .isISO8601()
-    .withMessage('Month must be in YYYY-MM format.')
-    .toDate(),
-  query('timeZone')
-    .notEmpty()
-    .withMessage('TimeZone query parameter is required.')
-    .custom(isValidTimeZone)
-    .withMessage('Invalid IANA TimeZone format provided.'),
-];
+const getProgressOverviewSchema = z.object({
+  month: z
+    .string()
+    .refine((date) => !isNaN(new Date(date).getTime()), {
+      message: 'Month must be in YYYY-MM format.',
+    })
+    .transform((date) => new Date(date)),
+  timeZone: timeZoneSchema,
+});
 
 export default {
-  createHabit,
-  getHabitsByDate,
-  updateHabit,
-  deleteHabit,
-  getHabitStats,
-  manageTracker,
-  getTrackers,
-  getProgressOverview,
+  createHabitSchema,
+  getHabitsByDateSchema,
+  updateHabitSchema,
+  habitIdParamSchema,
+  getHabitStatsSchema,
+  manageTrackerSchema,
+  getTrackersSchema,
+  getProgressOverviewSchema,
 };

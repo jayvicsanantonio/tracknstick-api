@@ -1,214 +1,166 @@
 import * as habitService from '../services/habit.service.js';
-import logger from '../utils/logger.js';
+import { controller } from '../middlewares/controllerHandler.js';
 
 /**
  * @description Get habits scheduled for a specific date.
  * @route GET /api/v1/habits
  * @access Private
  */
-const getHabits = async (req, res, next) => {
-  const { userId } = req.auth;
-  const { date, timeZone } = req.query;
+const getHabits = controller(async (c) => {
+  const userId = c.get('userId');
+  const validated = c.get('validated');
+  const { date, timeZone } = validated;
 
-  try {
-    const habits = await habitService.getHabitsForDate(userId, date, timeZone);
-    res.json(habits);
-  } catch (error) {
-    logger.error(`Error in getHabits controller for user ${userId}:`, {
-      error,
-    });
-    next(error);
-  }
-};
+  const habits = await habitService.getHabitsForDate(userId, date, timeZone);
+  return c.json(habits);
+});
 
 /**
  * @description Create a new habit.
  * @route POST /api/v1/habits
  * @access Private
  */
-const createHabit = async (req, res, next) => {
-  const { userId } = req.auth;
-  const { name, icon, frequency, startDate, endDate } = req.body;
+const createHabit = controller(async (c) => {
+  const userId = c.get('userId');
+  const validated = c.get('validated');
+  const { name, icon, frequency, startDate, endDate } = validated;
 
-  try {
-    const result = await habitService.createHabit(userId, {
-      name,
-      icon,
-      frequency,
-      startDate,
-      endDate,
-    });
-    res.status(201).json({
+  const result = await habitService.createHabit(userId, {
+    name,
+    icon,
+    frequency,
+    startDate,
+    endDate,
+  });
+
+  return c.json(
+    {
       message: 'Habit created successfully',
       habitId: result.habitId,
-    });
-  } catch (error) {
-    logger.error(`Error in createHabit controller for user ${userId}:`, {
-      error,
-    });
-    next(error);
-  }
-};
+    },
+    201
+  );
+});
 
 /**
  * @description Update an existing habit.
  * @route PUT /api/v1/habits/:habitId
  * @access Private
  */
-const updateHabit = async (req, res, next) => {
-  const { userId } = req.auth;
-  const { habitId } = req.params;
-  const { name, icon, frequency, startDate, endDate } = req.body;
+const updateHabit = controller(async (c) => {
+  const userId = c.get('userId');
+  const { habitId } = c.get('validated'); // From params validation
+  const habitData = c.get('validated'); // From body validation
 
-  try {
-    const habitData = {};
-    if (name !== undefined) habitData.name = name;
-    if (icon !== undefined) habitData.icon = icon;
-    if (frequency !== undefined) habitData.frequency = frequency;
-    if (startDate !== undefined) habitData.startDate = startDate;
-    if (endDate !== undefined) habitData.endDate = endDate;
+  await habitService.updateHabit(userId, habitId, habitData);
 
-    await habitService.updateHabit(userId, habitId, habitData);
-
-    res.status(200).json({ message: 'Habit updated successfully' });
-  } catch (error) {
-    logger.error(
-      `Error in updateHabit controller for user ${userId}, habit ${habitId}:`,
-      { error }
-    );
-    next(error);
-  }
-};
+  return c.json(
+    {
+      message: 'Habit updated successfully',
+    },
+    200
+  );
+});
 
 /**
  * @description Delete a specific habit.
  * @route DELETE /api/v1/habits/:habitId
  * @access Private
  */
-const deleteHabit = async (req, res, next) => {
-  const { userId } = req.auth;
-  const { habitId } = req.params;
+const deleteHabit = controller(async (c) => {
+  const userId = c.get('userId');
+  const { habitId } = c.get('validated');
 
-  try {
-    await habitService.deleteHabit(userId, habitId);
+  await habitService.deleteHabit(userId, habitId);
 
-    res.status(200).json({ message: 'Habit deleted successfully' });
-  } catch (error) {
-    logger.error(
-      `Error in deleteHabit controller for user ${userId}, habit ${habitId}:`,
-      { error }
-    );
-    next(error);
-  }
-};
+  return c.json(
+    {
+      message: 'Habit deleted successfully',
+    },
+    200
+  );
+});
 
 /**
  * @description Get tracker entries for a specific habit.
  * @route GET /api/v1/habits/:habitId/trackers
  * @access Private
  */
-const getTrackers = async (req, res, next) => {
-  const { userId } = req.auth;
-  const { habitId } = req.params;
-  const { startDate, endDate } = req.query;
+const getTrackers = controller(async (c) => {
+  const userId = c.get('userId');
+  const { habitId } = c.get('validated'); // From params validation
+  const { startDate, endDate } = c.get('validated'); // From query validation
 
-  try {
-    const trackers = await habitService.getTrackersForHabit(
-      userId,
-      habitId,
-      startDate,
-      endDate
-    );
+  const trackers = await habitService.getTrackersForHabit(
+    userId,
+    habitId,
+    startDate,
+    endDate
+  );
 
-    res.json(trackers);
-  } catch (error) {
-    logger.error(
-      `Error in getTrackers controller for user ${userId}, habit ${habitId}:`,
-      { error }
-    );
-    next(error);
-  }
-};
+  return c.json(trackers);
+});
 
 /**
  * @description Add or remove a tracker entry for a habit on a specific date.
  * @route POST /api/v1/habits/:habitId/trackers
  * @access Private
  */
-const manageTracker = async (req, res, next) => {
-  const { userId } = req.auth;
-  const { habitId } = req.params;
-  const { timestamp, timeZone, notes } = req.body;
+const manageTracker = controller(async (c) => {
+  const userId = c.get('userId');
+  const { habitId } = c.get('validated'); // From params validation
+  const { timestamp, timeZone, notes } = c.get('validated'); // From body validation
 
-  try {
-    const result = await habitService.manageTracker(
-      userId,
-      habitId,
-      timestamp,
-      timeZone,
-      notes
-    );
+  const result = await habitService.manageTracker(
+    userId,
+    habitId,
+    timestamp,
+    timeZone,
+    notes
+  );
 
-    const statusCode = result.status === 'added' ? 201 : 200;
-    res.status(statusCode).json({
+  const statusCode = result.status === 'added' ? 201 : 200;
+  return c.json(
+    {
       message: result.message,
       ...(result.trackerId && { trackerId: result.trackerId }),
-    });
-  } catch (error) {
-    logger.error(
-      `Error in manageTracker controller for user ${userId}, habit ${habitId}:`,
-      { error }
-    );
-    next(error);
-  }
-};
+    },
+    statusCode
+  );
+});
 
 /**
  * @description Get statistics for a specific habit.
  * @route GET /api/v1/habits/:habitId/stats
  * @access Private
  */
-const getHabitStats = async (req, res, next) => {
-  const { userId } = req.auth;
-  const { habitId } = req.params;
-  const { timeZone } = req.query;
+const getHabitStats = controller(async (c) => {
+  const userId = c.get('userId');
+  const { habitId } = c.get('validated'); // From params validation
+  const { timeZone } = c.get('validated'); // From query validation
 
-  try {
-    const stats = await habitService.getHabitStats(userId, habitId, timeZone);
+  const stats = await habitService.getHabitStats(userId, habitId, timeZone);
 
-    res.json(stats);
-  } catch (error) {
-    logger.error(
-      `Error in getHabitStats controller for user ${userId}, habit ${habitId}:`,
-      { error }
-    );
-    next(error);
-  }
-};
+  return c.json(stats);
+});
 
 /**
  * @description Get progress overview for a user for a given month.
  * @route GET /api/v1/progress/overview
  * @access Private
  */
-const getProgressOverview = async (req, res, next) => {
-  const { userId } = req.auth;
-  const { month, timeZone } = req.query;
-  try {
-    const overview = await habitService.getProgressOverview(
-      userId,
-      month,
-      timeZone
-    );
-    res.json(overview);
-  } catch (error) {
-    logger.error(
-      `Error in getProgressOverview controller for user ${userId}:`,
-      { error }
-    );
-    next(error);
-  }
-};
+const getProgressOverview = controller(async (c) => {
+  const userId = c.get('userId');
+  const { month, timeZone } = c.get('validated');
+
+  const overview = await habitService.getProgressOverview(
+    userId,
+    month,
+    timeZone
+  );
+
+  return c.json(overview);
+});
 
 export {
   getHabits,
@@ -220,3 +172,30 @@ export {
   getHabitStats,
   getProgressOverview,
 };
+
+/**
+ * Original Express controller:
+ *
+ * // Example of one controller method:
+ *
+ * const getHabits = async (req, res, next) => {
+ *   const { userId } = req.auth;
+ *   const { date, timeZone } = req.query;
+ *
+ *   try {
+ *     const habits = await habitService.getHabitsForDate(userId, date, timeZone);
+ *     res.json(habits);
+ *   } catch (error) {
+ *     logger.error(`Error in getHabits controller for user ${userId}:`, {
+ *       error,
+ *     });
+ *     next(error);
+ *   }
+ * };
+ *
+ * // Key differences:
+ * // 1. Express uses req/res objects, Hono uses a unified context (c)
+ * // 2. In Express, errors are passed to next(), in Hono they are thrown directly
+ * // 3. In Express, responses are sent with res.json(), in Hono with c.json()
+ * // 4. Validated data comes from c.get('validated') instead of req.body, req.params, etc.
+ */

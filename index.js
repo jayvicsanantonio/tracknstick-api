@@ -1,8 +1,9 @@
 import dotenv from 'dotenv';
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import rateLimit from 'express-rate-limit';
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
+import { logger as honoLogger } from 'hono/logger';
+import { serve } from '@hono/node-server';
+import { secureHeaders } from 'hono/secure-headers';
 import { fileURLToPath } from 'url';
 import logger from './src/utils/logger.js';
 import habitRoutes from './src/api/habits.routes.js';
@@ -11,51 +12,63 @@ import { NotFoundError } from './src/utils/errors/index.js';
 
 dotenv.config();
 
-const app = express();
+const app = new Hono();
 const port = process.env.PORT || 3000;
 
+// CORS middleware (replaces express CORS)
 app.use(
+  '*',
   cors({
-    origin(origin, callback) {
-      if (!origin) return callback(null, true);
+    origin: (origin) => {
+      if (!origin) return '*';
       if (
         process.env.NODE_ENV === 'development' &&
         /^http:\/\/localhost:\d+$/.test(origin)
       ) {
-        return callback(null, true);
+        return origin;
       }
-      return callback(new Error('Not allowed by CORS'));
+      return null; // Will send 403 Forbidden
     },
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Content-Type', 'Authorization'],
+    exposeHeaders: ['Content-Length'],
+    maxAge: 86400,
   })
 );
 
-app.use(helmet());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Security headers (replaces helmet)
+app.use('*', secureHeaders());
 
-const limiter = rateLimit({
-  windowMs: process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000,
-  max: process.env.RATE_LIMIT_MAX_REQUESTS || 1000000,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: `Too many requests from this IP, please try again after ${Math.round((process.env.RATE_LIMIT_WINDOW_MS || 900000) / 60000)} minutes`,
+// Logger middleware
+app.use('*', honoLogger());
+
+// Body parser middleware (built into Hono)
+// No need for express.json() or express.urlencoded()
+
+// Mount routes
+app.route('/api/v1/habits', habitRoutes);
+
+// 404 handler (catch-all)
+app.notFound((c) => {
+  const error = new NotFoundError(`Cannot ${c.req.method} ${c.req.path}`);
+  return errorHandler(c, error);
 });
-app.use('/api', limiter);
 
-app.use('/api/v1/habits', habitRoutes);
-
-app.use((req, res, next) => {
-  next(new NotFoundError(`Cannot ${req.method} ${req.originalUrl}`));
-});
-
-app.use(errorHandler);
+// Error handler (comes built-in to Hono)
+app.onError(errorHandler);
 
 // For Node.js local runtime
 const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
 if (isMainModule) {
-  app.listen(port, () => {
-    logger.info(`Server listening on port ${port}`);
-  });
+  serve(
+    {
+      fetch: app.fetch,
+      port,
+    },
+    (info) => {
+      logger.info(`Server listening on port ${info.port}`);
+    }
+  );
 }
 
 // Export the app for Cloudflare Workers
