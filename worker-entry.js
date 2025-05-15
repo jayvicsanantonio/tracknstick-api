@@ -20,18 +20,26 @@ app.use(
   cors({
     origin: (origin) => {
       if (!origin) return '*';
+
+      // Allow localhost in development
       if (
         process.env.NODE_ENV === 'development' &&
         /^http:\/\/localhost:\d+$/.test(origin)
       ) {
         return origin;
       }
+
+      // Allow tracknstick.com domain
+      if (origin.match(/^https?:\/\/(.*\.)?tracknstick\.com$/)) {
+        return origin;
+      }
+
       return undefined;
     },
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowHeaders: ['Content-Type', 'Authorization'],
     exposeHeaders: ['Content-Length'],
-    maxAge: 86400,
+    maxAge: 0,
   })
 );
 
