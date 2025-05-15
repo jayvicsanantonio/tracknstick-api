@@ -1,65 +1,72 @@
-import express from 'express';
-import { clerkMiddleware } from '@clerk/express';
-import * as habitController from '../controllers/habit.controller.js';
+import { Hono } from 'hono';
+import { clerkMiddleware, getAuth } from '@hono/clerk-auth';
 import validate from '../middlewares/validate.js';
 import habitValidation from '../validators/habit.validator.js';
+import * as habitController from '../controllers/habit.controller.js';
 
-const router = express.Router();
+const app = new Hono();
 
-router.get(
+// Apply clerk authentication middleware to all routes
+app.use('*', clerkMiddleware());
+
+// GET /api/v1/habits
+app.get(
   '/',
-  clerkMiddleware(),
-  validate(habitValidation.getHabitsByDate),
+  validate(habitValidation.getHabitsByDateSchema, 'query'),
   habitController.getHabits
 );
 
-router.post(
+// POST /api/v1/habits
+app.post(
   '/',
-  clerkMiddleware(),
-  validate(habitValidation.createHabit),
+  validate(habitValidation.createHabitSchema, 'json'),
   habitController.createHabit
 );
 
-router.put(
+// PUT /api/v1/habits/:habitId
+app.put(
   '/:habitId',
-  clerkMiddleware(),
-  validate(habitValidation.updateHabit),
+  validate(habitValidation.habitIdParamSchema, 'params'),
+  validate(habitValidation.updateHabitSchema, 'json'),
   habitController.updateHabit
 );
 
-router.delete(
+// DELETE /api/v1/habits/:habitId
+app.delete(
   '/:habitId',
-  clerkMiddleware(),
-  validate(habitValidation.deleteHabit),
+  validate(habitValidation.habitIdParamSchema, 'params'),
   habitController.deleteHabit
 );
 
-router.get(
+// GET /api/v1/habits/:habitId/trackers
+app.get(
   '/:habitId/trackers',
-  clerkMiddleware(),
-  validate(habitValidation.getTrackers),
+  validate(habitValidation.habitIdParamSchema, 'params'),
+  validate(habitValidation.getTrackersSchema, 'query'),
   habitController.getTrackers
 );
 
-router.post(
+// POST /api/v1/habits/:habitId/trackers
+app.post(
   '/:habitId/trackers',
-  clerkMiddleware(),
-  validate(habitValidation.manageTracker),
+  validate(habitValidation.habitIdParamSchema, 'params'),
+  validate(habitValidation.manageTrackerSchema, 'json'),
   habitController.manageTracker
 );
 
-router.get(
+// GET /api/v1/habits/:habitId/stats
+app.get(
   '/:habitId/stats',
-  clerkMiddleware(),
-  validate(habitValidation.getHabitStats),
+  validate(habitValidation.habitIdParamSchema, 'params'),
+  validate(habitValidation.getHabitStatsSchema, 'query'),
   habitController.getHabitStats
 );
 
-router.get(
+// GET /api/v1/habits/progress/overview
+app.get(
   '/progress/overview',
-  clerkMiddleware(),
-  validate(habitValidation.getProgressOverview),
+  validate(habitValidation.getProgressOverviewSchema, 'query'),
   habitController.getProgressOverview
 );
 
-export default router;
+export default app;

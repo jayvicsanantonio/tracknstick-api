@@ -8,10 +8,11 @@ The TracknStick API follows a layered architecture pattern, which separates conc
 
 ```mermaid
 graph TD
-    Client[Client Applications] -->|HTTP Requests| ExpressApp[Express Application]
-    ExpressApp -->|Request| Middleware[Global Middleware]
-    Middleware -->|Authenticated Request| Router[API Routers]
-    Router -->|Route Handler| Controller[Controllers]
+    Client[Client Applications] -->|HTTP Requests| HonoApp[Hono Application]
+    HonoApp -->|Request| Middleware[Global Middleware]
+    Middleware -->|Authenticated Context| Router[API Routes]
+    Router -->|Route Handler| ControllerWrapper[Controller Middleware]
+    ControllerWrapper -->|Auth & Error Handling| Controller[Controllers]
     Controller -->|Business Logic| Service[Services]
     Service -->|Data Access| Repository[Repositories]
     Repository -->|Database Operations| DBUtils[Database Utilities]
@@ -29,12 +30,13 @@ graph TD
 
 ### Controller Layer (`src/controllers/`)
 
-- Handles HTTP request/response cycle
-- Extracts and validates input from requests
+- Handles HTTP request/response cycle using Hono context
+- Uses Higher-Order Component (HOC) pattern via controller middleware
+- Focuses purely on business logic with minimal boilerplate
+- Authentication and error handling delegated to controller middleware
+- Extracts validated data from Hono context
 - Calls appropriate service methods
-- Formats responses to the client
-- Does not contain business logic
-- Error handling via next(error)
+- Returns responses using Hono's context methods (c.json())
 
 ### Service Layer (`src/services/`)
 
@@ -64,16 +66,18 @@ graph TD
 
 ### Middleware (`src/middlewares/`)
 
-- Authentication middleware
+- Authentication middleware (@hono/clerk-auth)
+- Controller wrapper middleware (HOC pattern)
 - Error handling middleware
-- Validation middleware
+- Validation middleware (Zod-based)
 - Logging middleware
-- Rate limiting middleware
+- CORS and security headers middleware
 
 ### Validators (`src/validators/`)
 
-- Input validation rules
-- Schema definitions for requests
+- Input validation schemas using Zod
+- Schema definitions for request bodies, params, and queries
+- Type transformations and validations
 
 ## Data Flow
 
@@ -103,14 +107,15 @@ graph TD
 
 ## Authentication Flow
 
-Authentication is handled by Clerk, a third-party authentication service:
+Authentication is handled by Clerk via @hono/clerk-auth:
 
 1. Client authenticates with Clerk and receives a JWT token
 2. JWT token is included in API requests in the Authorization header
-3. Middleware verifies the token with Clerk
-4. User identity (Clerk User ID) is extracted from the token
-5. Local user record is fetched or created based on the Clerk User ID
+3. clerkMiddleware() verifies the token with Clerk
+4. User identity (Clerk User ID) is extracted with getAuth(c)
+5. Controller middleware sets userId in the Hono context
+6. Local user record is fetched or created based on the Clerk User ID
 
 For more details, see [Architecture Decisions](decisions.md) and [Code Organization](code-organization.md).
 
-Last Updated: 2024-03-21
+Last Updated: 2025-05-15

@@ -2,6 +2,22 @@
 
 This document outlines the key architectural decisions made during the refactoring of the Habit Tracker API.
 
+## Express to Hono Migration
+
+- **Decision:** Migrated from Express.js to Hono.js framework.
+- **Rationale:**
+  - **Performance:** Hono provides significantly better performance and lower latency than Express.
+  - **Edge Compatibility:** Hono is designed for edge computing environments (like Cloudflare Workers), enabling deployment to the edge.
+  - **Modern Features:** Hono follows modern web standards and has better TypeScript integration.
+  - **Maintainability:** Hono's simpler middleware approach and context-based handlers reduce complexity.
+  - **Unified Context:** Hono's unified context object (`c`) is easier to work with than Express's separate req/res objects.
+- **Key Implementation Details:**
+  - Introduced a Higher-Order Component (HOC) pattern for controllers to handle cross-cutting concerns.
+  - Used `@hono/clerk-auth` for authentication instead of custom middleware.
+  - Replaced express-validator with Zod for more robust validation.
+  - Converted Express middleware to Hono's middleware approach.
+  - Updated error handling to use Hono's throw/catch pattern rather than next(error).
+
 ## Layered Architecture
 
 - **Decision:** Adopted a standard layered architecture (Controllers, Services, Repositories).
@@ -91,3 +107,5 @@ This document outlines the key architectural decisions made during the refactori
   - Added npm scripts (`db:migrate`, `db:rollback`, `db:make-migration`) for easier management.
 
 _(Add other significant architectural decisions here as the project evolves)_
+
+Last Updated: 2025-05-15

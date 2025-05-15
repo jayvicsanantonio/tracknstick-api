@@ -12,8 +12,10 @@ This is a RESTful API for a habit tracker application built with Node.js, Expres
 ## Tech Stack
 
 - **Backend:** Node.js
-- **Framework:** Express.js
+- **Framework:** Hono.js
 - **Database:** SQLite
+- **Authentication:** Clerk (@hono/clerk-auth)
+- **Validation:** Zod
 - **Linting/Formatting:** ESLint, Prettier
 
 ## Visual Overview
@@ -22,10 +24,11 @@ This is a RESTful API for a habit tracker application built with Node.js, Expres
 
 ```mermaid
 graph LR
-    Client -->|"HTTP Request\nGET POST PUT DELETE"| ExpressApp[Express App];
-    ExpressApp -->|"Request"| Middleware["Middleware <br> (CORS, Helmet, JSON Parser, Auth)"];
-    Middleware -->|"Authenticated Request"| Routes["API Routes <br> (/api/v1/...)"];
-    Routes -->|"Params, Body"| Controller["Controller <br> (e.g., habit.controller.js)"];
+    Client -->|"HTTP Request\nGET POST PUT DELETE"| HonoApp[Hono App];
+    HonoApp -->|"Request"| Middleware["Middleware <br> (CORS, SecureHeaders, Logger, Auth)"];
+    Middleware -->|"Authenticated Context"| Routes["API Routes <br> (/api/v1/...)"];
+    Routes -->|"Context"| ControllerWrapper["Controller Middleware <br> (HOC Pattern)"];
+    ControllerWrapper -->|"Auth & Error Handling"| Controller["Controller <br> (e.g., habit.controller.js)"];
     Controller -->|"Data Request"| Service["Service Layer <br> (e.g., habit.service.js)"];
     Service -->|"DB Operations"| Repository["Repository Layer <br> (e.g., habit.repository.js)"];
     Repository -->|"SQL Query"| DBUtils["DB Utils <br> (dbUtils.js)"];
@@ -34,8 +37,8 @@ graph LR
     DBUtils -->|"Data"| Repository;
     Repository -->|"Data"| Service;
     Service -->|"Processed Data"| Controller;
-    Controller -->|"JSON Response"| ExpressApp;
-    ExpressApp -->|"HTTP Response"| Client;
+    Controller -->|"JSON Response"| HonoApp;
+    HonoApp -->|"HTTP Response"| Client;
 
     subgraph "Application Layers"
         Controller
@@ -203,6 +206,23 @@ Details about the refactoring process, architecture decisions, specific improvem
 - [Enhancements & Future Work](docs/development/enhancements.md)
 - [Performance Optimizations](docs/development/optimizations.md)
 - [Learnings & Takeaways](docs/development/learnings.md)
+
+## Framework Migration
+
+This project has been migrated from Express.js to Hono.js to improve performance, enable edge deployment, and leverage modern JavaScript patterns.
+
+Key improvements from the migration:
+
+- **Performance**: Hono is significantly faster and more efficient than Express
+- **Edge Compatibility**: Can be deployed to edge computing platforms like Cloudflare Workers
+- **Modern Architecture**: Using Higher-Order Component pattern for controllers
+- **Improved Validation**: Zod-based schema validation instead of express-validator
+- **Better Authentication**: @hono/clerk-auth integration for secure authentication
+
+Detailed migration documentation can be found in the `/docs/migration/` directory:
+- [Migration Guide](docs/migration/MIGRATION_GUIDE.md)
+- [Migration Log](docs/migration/MIGRATION_LOG.md)
+- [Migration Steps](docs/migration/MIGRATION_STEPS.md)
 
 ## Contributing
 

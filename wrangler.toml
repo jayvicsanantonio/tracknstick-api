@@ -13,6 +13,3 @@ NODE_ENV = "production"
 binding = "DB" # Will be available in your Worker as env.DB
 database_name = "tracknstick-db"
 database_id = "d828b4a9-4ae4-4af3-af29-be4c27ae42fc"
-
-[site]
-bucket = "./public" 
