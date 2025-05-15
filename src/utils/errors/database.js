@@ -1,4 +1,4 @@
-const AppError = require('./base');
+import AppError from './base.js';
 
 /**
  * Error for internal database issues.
@@ -17,4 +17,4 @@ class DatabaseError extends AppError {
   }
 }
 
-module.exports = DatabaseError;
+export default DatabaseError;

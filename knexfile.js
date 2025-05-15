@@ -1,17 +1,23 @@
-require('dotenv').config();
-const path = require('path');
-const logger = require('./src/utils/logger');
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import logger from './src/utils/logger.js';
+
+dotenv.config();
 
 const dbPath = process.env.DATABASE_PATH
   ? path.resolve(process.env.DATABASE_PATH)
-  : path.resolve(__dirname, './tracknstick.db');
+  : path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      './tracknstick.db'
+    );
 
 logger.info(`Knex using database at: ${dbPath}`);
 
 /**
  * @type { Object.<string, import("knex").Knex.Config> }
  */
-module.exports = {
+const config = {
   development: {
     client: 'sqlite3',
     connection: {
@@ -61,3 +67,5 @@ module.exports = {
   }
   */
 };
+
+export default config;

@@ -1,6 +1,6 @@
-const { dbGet, dbRun } = require('../utils/dbUtils');
-const { DatabaseError } = require('../utils/errors');
-const logger = require('../utils/logger');
+import { dbGet, dbRun } from '../utils/dbUtils.js';
+import { DatabaseError } from '../utils/errors/index.js';
+import logger from '../utils/logger.js';
 
 /**
  * @description Finds a user by their Clerk User ID.
@@ -62,8 +62,4 @@ async function findOrCreateByClerkId(clerkUserId) {
   return newUserId;
 }
 
-module.exports = {
-  findByClerkId,
-  create,
-  findOrCreateByClerkId,
-};
+export { findByClerkId, create, findOrCreateByClerkId };

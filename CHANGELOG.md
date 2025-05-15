@@ -7,8 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.0] - 2025-05-14
 
+### Changed
+
+- Converted entire codebase from CommonJS to ES modules
+  - Updated all import/export statements to use ESM syntax
+  - Added .js extensions to all imports for ESM compatibility
+  - Modified package.json to use "type": "module"
+  - Updated utility files to use import.meta.url instead of \_\_dirname
+- Replaced console statements with logger in Cloudflare D1 adapter
+  - Enhanced error logging with additional context information
+  - Standardized logging approach across the codebase
+
 ### Added
 
+- Added CI/CD workflow for automated Cloudflare deployments
+  - Configured GitHub Actions to deploy on PR merges to main branch
+  - Added linting check as part of deployment process
+- Added Cloudflare Workers deployment support
+  - Added .wrangler to .gitignore to exclude local worker state
 - Added `startDate` (required) and `endDate` (optional) fields to habits to support time-bound habits
 - Updated validators to handle and validate the new date fields
 - Extended API to accept and return these new fields in create/update operations

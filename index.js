@@ -1,13 +1,15 @@
-require('dotenv').config();
+import dotenv from 'dotenv';
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import rateLimit from 'express-rate-limit';
+import { fileURLToPath } from 'url';
+import logger from './src/utils/logger.js';
+import habitRoutes from './src/api/habits.routes.js';
+import errorHandler from './src/middlewares/errorHandler.js';
+import { NotFoundError } from './src/utils/errors/index.js';
 
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const rateLimit = require('express-rate-limit');
-const logger = require('./src/utils/logger');
-const habitRoutes = require('./src/api/habits.routes');
-const errorHandler = require('./src/middlewares/errorHandler');
-const { NotFoundError } = require('./src/utils/errors');
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -48,6 +50,13 @@ app.use((req, res, next) => {
 
 app.use(errorHandler);
 
-app.listen(port, () => {
-  logger.info(`Server listening on port ${port}`);
-});
+// For Node.js local runtime
+const isMainModule = process.argv[1] === fileURLToPath(import.meta.url);
+if (isMainModule) {
+  app.listen(port, () => {
+    logger.info(`Server listening on port ${port}`);
+  });
+}
+
+// Export the app for Cloudflare Workers
+export default app;

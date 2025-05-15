@@ -1,6 +1,6 @@
-const { dbAll, dbGet, dbRun } = require('../utils/dbUtils');
-const { DatabaseError } = require('../utils/errors');
-const logger = require('../utils/logger');
+import { dbAll, dbGet, dbRun } from '../utils/dbUtils.js';
+import { DatabaseError } from '../utils/errors/index.js';
+import logger from '../utils/logger.js';
 
 /**
  * @description Finds habits for a user scheduled for a specific day of the week.
@@ -215,11 +215,4 @@ async function updateStats(
   }
 }
 
-module.exports = {
-  findHabitsByDay,
-  findById,
-  create,
-  update,
-  remove,
-  updateStats,
-};
+export { findHabitsByDay, findById, create, update, remove, updateStats };

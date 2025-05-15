@@ -1,5 +1,5 @@
-const habitService = require('../services/habit.service');
-const logger = require('../utils/logger');
+import * as habitService from '../services/habit.service.js';
+import logger from '../utils/logger.js';
 
 /**
  * @description Get habits scheduled for a specific date.
@@ -210,7 +210,7 @@ const getProgressOverview = async (req, res, next) => {
   }
 };
 
-module.exports = {
+export {
   getHabits,
   createHabit,
   updateHabit,

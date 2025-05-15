@@ -2,6 +2,7 @@
   "name": "tracknstick-api",
   "version": "1.0.0",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "nodemon index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -10,7 +11,8 @@
     "format": "prettier --write \"**/*.js\"",
     "db:migrate": "knex migrate:latest",
     "db:rollback": "knex migrate:rollback",
-    "db:make-migration": "knex migrate:make"
+    "db:make-migration": "knex migrate:make",
+    "deploy": "wrangler deploy"
   },
   "repository": {
     "type": "git",

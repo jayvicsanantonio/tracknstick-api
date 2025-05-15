@@ -46,6 +46,4 @@ function getLocaleStartEnd(utcDate, timeZone) {
   };
 }
 
-module.exports = {
-  getLocaleStartEnd,
-};
+export { getLocaleStartEnd };

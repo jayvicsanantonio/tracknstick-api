@@ -11,7 +11,8 @@
     "prettier" // Add prettier plugin
   ],
   "parserOptions": {
-    "ecmaVersion": 12
+    "ecmaVersion": 12,
+    "sourceType": "module"
   },
   "rules": {
     "prettier/prettier": "error", // Run prettier as an ESLint rule
@@ -20,6 +21,7 @@
     "consistent-return": "off", // Allow route handlers to sometimes not return explicitly
     "func-names": "off", // Allow anonymous functions (common in Node callbacks)
     "no-shadow": "warn", // Warn about variable shadowing
-    "import/prefer-default-export": "off" // Allow named exports without a default export
+    "import/prefer-default-export": "off", // Allow named exports without a default export
+    "import/extensions": ["error", "ignorePackages"] // Allow .js extensions in imports
   }
 }

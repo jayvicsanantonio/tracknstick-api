@@ -1,15 +1,20 @@
-const sqlite3 = require('sqlite3').verbose();
-const { promisify } = require('util');
-const path = require('path');
-const logger = require('./logger');
+import sqlite3 from 'sqlite3';
+import { promisify } from 'util';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import logger from './logger.js';
 
 const dbPath = process.env.DATABASE_PATH
   ? path.resolve(process.env.DATABASE_PATH)
-  : path.resolve(__dirname, '../../tracknstick.db');
+  : path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '../../tracknstick.db'
+    );
 
 logger.info(`Attempting to connect to database at: ${dbPath}`);
 
-const db = new sqlite3.Database(dbPath, (err) => {
+const SQLite3 = sqlite3.verbose();
+const db = new SQLite3.Database(dbPath, (err) => {
   if (err) {
     logger.error(`Error opening database at ${dbPath}:`, { error: err });
     process.exit(1);
@@ -47,9 +52,4 @@ const dbRun = (sql, params = []) =>
     });
   });
 
-module.exports = {
-  db,
-  dbAll,
-  dbGet,
-  dbRun,
-};
+export { db, dbAll, dbGet, dbRun };

@@ -1,4 +1,4 @@
-const logger = require('../utils/logger');
+import logger from '../utils/logger.js';
 
 /**
  * Sends an error response in development environment (includes stack trace).
@@ -80,4 +80,4 @@ const errorHandler = (err, req, res, _next) => {
   }
 };
 
-module.exports = errorHandler;
+export default errorHandler;

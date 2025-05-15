@@ -1,5 +1,5 @@
-const { dbRun } = require('./dbUtils'); // Assuming dbRun handles BEGIN, COMMIT, ROLLBACK
-const logger = require('./logger');
+import { dbRun } from './dbUtils.js';
+import logger from './logger.js';
 
 /**
  * Executes a series of database operations within a transaction.
@@ -32,6 +32,4 @@ async function withTransaction(operations) {
   }
 }
 
-module.exports = {
-  withTransaction,
-};
+export { withTransaction };

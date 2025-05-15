@@ -1,4 +1,4 @@
-const AppError = require('./base');
+import AppError from './base.js';
 
 /**
  * Error for insufficient permissions to access a resource.
@@ -11,4 +11,4 @@ class AuthorizationError extends AppError {
   }
 }
 
-module.exports = AuthorizationError;
+export default AuthorizationError;

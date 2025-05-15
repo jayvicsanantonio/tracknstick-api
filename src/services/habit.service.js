@@ -1,11 +1,15 @@
-const habitRepository = require('../repositories/habit.repository');
-const trackerRepository = require('../repositories/tracker.repository');
-const userRepository = require('../repositories/user.repository');
-const { AppError, BadRequestError, NotFoundError } = require('../utils/errors');
-const { getLocaleStartEnd } = require('../utils/dateUtils');
-const { updateStreakInfo } = require('../utils/streakUtils');
-const { withTransaction } = require('../utils/transactionUtils');
-const logger = require('../utils/logger');
+import * as habitRepository from '../repositories/habit.repository.js';
+import * as trackerRepository from '../repositories/tracker.repository.js';
+import * as userRepository from '../repositories/user.repository.js';
+import {
+  AppError,
+  BadRequestError,
+  NotFoundError,
+} from '../utils/errors/index.js';
+import { getLocaleStartEnd } from '../utils/dateUtils.js';
+import { updateStreakInfo } from '../utils/streakUtils.js';
+import { withTransaction } from '../utils/transactionUtils.js';
+import logger from '../utils/logger.js';
 
 /**
  * @description Retrieves habits scheduled for a specific date, including completion status.
@@ -507,7 +511,7 @@ async function getProgressOverview(clerkUserId, month, timeZone) {
   }
 }
 
-module.exports = {
+export {
   getHabitsForDate,
   createHabit,
   updateHabit,
