@@ -43,6 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed "no such table: users" error in local development by adding clear database migration instructions
 - Improved initialization of database tables when running locally
 - Fixed "table habits has no column named frequency" error by adding a migration script to update the table schema
+- Fixed "FOREIGN KEY constraint failed" error when creating habits by improving user creation handling
+- Added enhanced error logging for database operations to better diagnose issues
+- Created migration to ensure the users table exists and is properly configured
+- Fixed critical schema mismatch where habits.user_id was INTEGER but needed to be TEXT to properly reference users.clerk_user_id
+- Added missing created_at and updated_at columns that were lost during schema migration
+- Added missing created_at and updated_at columns to trackers table
 
 ### Removed
 

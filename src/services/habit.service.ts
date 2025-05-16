@@ -13,18 +13,9 @@ export const getHabitsForDate = async (
 ) => {
   try {
     const utcDate = new Date(date);
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      weekday: 'short',
-    });
-    const formattedDate = formatter.format(utcDate);
 
     // Get habits from repository
-    const habits = await habitRepository.getHabitsByDate(
-      db,
-      userId,
-      formattedDate
-    );
+    const habits = await habitRepository.getHabitsByDate(db, userId, date);
 
     if (!habits || habits.length === 0) {
       return [];

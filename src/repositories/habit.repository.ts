@@ -37,16 +37,50 @@ export async function ensureUserExists(
   db: D1Database,
   clerkUserId: string
 ): Promise<void> {
-  const user = await db
-    .prepare('SELECT id FROM users WHERE clerk_user_id = ?')
-    .bind(clerkUserId)
-    .first();
-
-  if (!user) {
-    await db
-      .prepare('INSERT INTO users (clerk_user_id) VALUES (?)')
+  try {
+    const user = await db
+      .prepare('SELECT id FROM users WHERE clerk_user_id = ?')
       .bind(clerkUserId)
-      .run();
+      .first();
+
+    if (!user) {
+      logger.info(`Creating new user with clerk_user_id: ${clerkUserId}`);
+      const result = await db
+        .prepare('INSERT INTO users (clerk_user_id) VALUES (?)')
+        .bind(clerkUserId)
+        .run();
+
+      if (!result.success) {
+        logger.error(
+          `Failed to create user with clerk_user_id: ${clerkUserId}`,
+          { result }
+        );
+        throw new Error(
+          `Failed to create user with clerk_user_id: ${clerkUserId}`
+        );
+      }
+
+      // Verify the user was created
+      const verifyUser = await db
+        .prepare('SELECT id FROM users WHERE clerk_user_id = ?')
+        .bind(clerkUserId)
+        .first();
+
+      if (!verifyUser) {
+        logger.error(
+          `User creation verification failed for clerk_user_id: ${clerkUserId}`
+        );
+        throw new Error(
+          `User creation verification failed for clerk_user_id: ${clerkUserId}`
+        );
+      }
+    }
+  } catch (error) {
+    logger.error(
+      `Error in ensureUserExists for clerk_user_id: ${clerkUserId}`,
+      { error }
+    );
+    throw error;
   }
 }
 
@@ -86,39 +120,54 @@ export async function createHabit(
   userId: string,
   habitData: HabitData
 ): Promise<{ habitId: number }> {
-  // Ensure user exists
-  await ensureUserExists(db, userId);
+  try {
+    // Ensure user exists
+    await ensureUserExists(db, userId);
 
-  const { name, icon, frequency, startDate, endDate } = habitData;
+    const { name, icon, frequency, startDate, endDate } = habitData;
 
-  const frequencyString = Array.isArray(frequency)
-    ? frequency.join(',')
-    : frequency;
+    const frequencyString = Array.isArray(frequency)
+      ? frequency.join(',')
+      : frequency;
 
-  const result = await db
-    .prepare(
+    const result = await db
+      .prepare(
+        `
+        INSERT INTO habits (
+          user_id, name, icon, frequency, 
+          start_date, end_date
+        ) VALUES (?, ?, ?, ?, ?, ?)
       `
-      INSERT INTO habits (
-        user_id, name, icon, frequency, 
-        start_date, end_date
-      ) VALUES (?, ?, ?, ?, ?, ?)
-    `
-    )
-    .bind(
-      userId,
-      name,
-      icon || null,
-      frequencyString,
-      startDate,
-      endDate || null
-    )
-    .run();
+      )
+      .bind(
+        userId,
+        name,
+        icon || null,
+        frequencyString,
+        startDate,
+        endDate || null
+      )
+      .run();
 
-  if (!result.success) {
-    throw new Error('Failed to create habit');
+    if (!result.success) {
+      logger.error('Failed to create habit', {
+        userId,
+        habitData,
+        error: result.error,
+      });
+      throw new Error(
+        `Failed to create habit: ${result.error || 'Unknown error'}`
+      );
+    }
+
+    return { habitId: result.meta.last_row_id as number };
+  } catch (error) {
+    logger.error(`Error in createHabit for user ${userId}:`, {
+      error,
+      habitData,
+    });
+    throw error;
   }
-
-  return { habitId: result.meta.last_row_id as number };
 }
 
 // Get a single habit by ID
