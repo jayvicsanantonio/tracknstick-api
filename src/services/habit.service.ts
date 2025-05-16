@@ -13,9 +13,20 @@ export const getHabitsForDate = async (
 ) => {
   try {
     const utcDate = new Date(date);
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      weekday: 'short',
+    });
+    const dayOfWeek = formatter.format(utcDate);
 
-    // Get habits from repository
-    const habits = await habitRepository.getHabitsByDate(db, userId, date);
+    console.log('dayOfWeek', dayOfWeek);
+
+    const habits = await habitRepository.getHabitsByDate(
+      db,
+      userId,
+      date,
+      dayOfWeek
+    );
 
     if (!habits || habits.length === 0) {
       return [];
