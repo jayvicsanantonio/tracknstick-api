@@ -4,6 +4,21 @@ import * as habitRepository from '../repositories/habit.repository.js';
 import * as trackerRepository from '../repositories/tracker.repository.js';
 import { NotFoundError } from '../utils/errors.js';
 import { getLocaleStartEnd } from '../utils/dateUtils.js';
+import {
+  calculateDailyStreak,
+  calculateNonDailyStreak,
+} from '../utils/streakUtils.js';
+
+// Interface definitions
+interface TrackerRow {
+  id: number;
+  habit_id: number;
+  user_id: string;
+  timestamp: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 export const getHabitsForDate = async (
   userId: string,
@@ -137,10 +152,10 @@ export const getTrackersForHabit = async (
       endDate
     );
 
-    // Transform database rows to response format
+    // Transform database rows to response format with consistent naming
     return trackers.map((tracker) => ({
-      id: tracker.id.toString(),
-      habitId: tracker.habit_id.toString(),
+      id: tracker.id,
+      habitId: tracker.habit_id,
       timestamp: tracker.timestamp,
       notes: tracker.notes || undefined,
     }));
@@ -166,6 +181,10 @@ export const manageTracker = async (
   }
 
   try {
+    // Get habit data to determine frequency and streak info
+    const habit = await habitRepository.getHabitById(db, userId, habitId);
+
+    // Add or remove the tracker
     const result = await habitRepository.manageTracker(
       db,
       userId,
@@ -174,7 +193,10 @@ export const manageTracker = async (
       notes
     );
 
-    // Return the repository result directly since it matches our service result format
+    // If we added or removed a tracker, recalculate streak
+    await updateHabitStreakInfo(db, userId, habitId, habit.frequency);
+
+    // Return the repository result
     return {
       status: result.status,
       message: result.message,
@@ -189,6 +211,68 @@ export const manageTracker = async (
   }
 };
 
+/**
+ * Updates streak information for a habit based on completed trackers
+ */
+async function updateHabitStreakInfo(
+  db: D1Database,
+  userId: string,
+  habitId: string,
+  frequency: string
+): Promise<void> {
+  try {
+    // Get all trackers for this habit ordered by date
+    const trackers = await trackerRepository.getAllTrackersForHabit(
+      db,
+      userId,
+      habitId
+    );
+
+    if (!trackers || trackers.length === 0) {
+      // No trackers, reset streak to 0
+      await habitRepository.updateHabitStats(db, habitId, {
+        streak: 0,
+        lastCompleted: null,
+      });
+      return;
+    }
+
+    // Sort trackers by date, most recent first
+    const sortedTrackers = trackers.sort(
+      (a, b) =>
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    // Get frequency as array
+    const frequencyDays = frequency.split(',');
+
+    // Calculate current streak
+    let currentStreak = 0;
+    let lastCompleted = sortedTrackers[0].timestamp;
+    let longestStreak = 0;
+
+    // Simple implementation for daily habits
+    // For more complex frequency patterns, this would need to be expanded
+    if (frequencyDays.length === 7) {
+      // It's a daily habit
+      currentStreak = calculateDailyStreak(sortedTrackers);
+    } else {
+      // For non-daily habits, we need more complex logic
+      currentStreak = calculateNonDailyStreak(sortedTrackers, frequencyDays);
+    }
+
+    // Update the habit with new streak information
+    await habitRepository.updateHabitStats(db, habitId, {
+      streak: currentStreak,
+      lastCompleted,
+      totalCompletions: sortedTrackers.length,
+    });
+  } catch (error) {
+    console.error(`Error updating habit streak for habit ${habitId}:`, error);
+    throw error;
+  }
+}
+
 export const getHabitStats = async (
   userId: string,
   habitId: string,
@@ -198,8 +282,6 @@ export const getHabitStats = async (
     const stats = await habitRepository.getHabitStats(db, userId, habitId);
 
     return {
-      total: stats.total,
-      completed: stats.completed,
       streak: stats.streak,
       longestStreak: stats.longestStreak,
       totalCompletions: stats.totalCompletions,

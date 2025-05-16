@@ -4,6 +4,16 @@ import { D1Database } from '@cloudflare/workers-types';
 import { NotFoundError } from '../utils/errors.js';
 import { TrackerInsert, Tracker } from '../types/d1.js';
 
+interface TrackerRow {
+  id: number;
+  habit_id: number;
+  user_id: string;
+  timestamp: string;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 /**
  * Finds tracker entries for multiple habits within a specific ISO date range for a user.
  */
@@ -11,32 +21,35 @@ export async function findTrackersByDateRange(
   db: D1Database,
   userId: string,
   habitIds: number[],
-  startDateISO: string,
-  endDateISO: string
-): Promise<Tracker[]> {
+  startDate: string,
+  endDate: string
+): Promise<TrackerRow[]> {
   if (!habitIds || habitIds.length === 0) {
     return [];
   }
 
-  // D1 doesn't support array parameters directly, so we need to build the query differently
+  // Convert habitIds to strings for SQL placeholders
   const placeholders = habitIds.map(() => '?').join(',');
-  const sql = `
-    SELECT id, habit_id, timestamp, notes, created_at, updated_at
-    FROM trackers
-    WHERE user_id = ? AND habit_id IN (${placeholders}) AND (timestamp BETWEEN ? AND ?)
-  `;
-  const params = [userId, ...habitIds, startDateISO, endDateISO];
 
-  const result = await db
-    .prepare(sql)
+  // Build the parameter list with userId first, then all habitIds
+  const params = [userId, ...habitIds, startDate, endDate];
+
+  const trackers = await db
+    .prepare(
+      `SELECT * FROM trackers 
+       WHERE user_id = ? 
+       AND habit_id IN (${placeholders})
+       AND timestamp >= ? 
+       AND timestamp <= ?`
+    )
     .bind(...params)
     .all();
 
-  if (!result.success) {
-    throw new Error('Failed to fetch trackers by date range');
+  if (!trackers.success) {
+    throw new Error('Failed to fetch trackers');
   }
 
-  return result.results as Tracker[];
+  return trackers.results as TrackerRow[];
 }
 
 /**
@@ -220,4 +233,29 @@ export async function findAllByHabit(
   }
 
   return result.results as Tracker[];
+}
+
+/**
+ * Get all trackers for a specific habit
+ */
+export async function getAllTrackersForHabit(
+  db: D1Database,
+  userId: string,
+  habitId: string | number
+): Promise<TrackerRow[]> {
+  const trackers = await db
+    .prepare(
+      `SELECT * FROM trackers 
+       WHERE user_id = ? 
+       AND habit_id = ?
+       ORDER BY timestamp DESC`
+    )
+    .bind(userId, habitId)
+    .all();
+
+  if (!trackers.success) {
+    throw new Error(`Failed to fetch trackers for habit ${habitId}`);
+  }
+
+  return trackers.results as TrackerRow[];
 }
