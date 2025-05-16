@@ -27,9 +27,10 @@ export async function getUserProgressHistory(
       endDate
     );
   } catch (error) {
-    logger.error(`Error fetching progress history for user ${userId}:`, {
-      error,
-    });
+    logger.error(
+      `Error fetching progress history for user ${userId}:`,
+      error as Error
+    );
     throw error;
   }
 }
@@ -50,7 +51,7 @@ export async function getUserStreaks(
     logger.info(`Fetching streak information for user ${userId}`);
     return await trackerRepository.getUserStreaks(db, userId);
   } catch (error) {
-    logger.error(`Error fetching streaks for user ${userId}:`, { error });
+    logger.error(`Error fetching streaks for user ${userId}:`, error as Error);
     throw error;
   }
 }
@@ -90,9 +91,10 @@ export async function getUserProgressOverview(
       longestStreak: streaks.longestStreak,
     };
   } catch (error) {
-    logger.error(`Error fetching progress overview for user ${userId}:`, {
-      error,
-    });
+    logger.error(
+      `Error fetching progress overview for user ${userId}:`,
+      error as Error
+    );
     throw error;
   }
 }
