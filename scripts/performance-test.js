@@ -28,7 +28,7 @@ export const options = {
 };
 
 // API configuration - adjust to match your environment
-const API_BASE_URL = __ENV.API_URL || 'https://api-staging.tracknstick.com';
+const API_BASE_URL = __ENV.API_URL || 'https://api.tracknstick.com';
 
 // Authentication token - replace with a valid token for testing
 const AUTH_TOKEN = __ENV.AUTH_TOKEN || 'your-test-auth-token';

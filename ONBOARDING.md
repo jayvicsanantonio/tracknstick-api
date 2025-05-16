@@ -326,10 +326,10 @@ export async function getHabitsByDate(
 
 Key environment variables used:
 
-| Variable         | Description                                               | Required |
-| ---------------- | --------------------------------------------------------- | -------- |
-| CLERK_SECRET_KEY | Secret key for Clerk authentication                       | Yes      |
-| ENVIRONMENT      | Deployment environment (development, staging, production) | Yes      |
+| Variable         | Description                                      | Required |
+| ---------------- | ------------------------------------------------ | -------- |
+| CLERK_SECRET_KEY | Secret key for Clerk authentication              | Yes      |
+| ENVIRONMENT      | Deployment environment (development, production) | Yes      |
 
 ### Cloudflare Workers Configuration
 

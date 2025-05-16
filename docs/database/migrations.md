@@ -217,7 +217,7 @@ exports.down = function (knex) {
 ## Handling Production Migrations
 
 1. **Backup the database**: Always back up the production database before migrations
-2. **Test migrations thoroughly**: Test on a staging environment with production-like data
+2. **Test migrations thoroughly**: Test thoroughly in development environment before applying to production
 3. **Schedule maintenance window**: Plan migrations during low-traffic periods
 4. **Have a rollback plan**: Ensure you can roll back changes if needed
 5. **Monitor application**: Watch for any issues after applying migrations
