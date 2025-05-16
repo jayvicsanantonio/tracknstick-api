@@ -88,7 +88,8 @@ export async function ensureUserExists(
 export async function getHabitsByDate(
   db: D1Database,
   userId: string,
-  date: string
+  date: string,
+  dayOfWeek: string
 ): Promise<HabitRow[]> {
   // Ensure user exists
   await ensureUserExists(db, userId);
@@ -101,9 +102,18 @@ export async function getHabitsByDate(
       WHERE user_id = ? 
       AND start_date <= ? 
       AND (end_date IS NULL OR end_date >= ?)
+      AND (frequency LIKE ? OR frequency LIKE ? OR frequency LIKE ? OR frequency = ?)
     `
     )
-    .bind(userId, date, date)
+    .bind(
+      userId,
+      date,
+      date,
+      `%${dayOfWeek},%`, // Pattern: "Fri," (beginning or middle)
+      `%,${dayOfWeek},%`, // Pattern: ",Fri," (middle)
+      `%,${dayOfWeek}`, // Pattern: ",Fri" (end)
+      dayOfWeek // Pattern: "Fri" (exact match)
+    )
     .all();
 
   if (!habits.success) {
