@@ -297,6 +297,101 @@ GET /habits/progress/overview
 }
 ```
 
+## Progress
+
+### Get Progress History
+
+Retrieves the user's progress history showing completion rates by day. Date parameters only filter what results are displayed, not the accuracy of the calculations.
+
+```http
+GET /progress/history
+```
+
+#### Query Parameters
+
+| Parameter | Type   | Required | Description                       |
+| --------- | ------ | -------- | --------------------------------- |
+| startDate | string | No       | Filter by start date (YYYY-MM-DD) |
+| endDate   | string | No       | Filter by end date (YYYY-MM-DD)   |
+
+#### Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "date": "2024-05-10",
+      "completionRate": 75.0
+    },
+    {
+      "date": "2024-05-09",
+      "completionRate": 100.0
+    }
+  ],
+  "error": null
+}
+```
+
+### Get Streak Information
+
+Retrieves the user's current and longest streaks based on 100% completion days. Streak calculations always use a full year of data for accuracy, regardless of any date filters.
+
+```http
+GET /progress/streaks
+```
+
+#### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "currentStreak": 3,
+    "longestStreak": 7
+  },
+  "error": null
+}
+```
+
+### Get Progress Overview
+
+Retrieves a comprehensive overview of the user's progress including history and streaks in a single call. Date parameters only affect what history data is displayed, while streak calculations always use the full dataset.
+
+```http
+GET /progress/overview
+```
+
+#### Query Parameters
+
+| Parameter | Type   | Required | Description                       |
+| --------- | ------ | -------- | --------------------------------- |
+| startDate | string | No       | Filter by start date (YYYY-MM-DD) |
+| endDate   | string | No       | Filter by end date (YYYY-MM-DD)   |
+
+#### Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "history": [
+      {
+        "date": "2024-05-10",
+        "completionRate": 75.0
+      },
+      {
+        "date": "2024-05-09",
+        "completionRate": 100.0
+      }
+    ],
+    "currentStreak": 3,
+    "longestStreak": 7
+  },
+  "error": null
+}
+```
+
 ## Error Responses
 
 All endpoints may return the following error responses:

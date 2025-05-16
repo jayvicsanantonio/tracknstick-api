@@ -259,3 +259,205 @@ export async function getAllTrackersForHabit(
 
   return trackers.results as TrackerRow[];
 }
+
+/**
+ * Gets the user's progress history showing completion rate for each day
+ * This uses a fixed calculation window of the past 365 days to ensure comprehensive tracking
+ * Optional date parameters can restrict what's returned to the client but don't affect calculation
+ * @param db D1Database instance
+ * @param userId User's Clerk ID
+ * @param startDate Optional start date (ISO format) to filter returned results
+ * @param endDate Optional end date (ISO format) to filter returned results
+ * @returns Array of daily completion records with date and completion percentage
+ */
+export async function getUserProgressHistory(
+  db: D1Database,
+  userId: string,
+  startDate?: string,
+  endDate?: string
+): Promise<Array<{ date: string; completionRate: number }>> {
+  // Always calculate a full year of history for accurate streak calculation
+  // This ensures we have enough data regardless of requested date range
+  const fullHistoryStartDate = new Date();
+  fullHistoryStartDate.setDate(fullHistoryStartDate.getDate() - 365); // Go back a full year
+  const calculationStartDate = fullHistoryStartDate.toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
+
+  // This query calculates the completion rate for each day using a more efficient date generation approach
+  const sql = `
+    WITH RECURSIVE dates(date) AS (
+      -- Generate dates using recursive CTE instead of many UNIONs
+      VALUES(?)
+      UNION ALL
+      SELECT date(date, '+1 day')
+      FROM dates
+      WHERE date < ?
+    ),
+    habit_dates AS (
+      -- For each date, count active habits for that day of week
+      SELECT 
+        d.date,
+        COUNT(h.id) AS total_habits
+      FROM dates d
+      JOIN habits h ON h.user_id = ?
+        AND DATE(h.start_date) <= d.date
+        AND (h.end_date IS NULL OR DATE(h.end_date) >= d.date)
+        AND (
+          h.frequency LIKE '%' || SUBSTR('MonTueWedThuFriSatSun', 1 + 3*STRFTIME('%w', d.date), 3) || '%'
+          OR h.frequency = SUBSTR('MonTueWedThuFriSatSun', 1 + 3*STRFTIME('%w', d.date), 3)
+        )
+      GROUP BY d.date
+    ),
+    completed_habits AS (
+      -- For each date, count completed habits
+      SELECT 
+        DATE(t.timestamp) AS date,
+        COUNT(DISTINCT t.habit_id) AS completed_habits
+      FROM trackers t
+      JOIN habits h ON t.habit_id = h.id AND t.user_id = h.user_id
+      WHERE t.user_id = ?
+      GROUP BY DATE(t.timestamp)
+    )
+    -- Join to calculate completion rate
+    SELECT 
+      hd.date,
+      CASE 
+        WHEN hd.total_habits = 0 THEN 0
+        ELSE ROUND((COALESCE(ch.completed_habits, 0) * 100.0) / hd.total_habits, 2)
+      END AS completion_rate
+    FROM habit_dates hd
+    LEFT JOIN completed_habits ch ON hd.date = ch.date
+    WHERE hd.total_habits > 0
+    ORDER BY hd.date DESC;
+  `;
+
+  try {
+    const result = await db
+      .prepare(sql)
+      .bind(calculationStartDate, today, userId, userId)
+      .all();
+
+    if (!result.success) {
+      throw new Error('Failed to fetch user progress history');
+    }
+
+    // Map results to the expected format
+    let history = result.results.map((row) => ({
+      date: row.date,
+      completionRate: row.completion_rate,
+    }));
+
+    // If startDate and endDate are provided, filter the results to the requested range
+    if (startDate || endDate) {
+      history = history.filter((entry) => {
+        const entryDate = entry.date;
+        const afterStart = !startDate || entryDate >= startDate;
+        const beforeEnd = !endDate || entryDate <= endDate;
+        return afterStart && beforeEnd;
+      });
+    }
+
+    return history;
+  } catch (error) {
+    console.error('Error fetching user progress history:', error);
+    throw error;
+  }
+}
+
+/**
+ * Gets the user's current and longest streaks based on 100% completion days
+ * @param db D1Database instance
+ * @param userId User's Clerk ID
+ * @returns Object containing current streak and longest streak
+ */
+export async function getUserStreaks(
+  db: D1Database,
+  userId: string
+): Promise<{ currentStreak: number; longestStreak: number }> {
+  try {
+    // Get the user's progress history with full year of data to ensure accurate streak calculation
+    const history = await getUserProgressHistory(
+      db,
+      userId,
+      undefined,
+      undefined
+    );
+
+    // Calculate streaks based on 100% completion days
+    let currentStreak = 0;
+    let longestStreak = 0;
+    let tempStreak = 0;
+
+    // Sort by date descending to calculate current streak first
+    const sortedHistory = [...history].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    );
+
+    // Calculate current streak (consecutive 100% days up to today)
+    const today = new Date().toISOString().split('T')[0];
+
+    for (let i = 0; i < sortedHistory.length; i++) {
+      const entry = sortedHistory[i];
+
+      // Break if we encounter a gap in dates
+      if (i === 0 && entry.date !== today) {
+        break;
+      }
+
+      if (i > 0) {
+        const prevDate = new Date(sortedHistory[i - 1].date);
+        const currDate = new Date(entry.date);
+        const dayDiff = Math.floor(
+          (prevDate.getTime() - currDate.getTime()) / (24 * 60 * 60 * 1000)
+        );
+
+        if (dayDiff !== 1) {
+          break;
+        }
+      }
+
+      if (entry.completionRate === 100) {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
+
+    // Calculate longest streak
+    // Sort by date ascending for longest streak calculation
+    const chronologicalHistory = [...history].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    for (let i = 0; i < chronologicalHistory.length; i++) {
+      if (chronologicalHistory[i].completionRate === 100) {
+        tempStreak++;
+
+        // Check for date continuity
+        if (i > 0) {
+          const prevDate = new Date(chronologicalHistory[i - 1].date);
+          const currDate = new Date(chronologicalHistory[i].date);
+          const dayDiff = Math.floor(
+            (currDate.getTime() - prevDate.getTime()) / (24 * 60 * 60 * 1000)
+          );
+
+          // If dates aren't consecutive, reset the temporary streak
+          if (dayDiff !== 1) {
+            tempStreak = 1; // Reset to 1 (counting current day)
+          }
+        }
+      } else {
+        longestStreak = Math.max(longestStreak, tempStreak);
+        tempStreak = 0;
+      }
+    }
+
+    // Check final streak
+    longestStreak = Math.max(longestStreak, tempStreak);
+
+    return { currentStreak, longestStreak };
+  } catch (error) {
+    console.error('Error calculating user streaks:', error);
+    throw error;
+  }
+}

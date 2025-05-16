@@ -26,6 +26,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added GitHub Actions workflow for automated deployments to Cloudflare Workers
 - Added deployment documentation with setup instructions
 - Added deployment status indicators in GitHub repository
+- Added new progress endpoints for tracking user completion history and streaks
+  - `/api/v1/progress/history` for getting daily completion rates
+  - `/api/v1/progress/streaks` for getting current and longest streaks
+  - `/api/v1/progress/overview` for combined history and streak data
+- Improved progress tracking logic to use a full year of data for accurate streak calculations
 
 ### Changed
 
@@ -40,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Renamed best_streak to longest_streak in the habits table
 - Added total_completions field to habits table
 - Automatic updating of last_completed time when habit is marked as completed
+- Updated progress tracking endpoints to separate display filtering from calculation accuracy
 
 ### Fixed
 
@@ -52,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed critical schema mismatch where habits.user_id was INTEGER but needed to be TEXT to properly reference users.clerk_user_id
 - Added missing created_at and updated_at columns that were lost during schema migration
 - Added missing created_at and updated_at columns to trackers table
+- Fixed streak calculation accuracy by ensuring it always uses complete data regardless of display filters
 
 ### Removed
 

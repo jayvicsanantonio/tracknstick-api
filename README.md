@@ -7,6 +7,9 @@ This is a RESTful API for a habit tracker application built with Node.js, Expres
 - Create, Read, Update, and Delete (CRUD) habits.
 - Track habit completions for specific dates (toggle on/off).
 - Retrieve habit statistics (streak, total completions, last completed date).
+- Track daily progress with completion rates and streaks.
+- View historical completion data with daily completion percentages.
+- Monitor current and longest streaks of 100% completion days.
 - Secure endpoints using Clerk JWT authentication.
 
 ## Tech Stack
@@ -54,6 +57,7 @@ erDiagram
     USERS ||--|{ HABITS : "tracks"
     USERS ||--|{ TRACKERS : "logs"
     HABITS ||--|{ TRACKERS : "records"
+    TRACKERS }|--|| PROGRESS : "aggregated into"
 
     USERS {
         INTEGER id PK
@@ -77,6 +81,13 @@ erDiagram
         INTEGER user_id FK
         DATETIME timestamp "Completion Timestamp (UTC)"
         TEXT notes
+    }
+
+    PROGRESS {
+        TEXT date "YYYY-MM-DD"
+        FLOAT completion_rate "Daily completion percentage"
+        INTEGER current_streak "Consecutive 100% days"
+        INTEGER longest_streak "Record of consecutive 100% days"
     }
 ```
 
@@ -213,11 +224,3 @@ Details about the refactoring process, architecture decisions, specific improvem
 - [Enhancements & Future Work](docs/development/enhancements.md)
 - [Performance Optimizations](docs/development/optimizations.md)
 - [Learnings & Takeaways](docs/development/learnings.md)
-
-## Contributing
-
-_(Add contribution guidelines if applicable)_
-
-## License
-
-_(Add license information if applicable, e.g., ISC)_

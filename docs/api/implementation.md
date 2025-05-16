@@ -355,6 +355,91 @@ Base Path: `/api/v1`
     - `404 Not Found`: (See PUT /habits/:habitId example)
     - `500 Internal Server Error`: (Generic response in production, see POST /habits example)
 
+### Progress
+
+- **`GET /progress/history`**
+
+  - **Description:** Retrieves user's progress history showing completion rates by day. Date parameters only filter the results displayed to the client, not the data used for streak calculations.
+  - **Authentication:** Requires `Authorization: Bearer <token>` header (Clerk JWT).
+  - **Query Parameters:**
+    - `startDate` (string, optional): Start date ("YYYY-MM-DD") for filtering displayed results (inclusive).
+    - `endDate` (string, optional): End date ("YYYY-MM-DD") for filtering displayed results (inclusive).
+  - **Success Response (200 OK):**
+    ```json
+    {
+      "history": [
+        {
+          "date": "2023-05-24",
+          "completionRate": 75.5
+        },
+        {
+          "date": "2023-05-23",
+          "completionRate": 100
+        }
+        // ... more daily completion rates
+      ]
+    }
+    ```
+  - **Error Responses:**
+    - `400 Bad Request (Validation Error)`:
+      ```json
+      {
+        "error": "Invalid startDate format. Use YYYY-MM-DD"
+      }
+      ```
+    - `401 Unauthorized`: (See POST /habits example)
+    - `500 Internal Server Error`: (Generic response in production, see POST /habits example)
+
+- **`GET /progress/streaks`**
+
+  - **Description:** Retrieves user's current and longest streaks based on 100% completion days. Streak calculations always use a full year of data for accuracy, regardless of any date filters.
+  - **Authentication:** Requires `Authorization: Bearer <token>` header (Clerk JWT).
+  - **Success Response (200 OK):**
+    ```json
+    {
+      "currentStreak": 3,
+      "longestStreak": 7
+    }
+    ```
+  - **Error Responses:**
+    - `401 Unauthorized`: (See POST /habits example)
+    - `500 Internal Server Error`: (Generic response in production, see POST /habits example)
+
+- **`GET /progress/overview`**
+
+  - **Description:** Retrieves complete progress data including history and streaks in one call. Date parameters only affect what history data is displayed, while streak calculations always use the complete dataset.
+  - **Authentication:** Requires `Authorization: Bearer <token>` header (Clerk JWT).
+  - **Query Parameters:**
+    - `startDate` (string, optional): Start date ("YYYY-MM-DD") for filtering displayed history (inclusive).
+    - `endDate` (string, optional): End date ("YYYY-MM-DD") for filtering displayed history (inclusive).
+  - **Success Response (200 OK):**
+    ```json
+    {
+      "history": [
+        {
+          "date": "2023-05-24",
+          "completionRate": 75.5
+        },
+        {
+          "date": "2023-05-23",
+          "completionRate": 100
+        }
+        // ... more daily completion rates
+      ],
+      "currentStreak": 3,
+      "longestStreak": 7
+    }
+    ```
+  - **Error Responses:**
+    - `400 Bad Request (Validation Error)`:
+      ```json
+      {
+        "error": "Invalid startDate format. Use YYYY-MM-DD"
+      }
+      ```
+    - `401 Unauthorized`: (See POST /habits example)
+    - `500 Internal Server Error`: (Generic response in production, see POST /habits example)
+
 ## Database Schema
 
 **`users` table:**
