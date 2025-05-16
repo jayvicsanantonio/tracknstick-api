@@ -26,11 +26,7 @@ app.use('*', initBindings()); // Initialize bindings middleware
 app.use(
   '*',
   cors({
-    origin: [
-      'http://localhost:5173',
-      'http://localhost:4173',
-      'https://tracknstick.com',
-    ],
+    origin: ['http://localhost:5173', 'https://tracknstick.com'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowHeaders: ['Content-Type', 'Authorization'],
     maxAge: 86400,
