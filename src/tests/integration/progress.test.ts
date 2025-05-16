@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { app } from '../../index';
+import app from '../../index.js';
 import { Hono } from 'hono';
-import { prepareTestEnvironment, cleanupTestEnvironment } from '../setup';
+import { createTestEnv, mockAuthentication, resetMocks } from '../setup.js';
 import { D1Database } from '@cloudflare/workers-types';
 
 describe('Progress API Integration Tests', () => {
@@ -12,11 +12,14 @@ describe('Progress API Integration Tests', () => {
 
   // Set up test environment
   beforeAll(async () => {
-    const env = await prepareTestEnvironment();
-    testApp = env.app;
-    testDb = env.db;
-    authHeader = env.authHeader;
-    userId = env.userId;
+    const testEnv = createTestEnv();
+    testApp = testEnv.app;
+    testDb = testEnv.mockDb;
+    userId = 'test-user-123';
+    authHeader = { headers: { Authorization: 'Bearer test-token' } };
+
+    // Mock authentication
+    mockAuthentication(userId);
 
     // Create some test habits and trackers for testing progress endpoints
     // This setup will vary based on your actual test environment
@@ -24,7 +27,7 @@ describe('Progress API Integration Tests', () => {
 
   // Clean up after tests
   afterAll(async () => {
-    await cleanupTestEnvironment();
+    resetMocks();
   });
 
   describe('GET /api/v1/progress/history', () => {
@@ -34,7 +37,9 @@ describe('Progress API Integration Tests', () => {
       });
 
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = (await response.json()) as {
+        history: Array<{ date: string; completionRate: number }>;
+      };
       expect(data).toHaveProperty('history');
       expect(Array.isArray(data.history)).toBe(true);
 
@@ -84,7 +89,10 @@ describe('Progress API Integration Tests', () => {
       });
 
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = (await response.json()) as {
+        currentStreak: number;
+        longestStreak: number;
+      };
       expect(data).toHaveProperty('currentStreak');
       expect(data).toHaveProperty('longestStreak');
       expect(typeof data.currentStreak).toBe('number');
@@ -99,7 +107,11 @@ describe('Progress API Integration Tests', () => {
       });
 
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = (await response.json()) as {
+        history: Array<{ date: string; completionRate: number }>;
+        currentStreak: number;
+        longestStreak: number;
+      };
       expect(data).toHaveProperty('history');
       expect(data).toHaveProperty('currentStreak');
       expect(data).toHaveProperty('longestStreak');
@@ -122,7 +134,11 @@ describe('Progress API Integration Tests', () => {
       );
 
       expect(response.status).toBe(200);
-      const data = await response.json();
+      const data = (await response.json()) as {
+        history: Array<{ date: string; completionRate: number }>;
+        currentStreak: number;
+        longestStreak: number;
+      };
       expect(data).toHaveProperty('history');
       expect(data).toHaveProperty('currentStreak');
       expect(data).toHaveProperty('longestStreak');
