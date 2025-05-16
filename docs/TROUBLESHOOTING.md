@@ -109,9 +109,3 @@ Make sure you build and deploy your changes:
 npm run build
 npm run deploy
 ```
-
-For staging deployments, use:
-
-```bash
-npm run deploy:staging
-```

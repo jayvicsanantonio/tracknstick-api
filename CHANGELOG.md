@@ -54,6 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Removed Winston logger (not compatible with edge runtime)
 - Removed direct SQLite dependencies
+- Removed staging environment configuration (wrangler.staging.toml) to simplify deployment process
 
 ## [1.2.0] - 2025-05-14
 
