@@ -1,7 +1,14 @@
 import logger from './logger.js';
+import { formatDayOfWeek, formatDate, getDaysBetween } from './dateUtils.js';
 
 interface TrackerRow {
   timestamp: string;
+  habit_id?: number;
+  id?: number;
+  user_id?: string;
+  notes?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface StreakStats {
@@ -108,4 +115,123 @@ export function updateStreakInfo(
     streak: currentStreak,
     longestStreak,
   };
+}
+
+/**
+ * Calculate streak for daily habits
+ * @param trackers Array of tracker entries sorted by date (most recent first)
+ * @returns Current streak count
+ */
+export function calculateDailyStreak(trackers: TrackerRow[]): number {
+  if (trackers.length === 0) {
+    return 0;
+  }
+
+  let streak = 1; // Start with the most recent day
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const mostRecentDate = new Date(trackers[0].timestamp);
+  mostRecentDate.setHours(0, 0, 0, 0);
+
+  // If most recent isn't today or yesterday, streak is broken
+  const dayDiff = getDaysBetween(mostRecentDate, today);
+  if (dayDiff > 1) {
+    return 0;
+  }
+
+  // Count consecutive days
+  for (let i = 0; i < trackers.length - 1; i++) {
+    const currentDate = new Date(trackers[i].timestamp);
+    const nextDate = new Date(trackers[i + 1].timestamp);
+
+    currentDate.setHours(0, 0, 0, 0);
+    nextDate.setHours(0, 0, 0, 0);
+
+    const diffTime = currentDate.getTime() - nextDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 1) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+
+  return streak;
+}
+
+/**
+ * Calculate streak for non-daily habits based on frequency pattern
+ * @param trackers Array of tracker entries sorted by date (most recent first)
+ * @param frequencyDays Array of days when habit is scheduled (e.g., ["Mon", "Wed", "Fri"])
+ * @returns Current streak count
+ */
+export function calculateNonDailyStreak(
+  trackers: TrackerRow[],
+  frequencyDays: string[]
+): number {
+  if (trackers.length === 0) {
+    return 0;
+  }
+
+  // Create a Set for faster lookups of scheduled days
+  const scheduledDays = new Set(frequencyDays);
+
+  // Get most recent tracker date to start from
+  const mostRecentDate = new Date(trackers[0].timestamp);
+  mostRecentDate.setHours(0, 0, 0, 0);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Check if the most recent tracked date is on or after the most recent scheduled day
+  // If the user has missed their most recent scheduled day, streak is broken
+  const daysSinceMostRecent = getDaysBetween(mostRecentDate, today);
+
+  // If more than 7 days have passed, we may need a more complex calculation
+  // but for simplicity, we'll assume streak is broken if the most recent tracker
+  // is more than a week old
+  if (daysSinceMostRecent > 7) {
+    return 0;
+  }
+
+  // Convert trackers to a map of dates for quick lookup
+  const trackersByDate = new Map<string, TrackerRow>();
+  trackers.forEach((tracker) => {
+    const date = new Date(tracker.timestamp);
+    date.setHours(0, 0, 0, 0);
+    trackersByDate.set(formatDate(date), tracker);
+  });
+
+  // Start from today and walk backwards through the scheduled days
+  let currentDate = new Date(today);
+  let streak = 0;
+  let missedScheduledDay = false;
+
+  // Look back up to 30 days to find streak (arbitrary limit to prevent infinite loop)
+  for (let i = 0; i < 30 && !missedScheduledDay; i++) {
+    const dayOfWeek = formatDayOfWeek(currentDate);
+
+    // If this is a scheduled day for the habit
+    if (scheduledDays.has(dayOfWeek)) {
+      const dateStr = formatDate(currentDate);
+
+      if (trackersByDate.has(dateStr)) {
+        // Habit was completed on this scheduled day
+        streak++;
+      } else if (currentDate <= today) {
+        // Habit was not completed on a scheduled day that's today or in the past
+        // This breaks the streak (unless it's today, which is still in progress)
+        if (getDaysBetween(currentDate, today) > 0) {
+          missedScheduledDay = true;
+        }
+      }
+    }
+
+    // Move to previous day
+    currentDate.setDate(currentDate.getDate() - 1);
+  }
+
+  return streak;
 }

@@ -119,7 +119,16 @@ export const getTrackers = async (c: Context) => {
       endDate,
       c.env.DB
     );
-    return c.json(trackers);
+
+    // Return a cleaner response with only relevant fields
+    return c.json({
+      trackers: trackers.map((tracker) => ({
+        id: tracker.id.toString(),
+        habitId: tracker.habitId.toString(),
+        timestamp: tracker.timestamp,
+        notes: tracker.notes || undefined,
+      })),
+    });
   } catch (error) {
     console.error(
       `Error in getTrackers controller for user ${userId}, habit ${habitId}:`,

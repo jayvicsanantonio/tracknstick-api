@@ -346,9 +346,6 @@ export async function manageTracker(
     };
   }
 
-  // Start a transaction for adding the tracker and updating the habit
-  // Note: D1 doesn't fully support transactions yet, so we're doing separate operations
-
   // Add a new tracker
   const result = await db
     .prepare(
@@ -364,21 +361,6 @@ export async function manageTracker(
     throw new Error('Failed to add tracker');
   }
 
-  // Update the habit's last_completed date and increment total_completions
-  await db
-    .prepare(
-      `
-      UPDATE habits
-      SET 
-        last_completed = datetime(?),
-        total_completions = total_completions + 1,
-        updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `
-    )
-    .bind(timestamp, habitId)
-    .run();
-
   return {
     status: 'added',
     trackerId: result.meta.last_row_id as number,
@@ -392,8 +374,6 @@ export async function getHabitStats(
   userId: string,
   habitId: number | string
 ): Promise<{
-  total: number;
-  completed: number;
   streak: number;
   longestStreak: number;
   totalCompletions: number;
@@ -402,18 +382,78 @@ export async function getHabitStats(
   // Check if habit exists and belongs to user
   const habit = await getHabitById(db, userId, habitId);
 
-  // Count total trackers
-  const { count } = (await db
-    .prepare('SELECT COUNT(*) as count FROM trackers WHERE habit_id = ?')
-    .bind(habitId)
-    .first<{ count: number }>()) || { count: 0 };
-
   return {
-    total: 0, // Calculate based on frequency and date range
-    completed: count,
     streak: habit.streak,
-    bestStreak: habit.longest_streak,
+    longestStreak: habit.longest_streak,
+    totalCompletions: habit.total_completions,
+
     lastCompleted: habit.last_completed,
-    completionRate: 0, // Calculate: completed / total
   };
+}
+
+// Update habit statistics (streak, longest_streak, etc.)
+export async function updateHabitStats(
+  db: D1Database,
+  habitId: number | string,
+  stats: {
+    streak?: number;
+    lastCompleted?: string | null;
+    totalCompletions?: number;
+    longestStreak?: number;
+  }
+): Promise<void> {
+  // Build the update query dynamically based on provided fields
+  const updateFields: string[] = [];
+  const values: any[] = [];
+
+  if (stats.streak !== undefined) {
+    updateFields.push('streak = ?');
+    values.push(stats.streak);
+
+    // If we're updating streak and it's greater than longest_streak, update longest_streak too
+    updateFields.push(
+      'longest_streak = CASE WHEN ? > longest_streak THEN ? ELSE longest_streak END'
+    );
+    values.push(stats.streak, stats.streak);
+  }
+
+  if (stats.lastCompleted !== undefined) {
+    updateFields.push('last_completed = ?');
+    values.push(stats.lastCompleted);
+  }
+
+  if (stats.totalCompletions !== undefined) {
+    updateFields.push('total_completions = ?');
+    values.push(stats.totalCompletions);
+  }
+
+  if (stats.longestStreak !== undefined) {
+    updateFields.push('longest_streak = ?');
+    values.push(stats.longestStreak);
+  }
+
+  // Add update timestamp
+  updateFields.push('updated_at = CURRENT_TIMESTAMP');
+
+  if (updateFields.length === 0) {
+    return; // Nothing to update
+  }
+
+  // Add the habit ID to the values array
+  values.push(habitId);
+
+  const query = `
+    UPDATE habits 
+    SET ${updateFields.join(', ')} 
+    WHERE id = ?
+  `;
+
+  const result = await db
+    .prepare(query)
+    .bind(...values)
+    .run();
+
+  if (!result.success) {
+    throw new Error(`Failed to update habit stats for habit ${habitId}`);
+  }
 }
