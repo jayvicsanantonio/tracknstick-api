@@ -15,7 +15,7 @@ jobs:
     name: Deploy
     environment:
       name: production
-      url: https://tracknstick-api.yourdomain.workers.dev
+      url: https://tracknstick-api.hi-00e.workers.dev
 
     steps:
       - uses: actions/checkout@v4
