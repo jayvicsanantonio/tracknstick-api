@@ -40,6 +40,7 @@ export const getHabits = async (c: Context) => {
         frequency: habit.frequency,
         startDate: habit.startDate,
         endDate: habit.endDate,
+        completed: habit.completed,
       }))
     );
   } catch (error) {
