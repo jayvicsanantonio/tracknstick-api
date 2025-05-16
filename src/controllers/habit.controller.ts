@@ -173,12 +173,7 @@ export const getHabitStats = async (c: Context) => {
   const { timeZone } = c.get('validated_query');
 
   try {
-    const stats = await habitService.getHabitStats(
-      userId,
-      habitId,
-      timeZone,
-      c.env.DB
-    );
+    const stats = await habitService.getHabitStats(userId, habitId, c.env.DB);
     return c.json(stats);
   } catch (error) {
     console.error(
