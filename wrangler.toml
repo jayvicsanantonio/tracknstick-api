@@ -8,6 +8,9 @@ send_metrics = false
 # Example environment variables
 ENVIRONMENT = "production"
 
+[observability.logs]
+enabled = true
+
 # Secrets that need to be set via wrangler
 # CLERK_SECRET_KEY - run: wrangler secret put CLERK_SECRET_KEY
 
