@@ -1,14 +1,14 @@
-const AppError = require('./base');
+import AppError from './base.js';
 
 /**
- * Error for missing or invalid authentication credentials.
+ * Error for failed authentication.
  * Status code: 401
  * Error code: AUTHENTICATION_FAILED
  */
 class AuthenticationError extends AppError {
-  constructor(message = 'Authentication Required') {
+  constructor(message = 'Authentication Failed') {
     super(message, 401, 'AUTHENTICATION_FAILED');
   }
 }
 
-module.exports = AuthenticationError;
+export default AuthenticationError;

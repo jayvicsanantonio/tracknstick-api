@@ -1,23 +1,41 @@
 {
   "name": "tracknstick-api",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "dist/index.js",
+  "type": "module",
   "scripts": {
-    "start": "nodemon index.js",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "lint": "eslint . --ext .js",
-    "lint:fix": "eslint . --ext .js --fix",
-    "format": "prettier --write \"**/*.js\"",
-    "db:migrate": "knex migrate:latest",
-    "db:rollback": "knex migrate:rollback",
-    "db:make-migration": "knex migrate:make"
+    "dev": "wrangler dev",
+    "dev:local": "wrangler dev --local",
+    "build": "tsc",
+    "deploy": "wrangler deploy",
+    "format": "prettier --write \"**/*.{js,ts}\"",
+    "lint": "eslint . --ext .js,.ts",
+    "lint:fix": "eslint . --ext .js,.ts --fix",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "db:migrate": "wrangler d1 execute tracknstick-db --file=./migrations/0000_initial_schema.sql",
+    "db:migrate:remote": "wrangler d1 execute tracknstick-db --file=./migrations/0000_initial_schema.sql --remote",
+    "db:migrate:frequency": "node scripts/migrate-frequency-data.js",
+    "db:migrate:update": "wrangler d1 execute tracknstick-db --file=./migrations/0002_recreate_habits_table.sql",
+    "db:migrate:update:remote": "wrangler d1 execute tracknstick-db --file=./migrations/0002_recreate_habits_table.sql --remote",
+    "db:export": "node scripts/migrate-data.js",
+    "db:import": "wrangler d1 execute tracknstick-db --file=./migrations/data_import.sql",
+    "db:import:remote": "wrangler d1 execute tracknstick-db --file=./migrations/data_import.sql --remote",
+    "db:query": "wrangler d1 execute tracknstick-db --command",
+    "db:query:remote": "wrangler d1 execute tracknstick-db --command --remote",
+    "predev": "npm run build",
+    "predeploy": "npm run build",
+    "deploy:staging": "wrangler deploy --env staging"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/jayvicsanantonio/tracknstick-api.git"
   },
   "keywords": [
-    "api"
+    "api",
+    "cloudflare-workers",
+    "hono"
   ],
   "author": "Jayvic San Antonio",
   "license": "ISC",
@@ -27,24 +45,26 @@
   "homepage": "https://github.com/jayvicsanantonio/tracknstick-api#readme",
   "description": "",
   "dependencies": {
-    "@clerk/express": "^1.4.5",
-    "cors": "^2.8.5",
-    "dotenv": "^16.5.0",
-    "express": "^4.21.2",
-    "express-rate-limit": "^7.5.0",
-    "express-validator": "^7.2.1",
-    "helmet": "^8.0.0",
+    "@clerk/backend": "^0.36.0",
+    "@hono/zod-validator": "^0.2.0",
+    "hono": "^4.5.0",
     "knex": "^3.1.0",
-    "nodemon": "^3.1.9",
-    "sqlite3": "^5.1.7",
-    "winston": "^3.17.0"
+    "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240610.0",
+    "@types/node": "^20.11.6",
+    "@typescript-eslint/eslint-plugin": "^8.32.1",
+    "@typescript-eslint/parser": "^8.32.1",
     "eslint": "^8.57.1",
     "eslint-config-airbnb-base": "^15.0.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-import": "^2.31.0",
     "eslint-plugin-prettier": "^5.2.6",
-    "prettier": "^3.5.3"
+    "prettier": "^3.5.3",
+    "sqlite3": "^5.1.7",
+    "typescript": "^5.3.3",
+    "vitest": "^1.6.1",
+    "wrangler": "^4.15.2"
   }
 }

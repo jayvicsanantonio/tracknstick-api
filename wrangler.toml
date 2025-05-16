@@ -1,0 +1,25 @@
+name = "tracknstick-api"
+main = "src/index.ts"
+compatibility_date = "2025-03-01"
+compatibility_flags = ["nodejs_compat"]
+send_metrics = false
+
+[vars]
+# Example environment variables
+ENVIRONMENT = "production"
+
+# Secrets that need to be set via wrangler
+# CLERK_SECRET_KEY - run: wrangler secret put CLERK_SECRET_KEY
+
+[dev]
+port = 3000
+
+# D1 Database configuration
+[[d1_databases]]
+binding = "DB"
+database_name = "tracknstick-db"
+database_id = "d828b4a9-4ae4-4af3-af29-be4c27ae42fc" 
+
+# Optional: Add cron triggers for scheduling tasks
+# [triggers]
+# crons = ["*/30 * * * *"] # Run every 30 minutes 

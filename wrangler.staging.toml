@@ -1,0 +1,27 @@
+# Staging environment configuration for Cloudflare Workers
+name = "tracknstick-api-staging"
+main = "dist/index.js"
+compatibility_date = "2025-03-01"
+compatibility_flags = ["nodejs_compat"]
+send_metrics = false
+
+# Production-like settings with staging database
+[vars]
+ENVIRONMENT = "staging"
+
+# Staging D1 database
+[[d1_databases]]
+binding = "DB" 
+database_name = "tracknstick-db-staging"
+database_id = "INSERT_STAGING_DB_ID_HERE" # You'll need to replace this with the actual ID
+
+# Add any necessary secrets via wrangler CLI:
+# npx wrangler secret put CLERK_SECRET_KEY --env staging
+
+# Staging route pattern
+[routes]
+pattern = "api-staging.tracknstick.com/*"
+custom_domain = true
+
+[triggers]
+crons = [] 

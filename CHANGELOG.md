@@ -5,6 +5,50 @@ All notable changes to the TrackNStick API will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - Unreleased
+
+### Added
+
+- Migrated to Hono.js framework for edge-optimized performance
+- Deployed on Cloudflare Workers runtime
+- Moved database to Cloudflare D1 (distributed SQLite)
+- TypeScript implementation with full type safety
+- New testing framework with Vitest
+- Improved validation with Zod schema validation
+- Enhanced error handling system
+- Edge-optimized custom logger
+- Request tracking middleware with unique request IDs
+- Data migration tooling from SQLite to D1
+- Comprehensive test suite with unit and integration tests
+- New troubleshooting documentation for common issues
+- Added last_completed field to habits table for tracking most recent completion date
+- Added migration script to update existing database schema to the new format
+
+### Changed
+
+- Replaced Express.js with Hono.js
+- Refactored repository layer to use D1 database
+- Updated authentication middleware for Clerk compatibility in Cloudflare Workers
+- Converted validation from express-validator to Zod
+- Improved error handling and status code responses
+- Enhanced TypeScript support throughout codebase
+- Updated README with D1 migration instructions
+- Simplified database schema for habits - replaced frequency_type, frequency_days, frequency_dates with a single frequency JSON field
+- Renamed best_streak to longest_streak in the habits table
+- Added total_completions field to habits table
+- Automatic updating of last_completed time when habit is marked as completed
+
+### Fixed
+
+- Fixed "no such table: users" error in local development by adding clear database migration instructions
+- Improved initialization of database tables when running locally
+- Fixed "table habits has no column named frequency" error by adding a migration script to update the table schema
+
+### Removed
+
+- Removed Winston logger (not compatible with edge runtime)
+- Removed direct SQLite dependencies
+
 ## [1.2.0] - 2025-05-14
 
 ### Added

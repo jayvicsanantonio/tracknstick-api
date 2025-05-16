@@ -12,8 +12,9 @@ This is a RESTful API for a habit tracker application built with Node.js, Expres
 ## Tech Stack
 
 - **Backend:** Node.js
-- **Framework:** Express.js
-- **Database:** SQLite
+- **Framework:** Hono.js
+- **Database:** Cloudflare D1 (SQLite)
+- **Deployment:** Cloudflare Workers
 - **Linting/Formatting:** ESLint, Prettier
 
 ## Visual Overview
@@ -22,30 +23,27 @@ This is a RESTful API for a habit tracker application built with Node.js, Expres
 
 ```mermaid
 graph LR
-    Client -->|"HTTP Request\nGET POST PUT DELETE"| ExpressApp[Express App];
-    ExpressApp -->|"Request"| Middleware["Middleware <br> (CORS, Helmet, JSON Parser, Auth)"];
+    Client -->|"HTTP Request\nGET POST PUT DELETE"| HonoApp[Hono App];
+    HonoApp -->|"Request"| Middleware["Middleware <br> (CORS, Authentication)"];
     Middleware -->|"Authenticated Request"| Routes["API Routes <br> (/api/v1/...)"];
-    Routes -->|"Params, Body"| Controller["Controller <br> (e.g., habit.controller.js)"];
-    Controller -->|"Data Request"| Service["Service Layer <br> (e.g., habit.service.js)"];
-    Service -->|"DB Operations"| Repository["Repository Layer <br> (e.g., habit.repository.js)"];
-    Repository -->|"SQL Query"| DBUtils["DB Utils <br> (dbUtils.js)"];
-    DBUtils -->|"Read/Write"| Database["(SQLite <br> tracknstick.db)"];
-    Database -->|"Result Set"| DBUtils;
-    DBUtils -->|"Data"| Repository;
+    Routes -->|"Params, Body"| Controller["Controller <br> (e.g., habit.controller.ts)"];
+    Controller -->|"Data Request"| Service["Service Layer <br> (e.g., habit.service.ts)"];
+    Service -->|"DB Operations"| Repository["Repository Layer <br> (e.g., habit.repository.ts)"];
+    Repository -->|"SQL Query"| D1["Cloudflare D1 <br> (SQLite-compatible)"];
+    D1 -->|"Result Set"| Repository;
     Repository -->|"Data"| Service;
     Service -->|"Processed Data"| Controller;
-    Controller -->|"JSON Response"| ExpressApp;
-    ExpressApp -->|"HTTP Response"| Client;
+    Controller -->|"JSON Response"| HonoApp;
+    HonoApp -->|"HTTP Response"| Client;
 
     subgraph "Application Layers"
         Controller
         Service
         Repository
-        DBUtils
     end
 
     subgraph "Infrastructure"
-        Database
+        D1
     end
 ```
 
@@ -116,16 +114,13 @@ To prevent abuse, API requests are rate-limited. By default, each IP address is 
       NODE_ENV=development
 
       # Clerk API Keys (Get from Clerk Dashboard)
-
       CLERK_SECRET_KEY=sk_test_YOUR_SECRET_KEY_HERE
       CLERK_PUBLISHABLE_KEY=pk_test_YOUR_PUBLISHABLE_KEY_HERE
 
       # Optional: Database Path
-
       DATABASE_PATH=./tracknstick.db
 
       # Optional: Rate Limiting
-
       RATE_LIMIT_WINDOW_MS=900000
       RATE_LIMIT_MAX_REQUESTS=100
       ```
@@ -133,26 +128,57 @@ To prevent abuse, API requests are rate-limited. By default, each IP address is 
     - **Important:** Replace the placeholder Clerk keys with your actual keys.
 
 4.  **Database Setup:**
-    - The database schema is managed using Knex migrations.
-    - Run the following command to create the database file (if it doesn't exist) and apply all pending migrations:
+
+    - The database schema is managed using Cloudflare D1 migrations.
+    - Run the following commands to set up the database and apply migrations:
+
       ```bash
+      # Set up initial schema
       npm run db:migrate
+
+      # Apply additional migrations (indexes)
+      wrangler d1 execute tracknstick-db --file=./migrations/0001_add_indexes.sql
       ```
-    - **Important:** When a user authenticates via Clerk for the first time against the backend, you might need logic (currently _not_ implemented) to create a corresponding record in the local `users` table using their Clerk User ID (`req.auth.userId`). The `api_key` column is no longer used for authentication.
+
+    - **Important:** This must be done before starting the application.
 
 ## Running the Application
 
-- **Development Mode (with auto-restart via nodemon):**
+- **Development Mode with Local D1 Database:**
   ```bash
-  npm start
+  npm run dev:local
   ```
-- **(Optional) Production Mode:**
+- **Development Mode with Remote D1 Database:**
   ```bash
-  npm install --production
-  NODE_ENV=production node index.js
+  npm run dev
+  ```
+- **Production Deployment:**
+  ```bash
+  npm run deploy
   ```
 
-The API will typically be available at `http://localhost:3000` (or the port specified in your `.env` file).
+The API will be available at `http://localhost:3000` when running in development mode.
+
+## Database Migrations
+
+Database schema changes are managed using Cloudflare D1 migrations:
+
+- **Apply Migrations Locally:**
+  ```bash
+  npm run db:migrate
+  ```
+- **Apply Migrations to Remote Database:**
+  ```bash
+  npm run db:migrate:remote
+  ```
+- **Execute SQL Queries Locally:**
+  ```bash
+  npm run db:query -- "SELECT * FROM users"
+  ```
+- **Execute SQL Queries on Remote Database:**
+  ```bash
+  npm run db:query:remote -- "SELECT * FROM users"
+  ```
 
 ## Running Tests
 
@@ -161,23 +187,6 @@ npm test
 ```
 
 _(Note: Test suite setup is pending)_
-
-## Database Migrations
-
-Database schema changes are managed using Knex.
-
-- **Apply Migrations:** To apply all pending migrations and bring the database schema up to date:
-  ```bash
-  npm run db:migrate
-  ```
-- **Rollback Last Migration:** To undo the most recently applied migration batch:
-  ```bash
-  npm run db:rollback
-  ```
-- **Create New Migration:** To generate a new migration file (replace `<migration_name>`):
-  ```bash
-  npm run db:make-migration -- <migration_name>
-  ```
 
 ## API Documentation
 

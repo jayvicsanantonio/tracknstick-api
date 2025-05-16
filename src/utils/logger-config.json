@@ -1,0 +1,9 @@
+{
+  "appName": "tracknstick-api",
+  "logLevel": "info",
+  "enableMetrics": true,
+  "formats": {
+    "timestamp": "ISO",
+    "includeRequestIds": true
+  }
+}

@@ -1,20 +1,19 @@
-const AppError = require('./base');
+import AppError from './base.js';
 
 /**
- * Error for internal database issues.
+ * Error for database operations.
  * Status code: 500
  * Error code: DATABASE_ERROR
  */
 class DatabaseError extends AppError {
   /**
-   * Creates an instance of DatabaseError.
-   * @param {string} [message='Database operation failed'] - The error message.
-   * @param {Error} [originalError=null] - The original error caught from the database driver.
+   * @param {string} message Error message
+   * @param {Error} originalError The original database error that occurred
    */
-  constructor(message = 'Database operation failed', originalError = null) {
+  constructor(message = 'Database Error', originalError = null) {
     super(message, 500, 'DATABASE_ERROR');
-    this.originalError = originalError; // Store original error for logging
+    this.originalError = originalError;
   }
 }
 
-module.exports = DatabaseError;
+export default DatabaseError;

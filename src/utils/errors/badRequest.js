@@ -1,14 +1,14 @@
-const AppError = require('./base');
+import AppError from './base.js';
 
 /**
- * Error for bad requests (e.g., invalid input).
+ * Error for invalid or malformed client requests.
  * Status code: 400
- * Error code: INVALID_INPUT
+ * Error code: BAD_REQUEST
  */
 class BadRequestError extends AppError {
   constructor(message = 'Bad Request') {
-    super(message, 400, 'INVALID_INPUT');
+    super(message, 400, 'BAD_REQUEST');
   }
 }
 
-module.exports = BadRequestError;
+export default BadRequestError;

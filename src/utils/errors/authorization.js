@@ -1,14 +1,14 @@
-const AppError = require('./base');
+import AppError from './base.js';
 
 /**
- * Error for insufficient permissions to access a resource.
+ * Error for forbidden access to a resource.
  * Status code: 403
- * Error code: AUTHORIZATION_FAILED
+ * Error code: ACCESS_FORBIDDEN
  */
 class AuthorizationError extends AppError {
-  constructor(message = 'Forbidden') {
-    super(message, 403, 'AUTHORIZATION_FAILED');
+  constructor(message = 'Access Forbidden') {
+    super(message, 403, 'ACCESS_FORBIDDEN');
   }
 }
 
-module.exports = AuthorizationError;
+export default AuthorizationError;

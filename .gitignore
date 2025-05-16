@@ -22,10 +22,12 @@ jspm_packages/
 
 # Environment variables
 .env
+.dev.vars
 
 # IDEs and editors
 .idea/
 .vscode/
+.cursor/
 *.suo
 *.ntvs*
 *.njsproj
@@ -39,4 +41,8 @@ Thumbs.db
 dist/
 build/
 
+# Database files
 *.db
+
+# Wrangler temp files
+.wrangler/
