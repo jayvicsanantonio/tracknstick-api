@@ -32,10 +32,16 @@ export const getHabits = async (c: Context) => {
     );
     const data = c.json(habits);
 
-    console.log('=== RESPONSE ===');
-    console.log('habits', habits);
-
-    return data;
+    return c.json(
+      habits.map((habit) => ({
+        id: habit.id.toString(),
+        name: habit.name,
+        icon: habit.icon,
+        frequency: habit.frequency,
+        startDate: habit.startDate,
+        endDate: habit.endDate,
+      }))
+    );
   } catch (error) {
     console.error(`Error in getHabits controller for user ${userId}:`, error);
     throw error;
