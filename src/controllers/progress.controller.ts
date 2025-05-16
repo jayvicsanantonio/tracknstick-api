@@ -24,10 +24,6 @@ export async function getProgressHistory(c: Context): Promise<Response> {
       endDate
     );
 
-    console.log('History data from API:', history);
-    console.log('History data length:', history.length);
-
-    // Wrap the history in an object as expected by frontend
     return c.json({ history });
   } catch (error: any) {
     logger.error('Error fetching progress history:', error);
@@ -49,8 +45,6 @@ export async function getStreaks(c: Context): Promise<Response> {
     const userId = auth.userId;
 
     const streaks = await progressService.getUserStreaks(c.env.DB, userId);
-
-    console.log('Streaks data from API:', streaks);
 
     return c.json(streaks);
   } catch (error: any) {

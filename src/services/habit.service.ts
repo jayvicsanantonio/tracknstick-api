@@ -34,8 +34,6 @@ export const getHabitsForDate = async (
     });
     const dayOfWeek = formatter.format(utcDate);
 
-    console.log('dayOfWeek', dayOfWeek);
-
     const habits = await habitRepository.getHabitsByDate(
       db,
       userId,
