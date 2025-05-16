@@ -198,6 +198,7 @@ Additional documentation can be found in the `docs` directory:
 - [Coding Standards](docs/development/coding-standards.md)
 - [Maintainability Improvements](docs/development/maintainability.md)
 - [Enhancements & Future Work](docs/development/enhancements.md)
+- [Deployment Guide](docs/deployment.md)
 - [Performance Optimizations](docs/development/optimizations.md)
 - [Learnings & Takeaways](docs/development/learnings.md)
 

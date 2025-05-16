@@ -5,7 +5,7 @@ All notable changes to the TrackNStick API will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.0.0] - Unreleased
+## [1.3.0] - Unreleased
 
 ### Added
 
@@ -23,6 +23,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New troubleshooting documentation for common issues
 - Added last_completed field to habits table for tracking most recent completion date
 - Added migration script to update existing database schema to the new format
+- Added GitHub Actions workflow for automated deployments to Cloudflare Workers
+- Added deployment documentation with setup instructions
+- Added deployment status indicators in GitHub repository
 
 ### Changed
 
