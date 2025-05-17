@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Migrated from npm to pnpm for improved package management and dependency resolution
+- Added fnm for Node.js version management with .nvmrc configuration
 - Migrated to Hono.js framework for edge-optimized performance
 - Deployed on Cloudflare Workers runtime
 - Moved database to Cloudflare D1 (distributed SQLite)
