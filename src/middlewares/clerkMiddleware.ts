@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Clerk } from '@clerk/backend';
+import { createClerkClient } from '@clerk/backend';
 import { UnauthorizedError } from '../utils/errors.js';
 
 // The auth type is already defined in types/index.ts
@@ -19,8 +19,7 @@ export const clerkMiddleware = () => async (c, next) => {
       throw new UnauthorizedError('No token provided');
     }
 
-    // Initialize Clerk client without storing the instance
-    Clerk({ secretKey: c.env.CLERK_SECRET_KEY });
+    const clerk = createClerkClient({ secretKey: c.env.CLERK_SECRET_KEY });
 
     try {
       // Parse the JWT
