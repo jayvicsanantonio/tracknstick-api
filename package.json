@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "main": "dist/index.js",
   "type": "module",
+  "engines": {
+    "node": ">=20.12.2",
+    "pnpm": ">=8.0.0"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "dev:local": "wrangler dev --local",
@@ -24,8 +28,8 @@
     "db:import:remote": "wrangler d1 execute tracknstick-db --file=./migrations/data_import.sql --remote",
     "db:query": "wrangler d1 execute tracknstick-db --command",
     "db:query:remote": "wrangler d1 execute tracknstick-db --command --remote",
-    "predev": "npm run build",
-    "predeploy": "npm run build"
+    "predev": "pnpm run build",
+    "predeploy": "pnpm run build"
   },
   "repository": {
     "type": "git",
