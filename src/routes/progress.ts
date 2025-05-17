@@ -1,6 +1,11 @@
 import { Hono } from 'hono';
 import { clerkMiddleware } from '../middlewares/clerkMiddleware.js';
 import * as progressController from '../controllers/progress.controller.js';
+import { validateRequest } from '../middlewares/validateRequest.js';
+import {
+  progressHistorySchema,
+  progressOverviewSchema,
+} from '../validators/progress.validator.js';
 
 const app = new Hono();
 
@@ -14,7 +19,11 @@ app.use('*', clerkMiddleware());
  * @query endDate - Optional end date in YYYY-MM-DD format
  * @returns {Object} - History of daily completion rates
  */
-app.get('/history', progressController.getProgressHistory);
+app.get(
+  '/history',
+  validateRequest(progressHistorySchema, 'query'),
+  progressController.getProgressHistory
+);
 
 /**
  * @route GET /streaks
@@ -30,6 +39,10 @@ app.get('/streaks', progressController.getStreaks);
  * @query endDate - Optional end date in YYYY-MM-DD format
  * @returns {Object} - Combined history and streak information
  */
-app.get('/overview', progressController.getProgressOverview);
+app.get(
+  '/overview',
+  validateRequest(progressOverviewSchema, 'query'),
+  progressController.getProgressOverview
+);
 
 export default app;

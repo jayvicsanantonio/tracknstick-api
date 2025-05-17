@@ -1,6 +1,5 @@
 import { Context } from 'hono';
 import * as progressService from '../services/progress.service.js';
-import { validateDateParam } from '../validators/common.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -15,7 +14,7 @@ export async function getProgressHistory(c: Context): Promise<Response> {
       return c.json({ error: 'User not authenticated' }, 401);
     }
     const userId = auth.userId;
-    const { startDate, endDate } = validateDateParams(c);
+    const { startDate, endDate } = c.get('validated_query') || {};
 
     const history = await progressService.getUserProgressHistory(
       c.env.DB,
@@ -71,7 +70,7 @@ export async function getProgressOverview(c: Context): Promise<Response> {
       return c.json({ error: 'User not authenticated' }, 401);
     }
     const userId = auth.userId;
-    const { startDate, endDate } = validateDateParams(c);
+    const { startDate, endDate } = c.get('validated_query') || {};
 
     const overview = await progressService.getUserProgressOverview(
       c.env.DB,
@@ -85,31 +84,6 @@ export async function getProgressOverview(c: Context): Promise<Response> {
     logger.error('Error fetching progress overview:', error);
     return handleError(c, error);
   }
-}
-
-/**
- * Helper function to validate date parameters
- * These parameters only affect what data is displayed to the user,
- * not the accuracy of streak calculations
- */
-function validateDateParams(c: Context): {
-  startDate?: string;
-  endDate?: string;
-} {
-  // Get query parameters
-  const startDate = c.req.query('startDate');
-  const endDate = c.req.query('endDate');
-
-  // Validate dates if provided
-  if (startDate && !validateDateParam(startDate)) {
-    throw new Error('Invalid startDate format. Use YYYY-MM-DD');
-  }
-
-  if (endDate && !validateDateParam(endDate)) {
-    throw new Error('Invalid endDate format. Use YYYY-MM-DD');
-  }
-
-  return { startDate, endDate };
 }
 
 /**
