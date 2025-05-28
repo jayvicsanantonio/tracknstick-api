@@ -66,14 +66,9 @@ When a pull request is merged to the `main` branch:
 If you need to deploy manually:
 
 ```bash
-# Make sure you're logged in to Cloudflare using the Wrangler CLI
-wrangler login
+# Make sure you're logged in to Cloudflare
+npx wrangler login
 
-# Deploy to the default environment (usually production, as defined in wrangler.toml)
-pnpm run deploy 
-# This script typically runs 'wrangler deploy src/index.ts' or similar.
-# Check package.json for the exact command.
-
-# To deploy to a specific environment (e.g., preview):
-# wrangler deploy --env preview
+# Deploy
+npm run deploy
 ```
