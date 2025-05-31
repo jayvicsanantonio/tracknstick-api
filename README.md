@@ -1,226 +1,71 @@
-# Habit Tracker API
+# Habit Tracker API (TrackNStick API)
 
-This is a RESTful API for a habit tracker application built with Node.js, Express.js, and SQLite.
+This is the RESTful API for the TrackNStick habit tracker application. It allows users to manage habits, track their completions, and view statistics about their progress. The API is designed to be robust, secure, and easy to use.
 
-## Features
+## Core Features
 
-- Create, Read, Update, and Delete (CRUD) habits.
-- Track habit completions for specific dates (toggle on/off).
-- Retrieve habit statistics (streak, total completions, last completed date).
-- Track daily progress with completion rates and streaks.
-- View historical completion data with daily completion percentages.
-- Monitor current and longest streaks of 100% completion days.
-- Secure endpoints using Clerk JWT authentication.
+- **Habit Management**: Create, Read, Update, and Delete (CRUD) habits.
+- **Habit Tracking**: Record habit completions for specific dates.
+- **Statistics**: Retrieve habit statistics like current and longest streaks, total completions, and last completed date.
+- **Progress Monitoring**: Track daily progress with completion rates.
+- **Secure Authentication**: Endpoints are secured using Clerk JWT authentication.
 
 ## Tech Stack
 
-- **Backend:** Node.js
-- **Framework:** Hono.js
-- **Database:** Cloudflare D1 (SQLite)
-- **Deployment:** Cloudflare Workers
-- **Linting/Formatting:** ESLint, Prettier
+- **Backend Runtime**: Node.js
+- **Web Framework**: Hono.js (optimized for edge environments)
+- **Database**: Cloudflare D1 (SQLite-compatible serverless database)
+- **Deployment**: Cloudflare Workers
+- **Language**: TypeScript
+- **Linting/Formatting**: ESLint, Prettier
 
-## Visual Overview
+## High-Level Architecture
 
-### High-Level Architecture
+The API follows a layered architecture for separation of concerns and maintainability.
 
 ```mermaid
 graph LR
-    Client -->|"HTTP Request\nGET POST PUT DELETE"| HonoApp[Hono App];
-    HonoApp -->|"Request"| Middleware["Middleware <br> (CORS, Authentication)"];
-    Middleware -->|"Authenticated Request"| Routes["API Routes <br> (/api/v1/...)"];
-    Routes -->|"Params, Body"| Controller["Controller <br> (e.g., habit.controller.ts)"];
-    Controller -->|"Data Request"| Service["Service Layer <br> (e.g., habit.service.ts)"];
-    Service -->|"DB Operations"| Repository["Repository Layer <br> (e.g., habit.repository.ts)"];
-    Repository -->|"SQL Query"| D1["Cloudflare D1 <br> (SQLite-compatible)"];
-    D1 -->|"Result Set"| Repository;
-    Repository -->|"Data"| Service;
-    Service -->|"Processed Data"| Controller;
+    Client -->|"HTTP Request\nGET POST PUT DELETE"| HonoApp[Hono App on Cloudflare Workers];
+    HonoApp -->|"Request"| Middleware["Global Middleware <br> (CORS, Auth, Logging, Error Handling)"];
+    Middleware -->|"Processed Request"| Routes["API Routes <br> (e.g., /api/v1/habits)"];
+    Routes -->|"Params, Body"| Controller["Controller Layer <br> (Handles HTTP, basic validation)"];
+    Controller -->|"Calls Business Logic"| Service["Service Layer <br> (Core application logic)"];
+    Service -->|"Requests Data"| Repository["Repository Layer <br> (Database interactions)"];
+    Repository -->|"SQL Query"| D1["Cloudflare D1 Database"];
+    D1 -->|"Query Result"| Repository;
+    Repository -->|"Returns Data"| Service;
+    Service -->|"Returns Processed Data"| Controller;
     Controller -->|"JSON Response"| HonoApp;
     HonoApp -->|"HTTP Response"| Client;
-
-    subgraph "Application Layers"
-        Controller
-        Service
-        Repository
-    end
-
-    subgraph "Infrastructure"
-        D1
-    end
 ```
 
-### Simplified Database ERD
+## Documentation
 
-```mermaid
-erDiagram
-    USERS ||--|{ HABITS : "tracks"
-    USERS ||--|{ TRACKERS : "logs"
-    HABITS ||--|{ TRACKERS : "records"
-    TRACKERS }|--|| PROGRESS : "aggregated into"
+For detailed information about the API, development practices, and more, please refer to the following documents:
 
-    USERS {
-        INTEGER id PK
-        TEXT clerk_user_id UK "Clerk User ID"
-    }
+- **[Developer Guide (`docs/DEVELOPER_GUIDE.md`)](docs/DEVELOPER_GUIDE.md)**: The main comprehensive guide for developers. Includes setup, architecture, coding standards, and much more.
+- **[API Endpoint Specifications (`docs/api/endpoints.md`)](docs/api/endpoints.md)**: Detailed information on all API endpoints, including request/response formats and examples.
+- **[Database Schema (`docs/database/schema.md`)](docs/database/schema.md)**: Full details of the database structure, tables, and columns.
+- **[Changelog (`CHANGELOG.md`)](CHANGELOG.md)**: A log of all notable changes, features, and fixes for each version of the API.
 
-    HABITS {
-        INTEGER id PK
-        INTEGER user_id FK
-        TEXT name
-        TEXT icon
-        TEXT frequency "Comma-separated days"
-        INTEGER streak
-        INTEGER total_completions
-        DATETIME last_completed
-    }
+## Getting Started
 
-    TRACKERS {
-        INTEGER id PK
-        INTEGER habit_id FK
-        INTEGER user_id FK
-        DATETIME timestamp "Completion Timestamp (UTC)"
-        TEXT notes
-    }
-
-    PROGRESS {
-        TEXT date "YYYY-MM-DD"
-        FLOAT completion_rate "Daily completion percentage"
-        INTEGER current_streak "Consecutive 100% days"
-        INTEGER longest_streak "Record of consecutive 100% days"
-    }
-```
+To get started with development, including prerequisites, local setup, and running the application, please consult the **[Setup and Installation section in the Developer Guide](docs/DEVELOPER_GUIDE.md#3-getting-started-setup-and-installation)**.
 
 ## Authentication
 
-API endpoints are protected using Clerk. Requests must include a valid JWT session token obtained from your Clerk frontend application in the `Authorization: Bearer <token>` header. The backend verifies this token using the `@clerk/express` middleware.
-
-## Rate Limiting
-
-To prevent abuse, API requests are rate-limited. By default, each IP address is allowed 100 requests per 15-minute window. If the limit is exceeded, a `429 Too Many Requests` error will be returned.
-
-## Prerequisites
-
-- Node.js (v16 or later recommended)
-- npm (usually included with Node.js)
-
-## Setup and Installation
-
-1.  **Clone the repository:**
-    ```bash
-    git clone https://github.com/jayvicsanantonio/tracknstick-api.git
-    cd tracknstick-api
-    ```
-2.  **Install dependencies:**
-    ```bash
-    npm install
-    ```
-3.  **Set up environment variables:**
-
-    - Create a `.env` file in the project root.
-    - Add the following variables (adjust values as needed):
-
-      ```bash
-      PORT=3000
-      NODE_ENV=development
-
-      # Clerk API Keys (Get from Clerk Dashboard)
-      CLERK_SECRET_KEY=sk_test_YOUR_SECRET_KEY_HERE
-      CLERK_PUBLISHABLE_KEY=pk_test_YOUR_PUBLISHABLE_KEY_HERE
-
-      # Optional: Database Path
-      DATABASE_PATH=./tracknstick.db
-
-      # Optional: Rate Limiting
-      RATE_LIMIT_WINDOW_MS=900000
-      RATE_LIMIT_MAX_REQUESTS=100
-      ```
-
-    - **Important:** Replace the placeholder Clerk keys with your actual keys.
-
-4.  **Database Setup:**
-
-    - The database schema is managed using Cloudflare D1 migrations.
-    - Run the following commands to set up the database and apply migrations:
-
-      ```bash
-      # Set up initial schema
-      npm run db:migrate
-
-      # Apply additional migrations (indexes)
-      wrangler d1 execute tracknstick-db --file=./migrations/0001_add_indexes.sql
-      ```
-
-    - **Important:** This must be done before starting the application.
-
-## Running the Application
-
-- **Development Mode with Local D1 Database:**
-  ```bash
-  npm run dev:local
-  ```
-- **Development Mode with Remote D1 Database:**
-  ```bash
-  npm run dev
-  ```
-- **Production Deployment:**
-  ```bash
-  npm run deploy
-  ```
-
-The API will be available at `http://localhost:3000` when running in development mode.
-
-## Database Migrations
-
-Database schema changes are managed using Cloudflare D1 migrations:
-
-- **Apply Migrations Locally:**
-  ```bash
-  npm run db:migrate
-  ```
-- **Apply Migrations to Remote Database:**
-  ```bash
-  npm run db:migrate:remote
-  ```
-- **Execute SQL Queries Locally:**
-  ```bash
-  npm run db:query -- "SELECT * FROM users"
-  ```
-- **Execute SQL Queries on Remote Database:**
-  ```bash
-  npm run db:query:remote -- "SELECT * FROM users"
-  ```
+API endpoints are protected using Clerk. Requests must include a valid JWT session token obtained from your Clerk frontend application in the `Authorization: Bearer <token>` header. More details can be found in the [Authentication section of the Developer Guide](docs/DEVELOPER_GUIDE.md#7-authentication-and-authorization).
 
 ## Running Tests
 
+To run the automated tests:
 ```bash
 npm test
 ```
+_(Note: Ensure the test suite and its setup are fully configured as detailed in the Developer Guide.)_
 
-_(Note: Test suite setup is pending)_
+## Contributing
 
-## API Documentation
+Contributions are welcome! Please refer to the **[Developer Guide](docs/DEVELOPER_GUIDE.md)** for coding standards, the code review process, and other guidelines before contributing.## Refactoring Overview
 
-For detailed endpoint specifications, request/response examples, and the full database schema, please see the **[API Documentation](docs/api/implementation.md)**.
-
-Additional documentation can be found in the `docs` directory:
-
-- [Architecture Decisions](docs/architecture/decisions.md)
-- [Coding Standards](docs/development/coding-standards.md)
-- [Maintainability Improvements](docs/development/maintainability.md)
-- [Enhancements & Future Work](docs/development/enhancements.md)
-- [Deployment Guide](docs/deployment.md)
-- [Performance Optimizations](docs/development/optimizations.md)
-- [Learnings & Takeaways](docs/development/learnings.md)
-
-## Refactoring Overview
-
-A significant refactoring effort was recently completed on this project with the primary goals of improving maintainability, testability, and performance, and establishing a scalable architecture.
-
-Details about the refactoring process, architecture decisions, specific improvements, and learnings can be found in the `docs` directory:
-
-- [Architecture Decisions](docs/architecture/decisions.md)
-- [Maintainability Improvements](docs/development/maintainability.md)
-- [Enhancements & Future Work](docs/development/enhancements.md)
-- [Performance Optimizations](docs/development/optimizations.md)
-- [Learnings & Takeaways](docs/development/learnings.md)
+This project has undergone significant refactoring to improve maintainability, testability, performance, and to establish a scalable architecture using Hono.js on Cloudflare Workers. Details about these changes can be found in the **[Developer Guide](docs/DEVELOPER_GUIDE.md)** and related documents in the `docs` directory.
