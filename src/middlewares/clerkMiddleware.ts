@@ -22,17 +22,17 @@ export const clerkMiddleware = () => async (c, next) => {
     const clerk = createClerkClient({ secretKey: c.env.CLERK_SECRET_KEY });
 
     try {
-      // Parse the JWT
-      const jwt = JSON.parse(atob(token.split('.')[1]));
+      // Verify the JWT
+      const claims = await clerk.verifyToken(token);
 
-      if (!jwt || !jwt.sub) {
+      if (!claims || !claims.sub) {
         throw new UnauthorizedError('Invalid token format');
       }
 
       // Set authenticated user ID in context variables
       c.set('auth', {
-        userId: jwt.sub,
-        sessionId: jwt.sid || '',
+        userId: claims.sub,
+        sessionId: claims.sid || '',
       });
 
       await next();
