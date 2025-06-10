@@ -66,6 +66,8 @@ _(Note: Ensure the test suite and its setup are fully configured as detailed in 
 
 ## Contributing
 
-Contributions are welcome! Please refer to the **[Developer Guide](docs/DEVELOPER_GUIDE.md)** for coding standards, the code review process, and other guidelines before contributing.## Refactoring Overview
+Contributions are welcome! Please refer to the **[Developer Guide](docs/DEVELOPER_GUIDE.md)** for coding standards, the code review process, and other guidelines before contributing.
+
+## Refactoring Overview
 
 This project has undergone significant refactoring to improve maintainability, testability, performance, and to establish a scalable architecture using Hono.js on Cloudflare Workers. Details about these changes can be found in the **[Developer Guide](docs/DEVELOPER_GUIDE.md)** and related documents in the `docs` directory.
