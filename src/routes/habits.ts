@@ -1,11 +1,15 @@
 import { Hono } from 'hono';
 import { clerkMiddleware } from '../middlewares/clerkMiddleware.js';
 import { validateRequest } from '../middlewares/validateRequest.js';
+import { authRateLimit } from '../middlewares/rateLimit.js';
 import * as habitValidator from '../validators/habit.validator.js';
 import * as habitController from '../controllers/habit.controller.js';
 
 // Create a sub-application for habits
 const app = new Hono();
+
+// Apply authentication rate limiting to all routes (since all require auth)
+app.use('*', authRateLimit);
 
 // Apply Clerk auth middleware to all routes
 app.use('*', clerkMiddleware());

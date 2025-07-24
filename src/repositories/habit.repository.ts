@@ -1,9 +1,6 @@
-// @ts-nocheck
-// Add this comment to suppress TypeScript errors during migration to Hono
-
 import { D1Database } from '@cloudflare/workers-types';
 import { HabitData } from '../controllers/habit.controller.js';
-import { NotFoundError } from '../utils/errors.js';
+import { NotFoundError, DatabaseError } from '../utils/errors.js';
 import logger from '../utils/logger.js';
 
 interface HabitRow {
@@ -50,15 +47,16 @@ export async function ensureUserExists(
         .bind(clerkUserId)
         .run();
 
-      if (!result.success) {
-        logger.error(
-          `Failed to create user with clerk_user_id: ${clerkUserId}`,
-          { result }
-        );
-        throw new Error(
-          `Failed to create user with clerk_user_id: ${clerkUserId}`
-        );
-      }
+          if (!result.success) {
+      logger.error(
+        `Failed to create user with clerk_user_id: ${clerkUserId}`,
+        undefined,
+        { result }
+      );
+      throw new DatabaseError(
+        `Failed to create user with clerk_user_id: ${clerkUserId}`
+      );
+    }
 
       // Verify the user was created
       const verifyUser = await db
@@ -70,15 +68,16 @@ export async function ensureUserExists(
         logger.error(
           `User creation verification failed for clerk_user_id: ${clerkUserId}`
         );
-        throw new Error(
+        throw new DatabaseError(
           `User creation verification failed for clerk_user_id: ${clerkUserId}`
         );
       }
     }
   } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
     logger.error(
       `Error in ensureUserExists for clerk_user_id: ${clerkUserId}`,
-      { error }
+      err
     );
     throw error;
   }
@@ -117,11 +116,11 @@ export async function getHabitsByDate(
     .all();
 
   if (!habits.success) {
-    logger.error('Failed to fetch habits by date', { userId, date });
-    throw new Error('Failed to fetch habits by date');
+    logger.error('Failed to fetch habits by date', undefined, { userId, date });
+    throw new DatabaseError('Failed to fetch habits by date');
   }
 
-  return habits.results as HabitRow[];
+  return habits.results as unknown as HabitRow[];
 }
 
 // Create a new habit
@@ -160,23 +159,23 @@ export async function createHabit(
       .run();
 
     if (!result.success) {
-      logger.error('Failed to create habit', {
+      logger.error('Failed to create habit', undefined, {
         userId,
         habitData,
         error: result.error,
       });
-      throw new Error(
+      throw new DatabaseError(
         `Failed to create habit: ${result.error || 'Unknown error'}`
       );
     }
 
     return { habitId: result.meta.last_row_id as number };
   } catch (error) {
-    logger.error(`Error in createHabit for user ${userId}:`, {
-      error,
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error(`Error in createHabit for user ${userId}:`, err, {
       habitData,
     });
-    throw error;
+    throw err;
   }
 }
 
@@ -195,7 +194,7 @@ export async function getHabitById(
     throw new NotFoundError(`Habit with ID ${habitId} not found`);
   }
 
-  return habit as HabitRow;
+  return habit as unknown as HabitRow;
 }
 
 // Update an existing habit
@@ -309,7 +308,7 @@ export async function getTrackers(
     .bind(habitId, userId, startDate, endDate)
     .all();
 
-  return trackers.results as TrackerRow[];
+  return trackers.results as unknown as TrackerRow[];
 }
 
 // Add or remove a tracker for a habit

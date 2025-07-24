@@ -1,7 +1,7 @@
-// @ts-nocheck
 import { Context, MiddlewareHandler, Next } from 'hono';
 import { z } from 'zod';
 import { ValidationError } from '../utils/errors.js';
+import logger from '../utils/logger.js';
 
 type ValidateTarget = 'json' | 'query' | 'param';
 
@@ -16,7 +16,15 @@ export const validateRequest =
 
       switch (target) {
         case 'json':
-          data = await c.req.json().catch(() => ({}));
+          try {
+            data = await c.req.json();
+          } catch (jsonError) {
+            logger.warn('Invalid JSON payload received', { 
+              url: c.req.url, 
+              method: c.req.method 
+            });
+            throw new ValidationError('Invalid JSON payload');
+          }
           break;
         case 'query':
           data = c.req.query();
@@ -25,7 +33,11 @@ export const validateRequest =
           data = c.req.param();
           break;
         default:
-          data = await c.req.json().catch(() => ({}));
+          try {
+            data = await c.req.json();
+          } catch (jsonError) {
+            data = {};
+          }
           break;
       }
 
@@ -33,6 +45,12 @@ export const validateRequest =
 
       if (!result.success) {
         const formattedErrors = result.error.format();
+        logger.warn('Request validation failed', { 
+          target, 
+          errors: formattedErrors,
+          url: c.req.url,
+          method: c.req.method 
+        });
         throw new ValidationError('Validation failed', formattedErrors);
       }
 
@@ -46,16 +64,12 @@ export const validateRequest =
       }
 
       if (error instanceof z.ZodError) {
+        logger.warn('Zod validation error', { error: error.format() });
         throw new ValidationError('Validation failed', error.format());
       }
 
-      if (
-        error instanceof Error &&
-        error.message.includes('Failed to parse JSON')
-      ) {
-        throw new ValidationError('Invalid JSON payload');
-      }
-
-      throw error;
+      const err = error instanceof Error ? error : new Error(String(error));
+      logger.error('Unexpected error in validation middleware', err);
+      throw err;
     }
   };
