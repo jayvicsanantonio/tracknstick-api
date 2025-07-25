@@ -77,11 +77,15 @@ export const getHabitsForDate = async (
       };
     });
   } catch (error) {
-    console.error(
-      `Error in getHabitsForDate service for user ${userId}:`,
-      error
-    );
-    throw error;
+    const err = error instanceof Error ? error : new Error(String(error));
+    // Note: Cannot import logger here due to potential circular dependency
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(
+        `Error in getHabitsForDate service for user ${userId}:`,
+        err
+      );
+    }
+    throw err;
   }
 };
 
@@ -94,8 +98,11 @@ export const createHabit = async (
     const result = await habitRepository.createHabit(db, userId, habitData);
     return { habitId: result.habitId.toString() };
   } catch (error) {
-    console.error(`Error in createHabit service for user ${userId}:`, error);
-    throw error;
+    const err = error instanceof Error ? error : new Error(String(error));
+    if (process.env.NODE_ENV !== 'production') {
+      console.error(`Error in createHabit service for user ${userId}:`, err);
+    }
+    throw err;
   }
 };
 

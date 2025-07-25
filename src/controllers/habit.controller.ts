@@ -1,5 +1,6 @@
 import { Context } from 'hono';
 import * as habitService from '../services/habit.service.js';
+import logger from '../utils/logger.js';
 
 // Define types for request data
 export interface HabitData {
@@ -30,7 +31,6 @@ export const getHabits = async (c: Context) => {
       timeZone,
       c.env.DB
     );
-    const data = c.json(habits);
 
     return c.json(
       habits.map((habit) => ({
@@ -44,8 +44,14 @@ export const getHabits = async (c: Context) => {
       }))
     );
   } catch (error) {
-    console.error(`Error in getHabits controller for user ${userId}:`, error);
-    throw error;
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error(`Error in getHabits controller for user ${userId}`, err, {
+      userId,
+      date,
+      timeZone,
+      method: 'getHabits'
+    });
+    throw err;
   }
 };
 
@@ -66,8 +72,13 @@ export const createHabit = async (c: Context) => {
       201
     );
   } catch (error) {
-    console.error(`Error in createHabit controller for user ${userId}:`, error);
-    throw error;
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error(`Error in createHabit controller for user ${userId}`, err, {
+      userId,
+      habitData,
+      method: 'createHabit'
+    });
+    throw err;
   }
 };
 
@@ -83,11 +94,18 @@ export const updateHabit = async (c: Context) => {
     await habitService.updateHabit(userId, habitId, habitData, c.env.DB);
     return c.json({ message: 'Habit updated successfully' });
   } catch (error) {
-    console.error(
-      `Error in updateHabit controller for user ${userId}, habit ${habitId}:`,
-      error
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error(
+      `Error in updateHabit controller for user ${userId}, habit ${habitId}`,
+      err,
+      {
+        userId,
+        habitId,
+        habitData,
+        method: 'updateHabit'
+      }
     );
-    throw error;
+    throw err;
   }
 };
 
@@ -102,11 +120,17 @@ export const deleteHabit = async (c: Context) => {
     await habitService.deleteHabit(userId, habitId, c.env.DB);
     return c.json({ message: 'Habit deleted successfully' });
   } catch (error) {
-    console.error(
-      `Error in deleteHabit controller for user ${userId}, habit ${habitId}:`,
-      error
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error(
+      `Error in deleteHabit controller for user ${userId}, habit ${habitId}`,
+      err,
+      {
+        userId,
+        habitId,
+        method: 'deleteHabit'
+      }
     );
-    throw error;
+    throw err;
   }
 };
 
@@ -137,11 +161,19 @@ export const getTrackers = async (c: Context) => {
       })),
     });
   } catch (error) {
-    console.error(
-      `Error in getTrackers controller for user ${userId}, habit ${habitId}:`,
-      error
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error(
+      `Error in getTrackers controller for user ${userId}, habit ${habitId}`,
+      err,
+      {
+        userId,
+        habitId,
+        startDate,
+        endDate,
+        method: 'getTrackers'
+      }
     );
-    throw error;
+    throw err;
   }
 };
 
@@ -172,11 +204,20 @@ export const manageTracker = async (c: Context) => {
       statusCode
     );
   } catch (error) {
-    console.error(
-      `Error in manageTracker controller for user ${userId}, habit ${habitId}:`,
-      error
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error(
+      `Error in manageTracker controller for user ${userId}, habit ${habitId}`,
+      err,
+      {
+        userId,
+        habitId,
+        timestamp,
+        timeZone,
+        notes,
+        method: 'manageTracker'
+      }
     );
-    throw error;
+    throw err;
   }
 };
 
@@ -192,11 +233,18 @@ export const getHabitStats = async (c: Context) => {
     const stats = await habitService.getHabitStats(userId, habitId, c.env.DB);
     return c.json(stats);
   } catch (error) {
-    console.error(
-      `Error in getHabitStats controller for user ${userId}, habit ${habitId}:`,
-      error
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error(
+      `Error in getHabitStats controller for user ${userId}, habit ${habitId}`,
+      err,
+      {
+        userId,
+        habitId,
+        timeZone,
+        method: 'getHabitStats'
+      }
     );
-    throw error;
+    throw err;
   }
 };
 
@@ -216,10 +264,17 @@ export const getProgressOverview = async (c: Context) => {
     );
     return c.json(overview);
   } catch (error) {
-    console.error(
-      `Error in getProgressOverview controller for user ${userId}:`,
-      error
+    const err = error instanceof Error ? error : new Error(String(error));
+    logger.error(
+      `Error in getProgressOverview controller for user ${userId}`,
+      err,
+      {
+        userId,
+        month,
+        timeZone,
+        method: 'getProgressOverview'
+      }
     );
-    throw error;
+    throw err;
   }
 };

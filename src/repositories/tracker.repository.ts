@@ -1,8 +1,6 @@
-// @ts-nocheck
-// Add this comment to suppress TypeScript errors during migration to Hono
 import { D1Database } from '@cloudflare/workers-types';
-import { NotFoundError } from '../utils/errors.js';
-import { TrackerInsert, Tracker } from '../types/d1.js';
+import { NotFoundError, DatabaseError } from '../utils/errors.js';
+import logger from '../utils/logger.js';
 
 interface TrackerRow {
   id: number;
@@ -13,6 +11,9 @@ interface TrackerRow {
   created_at: string;
   updated_at: string;
 }
+
+// Define Tracker type (same as TrackerRow for now)
+type Tracker = TrackerRow;
 
 /**
  * Finds tracker entries for multiple habits within a specific ISO date range for a user.
@@ -46,10 +47,11 @@ export async function findTrackersByDateRange(
     .all();
 
   if (!trackers.success) {
-    throw new Error('Failed to fetch trackers');
+    logger.error('Failed to fetch trackers', undefined, { userId, habitIds, startDate, endDate });
+    throw new DatabaseError('Failed to fetch trackers');
   }
 
-  return trackers.results as TrackerRow[];
+  return trackers.results as unknown as TrackerRow[];
 }
 
 /**
@@ -88,10 +90,10 @@ export async function findTrackersByHabitAndDateRange(
     .all();
 
   if (!result.success) {
-    throw new Error('Failed to fetch trackers by habit and date range');
+    throw new DatabaseError('Failed to fetch trackers by habit and date range');
   }
 
-  return result.results as Tracker[];
+  return result.results as unknown as Tracker[];
 }
 
 /**
@@ -229,10 +231,10 @@ export async function findAllByHabit(
     .all();
 
   if (!result.success) {
-    throw new Error('Failed to fetch all trackers for habit');
+    throw new DatabaseError('Failed to fetch all trackers for habit');
   }
 
-  return result.results as Tracker[];
+  return result.results as unknown as Tracker[];
 }
 
 /**
@@ -257,7 +259,7 @@ export async function getAllTrackersForHabit(
     throw new Error(`Failed to fetch trackers for habit ${habitId}`);
   }
 
-  return trackers.results as TrackerRow[];
+  return trackers.results as unknown as TrackerRow[];
 }
 
 /**
@@ -350,14 +352,14 @@ export async function getUserProgressHistory(
     // If startDate and endDate are provided, filter the results to the requested range
     if (startDate || endDate) {
       history = history.filter((entry) => {
-        const entryDate = entry.date;
+        const entryDate = entry.date as string;
         const afterStart = !startDate || entryDate >= startDate;
         const beforeEnd = !endDate || entryDate <= endDate;
         return afterStart && beforeEnd;
       });
     }
 
-    return history;
+    return history as { date: string; completionRate: number; }[];
   } catch (error) {
     console.error('Error fetching user progress history:', error);
     throw error;
