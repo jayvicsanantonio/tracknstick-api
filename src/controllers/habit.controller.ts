@@ -57,7 +57,12 @@ export const createHabit = async (c: Context) => {
   const habitData = c.get('validated_json');
 
   try {
-    const result = await habitService.createHabit(userId, habitData, c.env.DB);
+    const result = await habitService.createHabit(
+      userId,
+      habitData,
+      c.env.DB,
+      c.env as any
+    );
     return c.json(
       {
         message: 'Habit created successfully',
@@ -80,7 +85,13 @@ export const updateHabit = async (c: Context) => {
   const habitData = c.get('validated_json');
 
   try {
-    await habitService.updateHabit(userId, habitId, habitData, c.env.DB);
+    await habitService.updateHabit(
+      userId,
+      habitId,
+      habitData,
+      c.env.DB,
+      c.env as any
+    );
     return c.json({ message: 'Habit updated successfully' });
   } catch (error) {
     console.error(
@@ -99,7 +110,7 @@ export const deleteHabit = async (c: Context) => {
   const { habitId } = c.get('validated_param');
 
   try {
-    await habitService.deleteHabit(userId, habitId, c.env.DB);
+    await habitService.deleteHabit(userId, habitId, c.env.DB, c.env as any);
     return c.json({ message: 'Habit deleted successfully' });
   } catch (error) {
     console.error(
