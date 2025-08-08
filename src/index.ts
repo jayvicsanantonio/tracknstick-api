@@ -5,6 +5,7 @@ import { D1Database } from '@cloudflare/workers-types';
 import { habitRoutes } from './routes/habits.js';
 import { healthRoutes } from './routes/health.js';
 import progressRoutes from './routes/progress.js';
+import googleRoutes from './routes/google.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { requestLogger } from './middlewares/requestLogger.js';
 import { initBindings } from './middlewares/initBindings.js';
@@ -14,6 +15,9 @@ import logger from './utils/logger.js';
 type Bindings = {
   ENVIRONMENT: string;
   CLERK_SECRET_KEY: string;
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
+  GOOGLE_REDIRECT_URI: string;
   DB: D1Database;
 };
 
@@ -43,6 +47,7 @@ app.use('*', async (c, next) => {
 // Set up API routes
 app.route('/api/v1/habits', habitRoutes);
 app.route('/api/v1/progress', progressRoutes);
+app.route('/api/v1/google', googleRoutes);
 
 // Health check routes - no authentication required
 app.route('/health', healthRoutes);

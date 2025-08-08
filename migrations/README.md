@@ -91,3 +91,16 @@ Example rollback:
 # Roll back the latest migration
 npx wrangler d1 execute tracknstick-db --file=./migrations/rollbacks/0001_rollback.sql --remote
 ```
+
+## Google integration migration
+Run this migration locally:
+
+```sh
+wrangler d1 execute tracknstick-db --file=./migrations/0009_google_integration.sql
+```
+
+Or against remote:
+
+```sh
+wrangler d1 execute tracknstick-db --file=./migrations/0009_google_integration.sql --remote
+```

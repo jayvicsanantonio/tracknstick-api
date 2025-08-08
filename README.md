@@ -56,18 +56,14 @@ To get started with development, including prerequisites, local setup, and runni
 
 API endpoints are protected using Clerk. Requests must include a valid JWT session token obtained from your Clerk frontend application in the `Authorization: Bearer <token>` header. More details can be found in the [Authentication section of the Developer Guide](docs/DEVELOPER_GUIDE.md#7-authentication-and-authorization).
 
+## Google Calendar Integration
+- See docs: `docs/google-calendar-setup.md`
+- OAuth routes:
+  - `GET /api/v1/google/auth` — Start Google OAuth (requires Clerk `Authorization` header)
+  - `GET /api/v1/google/callback` — OAuth callback handler
+- After connecting, habit create/update/delete will sync recurring events to the user's primary Google Calendar.
+
 ## Running Tests
 
 To run the automated tests:
-```bash
-npm test
 ```
-_(Note: Ensure the test suite and its setup are fully configured as detailed in the Developer Guide.)_
-
-## Contributing
-
-Contributions are welcome! Please refer to the **[Developer Guide](docs/DEVELOPER_GUIDE.md)** for coding standards, the code review process, and other guidelines before contributing.
-
-## Refactoring Overview
-
-This project has undergone significant refactoring to improve maintainability, testability, performance, and to establish a scalable architecture using Hono.js on Cloudflare Workers. Details about these changes can be found in the **[Developer Guide](docs/DEVELOPER_GUIDE.md)** and related documents in the `docs` directory.

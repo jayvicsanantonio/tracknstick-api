@@ -6,6 +6,9 @@ export default defineConfig({
     environmentOptions: {
       bindings: {
         ENVIRONMENT: 'test',
+        GOOGLE_CLIENT_ID: 'test-google-client-id',
+        GOOGLE_CLIENT_SECRET: 'test-google-client-secret',
+        GOOGLE_REDIRECT_URI: 'http://localhost:3000/api/v1/google/callback',
       },
       // Uncomment to enable KV storage for tests
       // kvNamespaces: ['CACHE'],

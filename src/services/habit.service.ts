@@ -8,6 +8,7 @@ import {
   calculateDailyStreak,
   calculateNonDailyStreak,
 } from '../utils/streakUtils.js';
+import * as googleService from './google.service.js';
 
 // Interface definitions
 interface TrackerRow {
@@ -88,10 +89,35 @@ export const getHabitsForDate = async (
 export const createHabit = async (
   userId: string,
   habitData: HabitData,
-  db: D1Database
+  db: D1Database,
+  env?: { GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string }
 ) => {
   try {
     const result = await habitRepository.createHabit(db, userId, habitData);
+
+    // Fire-and-forget Google Calendar sync (non-blocking)
+    // We pass minimal event details per spec
+    const frequency = Array.isArray(habitData.frequency)
+      ? habitData.frequency
+      : (habitData.frequency || '').split(',').filter(Boolean);
+    googleService
+      .createOrUpdateHabitEvent(
+        {
+          GOOGLE_CLIENT_ID: env?.GOOGLE_CLIENT_ID || '',
+          GOOGLE_CLIENT_SECRET: env?.GOOGLE_CLIENT_SECRET || '',
+        } as any,
+        db,
+        userId,
+        result.habitId,
+        {
+          name: habitData.name!,
+          frequency,
+          startDate: habitData.startDate!,
+          endDate: habitData.endDate ?? null,
+        }
+      )
+      .catch(() => {});
+
     return { habitId: result.habitId.toString() };
   } catch (error) {
     console.error(`Error in createHabit service for user ${userId}:`, error);
@@ -103,10 +129,36 @@ export const updateHabit = async (
   userId: string,
   habitId: string,
   habitData: HabitData,
-  db: D1Database
+  db: D1Database,
+  env?: { GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string }
 ) => {
   try {
     await habitRepository.updateHabit(db, userId, habitId, habitData);
+
+    // Fetch current habit to get latest fields for syncing
+    const updated = await habitRepository.getHabitById(db, userId, habitId);
+    const frequency = (updated.frequency || '')
+      .split(',')
+      .filter(Boolean);
+
+    googleService
+      .createOrUpdateHabitEvent(
+        {
+          GOOGLE_CLIENT_ID: env?.GOOGLE_CLIENT_ID || '',
+          GOOGLE_CLIENT_SECRET: env?.GOOGLE_CLIENT_SECRET || '',
+        } as any,
+        db,
+        userId,
+        habitId,
+        {
+          name: updated.name,
+          frequency,
+          startDate: updated.start_date,
+          endDate: updated.end_date || null,
+        }
+      )
+      .catch(() => {});
+
     return true;
   } catch (error) {
     console.error(
@@ -120,10 +172,24 @@ export const updateHabit = async (
 export const deleteHabit = async (
   userId: string,
   habitId: string,
-  db: D1Database
+  db: D1Database,
+  env?: { GOOGLE_CLIENT_ID?: string; GOOGLE_CLIENT_SECRET?: string }
 ) => {
   try {
     await habitRepository.deleteHabit(db, userId, habitId);
+
+    googleService
+      .deleteHabitEvent(
+        {
+          GOOGLE_CLIENT_ID: env?.GOOGLE_CLIENT_ID || '',
+          GOOGLE_CLIENT_SECRET: env?.GOOGLE_CLIENT_SECRET || '',
+        } as any,
+        db,
+        userId,
+        habitId
+      )
+      .catch(() => {});
+
     return true;
   } catch (error) {
     console.error(
