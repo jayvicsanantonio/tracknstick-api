@@ -327,10 +327,14 @@ export async function manageTracker(
   // Check if habit exists and belongs to user
   await getHabitById(db, userId, habitId);
 
-  // Check if tracker already exists
+  // Extract date from timestamp for day-based lookup
+  const timestampDate = new Date(timestamp);
+  const dateOnly = timestampDate.toISOString().substring(0, 10); // YYYY-MM-DD format
+
+  // Check if tracker already exists for this date (not exact timestamp)
   const existingTracker = await db
-    .prepare('SELECT id FROM trackers WHERE habit_id = ? AND timestamp = ?')
-    .bind(habitId, timestamp)
+    .prepare('SELECT id FROM trackers WHERE habit_id = ? AND DATE(timestamp) = ?')
+    .bind(habitId, dateOnly)
     .first<{ id: number }>();
 
   // If tracker exists, remove it

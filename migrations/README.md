@@ -9,85 +9,71 @@ This directory contains database migrations for the TrackNStick API.
 - `0002_recreate_habits_table.sql` - Modified habits table schema with improved frequency support
 - `0003_fix_habits_old_reference.sql` - Fixed potential issues with partially applied migrations
 - `0004_fix_trackers_fk.sql` - Fixed foreign key in trackers table that referenced non-existent habits_old table
-- `0004_fix_trackers_fk_remote.sql` - Same fix adapted for the remote database schema
-- `data_import.sql` - Generated file containing data imported from SQLite (created by the migration script)
+- `0005_ensure_users_table.sql` - Ensured users table exists with proper structure
+- `0006_fix_user_id_type.sql` - Fixed user ID type consistency
+- `0007_add_timestamp_columns.sql` - Added timestamp columns to tables
+- `0008_add_timestamps_to_trackers.sql` - Added timestamps to trackers table
 
-## Migrating from SQLite to D1
+## Database Management
 
-### Step 1: Export Data from SQLite
+Use the simplified database management commands:
 
-Run the data export script:
+### Local Development
 
 ```bash
-# Install dependencies if needed
-npm install sqlite3
+# Setup database (apply all migrations)
+pnpm db:setup
 
-# Run the export script
-node scripts/migrate-data.js
+# Reset database (clear data, reapply schema)
+pnpm db:reset
+
+# Apply migrations
+pnpm db:migrate
+
+# Add sample data
+pnpm db:seed
+
+# Run SQL queries
+pnpm db:query "SELECT COUNT(*) FROM habits"
 ```
 
-This will create a `data_import.sql` file in this directory containing all your data.
+### Remote Production
 
-### Step 2: Apply the Migration to D1
-
-First, make sure you have applied the schema:
+Add `:remote` to any command:
 
 ```bash
-# Apply schema to local D1 database (for testing)
-npx wrangler d1 execute tracknstick-db --file=./migrations/0000_initial_schema.sql
+# Setup remote database
+pnpm db:setup:remote
 
-# Apply schema to remote D1 database (for production)
-npx wrangler d1 execute tracknstick-db --file=./migrations/0000_initial_schema.sql --remote
-```
+# Reset remote database
+pnpm db:reset:remote
 
-Then import the data:
-
-```bash
-# Import data to local D1 database (for testing)
-npx wrangler d1 execute tracknstick-db --file=./migrations/data_import.sql
-
-# Import data to remote D1 database (for production)
-npx wrangler d1 execute tracknstick-db --file=./migrations/data_import.sql --remote
-```
-
-### Step 3: Verify the Migration
-
-You can run SQL queries to verify your data has been imported correctly:
-
-```bash
-# Check data in local D1 database
-npx wrangler d1 execute tracknstick-db --command="SELECT COUNT(*) FROM habits"
-
-# Check data in remote D1 database
-npx wrangler d1 execute tracknstick-db --command="SELECT COUNT(*) FROM habits" --remote
+# Query remote database
+pnpm db:query:remote "SELECT COUNT(*) FROM users"
 ```
 
 ## Creating New Migrations
 
-1. Create a new migration file with a sequential prefix:
+1. Create a new migration file with sequential numbering:
 
    ```bash
-   touch migrations/0001_add_habit_categories.sql
+   touch migrations/0009_add_habit_categories.sql
    ```
 
-2. Write your SQL migration in the file, including both `UP` and `DOWN` migrations if possible
+2. Write your SQL migration in the file
 
 3. Apply the migration:
    ```bash
-   npx wrangler d1 execute tracknstick-db --file=./migrations/0001_add_habit_categories.sql
+   pnpm db:migrate
    ```
 
-## Rollback Strategy
+## Seeding Data
 
-Cloudflare D1 doesn't have built-in rollback functionality, so we need to plan for it:
+The `pnpm db:seed` command will create a `seed.sql` file with sample data if one doesn't exist, then apply it to your database.
 
-1. Always create an inverse migration for each migration
-2. Store the migration history in your codebase
-3. To roll back, manually apply the inverse migration
+## Help
 
-Example rollback:
-
+For all available commands:
 ```bash
-# Roll back the latest migration
-npx wrangler d1 execute tracknstick-db --file=./migrations/rollbacks/0001_rollback.sql --remote
+pnpm db:setup help
 ```
