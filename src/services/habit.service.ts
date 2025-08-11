@@ -213,43 +213,40 @@ export const manageTracker = async (
     // Get habit data to determine frequency and streak info
     const habit = await habitRepository.getHabitById(db, userId, habitId);
 
-    // Check for existing tracker with the exact same timestamp
-    const existingExactTracker = await db
+    // Import date utilities to get date in user's timezone
+    const { getDateInTimeZone } = await import('../utils/dateUtils.js');
+    const dateInTimezone = getDateInTimeZone(timestamp, timeZone);
+    
+    // Debug logging
+    console.log(`[DEBUG] manageTracker - habitId: ${habitId}, dateInTimezone: ${dateInTimezone}, timestamp: ${timestamp}`);
+    
+    // Check for existing tracker on the same DATE (not exact timestamp) in user's timezone
+    const existingDayTracker = await db
       .prepare(`
         SELECT id, timestamp, deleted_at FROM trackers 
         WHERE habit_id = ? AND user_id = ? 
-        AND timestamp = ?
+        AND DATE(timestamp, 'localtime') = ?
+        AND deleted_at IS NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
       `)
-      .bind(habitId, userId, timestamp)
+      .bind(habitId, userId, dateInTimezone)
       .first<{ id: number; timestamp: string; deleted_at: string | null }>();
+      
+    console.log(`[DEBUG] existingDayTracker found:`, existingDayTracker);
 
-    if (existingExactTracker) {
-      if (existingExactTracker.deleted_at === null) {
-        // Tracker exists and is active - toggle it off by soft deleting
-        await db
-          .prepare('UPDATE trackers SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?')
-          .bind(existingExactTracker.id)
-          .run();
+    if (existingDayTracker) {
+      // Active tracker found for this date - soft delete it to toggle off
+      await db
+        .prepare('UPDATE trackers SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?')
+        .bind(existingDayTracker.id)
+        .run();
 
-        await updateHabitStreakInfo(db, userId, habitId, habit.frequency);
-        return {
-          status: 'removed',
-          message: 'Habit marked as not completed',
-        };
-      } else {
-        // Tracker exists but is soft deleted - reactivate it by clearing deleted_at
-        await db
-          .prepare('UPDATE trackers SET deleted_at = NULL, notes = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
-          .bind(notes || null, existingExactTracker.id)
-          .run();
-
-        await updateHabitStreakInfo(db, userId, habitId, habit.frequency);
-        return {
-          status: 'added',
-          message: 'Habit marked as completed',
-          trackerId: existingExactTracker.id.toString(),
-        };
-      }
+      await updateHabitStreakInfo(db, userId, habitId, habit.frequency);
+      return {
+        status: 'removed',
+        message: 'Habit marked as not completed',
+      };
     }
 
     // No existing tracker with this timestamp - create new one
