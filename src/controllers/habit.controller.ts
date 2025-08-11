@@ -5,7 +5,7 @@ import * as habitService from '../services/habit.service.js';
 export interface HabitData {
   name?: string;
   icon?: string;
-  frequency?: string;
+  frequency?: string[];
   startDate?: string;
   endDate?: string | null;
 }
@@ -201,6 +201,25 @@ export const getHabitStats = async (c: Context) => {
 };
 
 /**
+ * Restore a soft deleted habit.
+ */
+export const restoreHabit = async (c: Context) => {
+  const { userId } = c.get('auth');
+  const { habitId } = c.get('validated_param');
+
+  try {
+    await habitService.restoreHabit(userId, habitId, c.env.DB);
+    return c.json({ message: 'Habit restored successfully' });
+  } catch (error) {
+    console.error(
+      `Error in restoreHabit controller for user ${userId}, habit ${habitId}:`,
+      error
+    );
+    throw error;
+  }
+};
+
+/**
  * Get progress overview for a user for a given month.
  */
 export const getProgressOverview = async (c: Context) => {
@@ -208,11 +227,13 @@ export const getProgressOverview = async (c: Context) => {
   const { month, timeZone } = c.get('validated_query');
 
   try {
-    const overview = await habitService.getProgressOverview(
+    // Import progress service to get actual implementation
+    const progressService = await import('../services/progress.service.js');
+    const overview = await progressService.getUserProgressOverview(
+      c.env.DB,
       userId,
-      month,
-      timeZone,
-      c.env.DB
+      undefined, // startDate
+      undefined  // endDate  
     );
     return c.json(overview);
   } catch (error) {

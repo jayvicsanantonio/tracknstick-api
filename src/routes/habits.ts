@@ -17,6 +17,13 @@ app.get(
   habitController.getHabits
 );
 
+// GET /api/v1/habits/progress/overview (MUST be before :habitId routes)
+app.get(
+  '/progress/overview',
+  validateRequest(habitValidator.getProgressOverviewSchema, 'query'),
+  habitController.getProgressOverview
+);
+
 // POST /api/v1/habits
 app.post(
   '/',
@@ -37,6 +44,13 @@ app.delete(
   '/:habitId',
   validateRequest(habitValidator.habitIdParamSchema, 'param'),
   habitController.deleteHabit
+);
+
+// POST /api/v1/habits/:habitId/restore (for soft delete recovery)
+app.post(
+  '/:habitId/restore',
+  validateRequest(habitValidator.habitIdParamSchema, 'param'),
+  habitController.restoreHabit
 );
 
 // GET /api/v1/habits/:habitId/trackers
@@ -61,13 +75,6 @@ app.get(
   validateRequest(habitValidator.habitIdParamSchema, 'param'),
   validateRequest(habitValidator.getHabitStatsSchema, 'query'),
   habitController.getHabitStats
-);
-
-// GET /api/v1/habits/progress/overview
-app.get(
-  '/progress/overview',
-  validateRequest(habitValidator.getProgressOverviewSchema, 'query'),
-  habitController.getProgressOverview
 );
 
 export { app as habitRoutes };
