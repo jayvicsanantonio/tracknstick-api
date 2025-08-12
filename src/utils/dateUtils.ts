@@ -126,7 +126,13 @@ export function getDateInTimeZone(timestamp: string, timeZone: string): string {
     throw new Error(`Invalid timestamp: ${timestamp}`);
   }
   
-  // Get the date in the specified timezone
-  const localeDate = new Date(date.toLocaleString('en-US', { timeZone }));
-  return formatDate(localeDate);
+  // Use Intl.DateTimeFormat to safely get date in timezone (MUCH MORE RELIABLE)
+  const formatter = new Intl.DateTimeFormat('en-CA', { 
+    timeZone,
+    year: 'numeric',
+    month: '2-digit', 
+    day: '2-digit'
+  });
+  
+  return formatter.format(date); // Returns YYYY-MM-DD format directly
 }

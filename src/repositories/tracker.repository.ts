@@ -40,8 +40,7 @@ export async function findTrackersByDateRange(
        WHERE user_id = ? 
        AND habit_id IN (${placeholders})
        AND timestamp >= ? 
-       AND timestamp <= ?
-       AND deleted_at IS NULL`
+       AND timestamp <= ?`
     )
     .bind(...params)
     .all();
@@ -67,7 +66,6 @@ export async function findTrackersByHabitAndDateRange(
     SELECT id, habit_id, user_id, timestamp, notes, created_at, updated_at
     FROM trackers
     WHERE habit_id = ? AND user_id = ?
-    AND deleted_at IS NULL
   `;
   const params: (string | number)[] = [habitId, userId];
 
@@ -110,7 +108,6 @@ export async function findTrackersInDateRange(
     SELECT id
     FROM trackers
     WHERE habit_id = ? AND user_id = ? AND (timestamp BETWEEN ? AND ?)
-    AND deleted_at IS NULL
   `;
   const params = [habitId, userId, startDateISO, endDateISO];
 
@@ -222,7 +219,6 @@ export async function findAllByHabit(
     SELECT id, habit_id, user_id, timestamp, notes, created_at, updated_at
     FROM trackers
     WHERE habit_id = ? AND user_id = ?
-    AND deleted_at IS NULL
     ORDER BY timestamp DESC
   `;
   const params = [habitId, userId];
@@ -252,8 +248,7 @@ export async function getAllTrackersForHabit(
       `SELECT * FROM trackers 
        WHERE user_id = ? 
        AND habit_id = ?
-       AND deleted_at IS NULL
-       ORDER BY timestamp DESC`
+          ORDER BY timestamp DESC`
     )
     .bind(userId, habitId)
     .all();
@@ -321,7 +316,6 @@ export async function getUserProgressHistory(
       FROM trackers t
       JOIN habits h ON t.habit_id = h.id AND t.user_id = h.user_id
       WHERE t.user_id = ?
-      AND t.deleted_at IS NULL
       GROUP BY DATE(t.timestamp)
     )
     -- Join to calculate completion rate

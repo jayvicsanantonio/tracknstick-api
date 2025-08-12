@@ -235,3 +235,98 @@ export function calculateNonDailyStreak(
 
   return streak;
 }
+
+/**
+ * Calculate the longest streak from historical tracker data
+ * This handles historical toggles properly by analyzing all completion periods
+ */
+export function calculateLongestStreakFromTrackers(
+  trackers: TrackerRow[],
+  frequencyDays: string[],
+  timeZone: string
+): number {
+  if (!trackers || trackers.length === 0) {
+    return 0;
+  }
+
+  try {
+    // Validate timezone
+    Intl.DateTimeFormat(undefined, { timeZone });
+  } catch (ex) {
+    logger.error(`Invalid timeZone provided: ${timeZone}`);
+    return 0;
+  }
+
+  // Convert trackers to timezone-aware completion dates
+  const completionDates = trackers
+    .map((tracker) => {
+      const utcDate = new Date(tracker.timestamp);
+      return utcDate.toLocaleDateString('en-CA', { timeZone });
+    })
+    .sort() // Sort chronologically
+    .filter((date, index, array) => array.indexOf(date) === index); // Remove duplicates
+
+  if (completionDates.length === 0) {
+    return 0;
+  }
+
+  const scheduledDays = new Set(frequencyDays);
+  let maxStreak = 0;
+  let currentStreak = 0;
+
+  // Walk through all dates from first completion to last
+  const startDate = new Date(completionDates[0]);
+  const endDate = new Date(completionDates[completionDates.length - 1]);
+  const completionSet = new Set(completionDates);
+
+  let currentDate = new Date(startDate);
+  const dayFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    weekday: 'short',
+  });
+
+  while (currentDate <= endDate) {
+    const dateStr = currentDate.toLocaleDateString('en-CA', { timeZone });
+    const dayOfWeek = dayFormatter.format(currentDate);
+
+    if (scheduledDays.has(dayOfWeek)) {
+      if (completionSet.has(dateStr)) {
+        currentStreak++;
+        maxStreak = Math.max(maxStreak, currentStreak);
+      } else {
+        currentStreak = 0;
+      }
+    }
+
+    currentDate.setDate(currentDate.getDate() + 1);
+  }
+
+  return maxStreak;
+}
+
+/**
+ * Get the most recent completion date in user's timezone
+ */
+export function getMostRecentCompletionDate(
+  trackers: TrackerRow[],
+  timeZone: string
+): string | null {
+  if (!trackers || trackers.length === 0) {
+    return null;
+  }
+
+  try {
+    // Validate timezone
+    Intl.DateTimeFormat(undefined, { timeZone });
+  } catch (ex) {
+    logger.error(`Invalid timeZone provided: ${timeZone}`);
+    return null;
+  }
+
+  // Sort by timestamp descending to get most recent
+  const sortedTrackers = trackers.sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+
+  return sortedTrackers[0].timestamp;
+}

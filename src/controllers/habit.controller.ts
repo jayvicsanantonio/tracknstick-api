@@ -164,6 +164,8 @@ export const manageTracker = async (c: Context) => {
   const { timestamp, timeZone, notes } = c.get('validated_json');
 
   try {
+    console.log(`[CONTROLLER] Starting manageTracker: user=${userId}, habit=${habitId}, timestamp=${timestamp}, timeZone=${timeZone}`);
+    
     const result = await habitService.manageTracker(
       userId,
       habitId,
@@ -173,14 +175,17 @@ export const manageTracker = async (c: Context) => {
       c.env.DB
     );
 
+    console.log(`[CONTROLLER] Service result: ${JSON.stringify(result)}`);
+    
     const statusCode = result.status === 'added' ? 201 : 200;
-    return c.json(
-      {
-        message: result.message,
-        ...(result.trackerId && { trackerId: result.trackerId }),
-      },
-      statusCode
-    );
+    const response = {
+      message: result.message,
+      ...(result.trackerId && { trackerId: result.trackerId }),
+    };
+    
+    console.log(`[CONTROLLER] Returning response: status=${statusCode}, body=${JSON.stringify(response)}`);
+    
+    return c.json(response, statusCode);
   } catch (error) {
     console.error(
       `Error in manageTracker controller for user ${userId}, habit ${habitId}:`,
