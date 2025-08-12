@@ -1699,8 +1699,7 @@ Refer to the dedicated **[Troubleshooting Guide](TROUBLESHOOTING.md)** for a lis
 Keeping documentation up-to-date is vital for a healthy project.
 
 *   **This Developer Guide**: The primary source for onboarding and understanding the project's architecture and practices.
-*   **API Documentation (`docs/api/endpoints.md`)**: Detailed specifications for each API endpoint. This is crucial for anyone consuming the API.
-*   **Database Schema (`docs/database/schema.md`)**: Describes the database structure.
+*   **[API Documentation (`API_DOCUMENTATION.md`)](API_DOCUMENTATION.md)**: The single source of truth for all API endpoints, data models, and authentication.
 *   **Code Comments (JSDoc)**: Use JSDoc-style comments for functions, classes, and complex types, especially in services and utilities, to explain their purpose, parameters, and return values.
 *   **Changelog (`CHANGELOG.md`)**: All significant changes, features, and bug fixes should be logged here with each release.
 *   **README.md**: The main `README.md` at the project root should provide a high-level overview and link to this Developer Guide.
