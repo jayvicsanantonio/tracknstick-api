@@ -63,8 +63,8 @@ export const habitIdParamSchema = z.object({
 });
 
 export const getHabitsByDateSchema = z.object({
-  date: z.string().datetime(),
-  timeZone: z.string().default('UTC'),
+  date: z.string().datetime().optional(),
+  timeZone: z.string().default('UTC').optional(),
 });
 
 export const getTrackersSchema = z.object({

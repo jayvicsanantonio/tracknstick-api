@@ -8,6 +8,7 @@ import {
   calculateDailyStreak,
   calculateNonDailyStreak,
 } from '../utils/streakUtils.js';
+import logger from '../utils/logger.js';
 
 // Interface definitions
 interface TrackerRow {
@@ -19,6 +20,39 @@ interface TrackerRow {
   created_at: string;
   updated_at: string;
 }
+
+export const getAllHabits = async (
+  userId: string,
+  db: D1Database
+) => {
+  try {
+    const habits = await habitRepository.getAllHabits(db, userId);
+
+    if (!habits || habits.length === 0) {
+      return [];
+    }
+
+    // Return habits with basic structure - no completion status since no date context
+    return habits.map((habit) => ({
+      id: habit.id,
+      name: habit.name,
+      icon: habit.icon || '',
+      frequency: habit.frequency.split(','),
+      startDate: habit.start_date,
+      endDate: habit.end_date,
+      streak: habit.streak,
+      totalCompletions: habit.total_completions,
+      lastCompleted: habit.last_completed,
+      completed: false, // No date context, so default to false
+    }));
+  } catch (error) {
+    logger.error(
+      `Error in getAllHabits service for user ${userId}:`,
+      error as Error
+    );
+    throw error;
+  }
+};
 
 export const getHabitsForDate = async (
   userId: string,

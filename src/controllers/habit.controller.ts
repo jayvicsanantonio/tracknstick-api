@@ -17,20 +17,30 @@ export interface TrackerResult {
 }
 
 /**
- * Get habits scheduled for a specific date.
+ * Get habits for a specific date or all habits if no date provided.
  */
 export const getHabits = async (c: Context) => {
   const { userId } = c.get('auth');
   const { date, timeZone } = c.get('validated_query');
 
   try {
-    const habits = await habitService.getHabitsForDate(
-      userId,
-      date,
-      timeZone,
-      c.env.DB
-    );
-    const data = c.json(habits);
+    let habits;
+    
+    if (date && timeZone) {
+      // Get habits for a specific date
+      habits = await habitService.getHabitsForDate(
+        userId,
+        date,
+        timeZone,
+        c.env.DB
+      );
+    } else {
+      // Get all habits
+      habits = await habitService.getAllHabits(
+        userId,
+        c.env.DB
+      );
+    }
 
     return c.json(
       habits.map((habit) => ({

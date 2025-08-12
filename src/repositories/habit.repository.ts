@@ -83,6 +83,35 @@ export async function ensureUserExists(
   }
 }
 
+// Get all habits for a user (excluding soft deleted)
+export async function getAllHabits(
+  db: D1Database,
+  userId: string
+): Promise<HabitRow[]> {
+  // Ensure user exists
+  await ensureUserExists(db, userId);
+
+  // Get all habits (exclude soft deleted)
+  const habits = await db
+    .prepare(
+      `
+      SELECT * FROM habits 
+      WHERE user_id = ? 
+      AND deleted_at IS NULL
+      ORDER BY created_at DESC
+    `
+    )
+    .bind(userId)
+    .all();
+
+  if (!habits.success) {
+    logger.error('Failed to fetch all habits', { userId });
+    throw new Error('Failed to fetch all habits');
+  }
+
+  return habits.results as HabitRow[];
+}
+
 // Get habits for a given date
 export async function getHabitsByDate(
   db: D1Database,
