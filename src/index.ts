@@ -5,6 +5,7 @@ import { D1Database } from '@cloudflare/workers-types';
 import { habitRoutes } from './routes/habits.js';
 import { healthRoutes } from './routes/health.js';
 import progressRoutes from './routes/progress.js';
+import { achievementRoutes } from './routes/achievements.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 import { requestLogger } from './middlewares/requestLogger.js';
 import { initBindings } from './middlewares/initBindings.js';
@@ -43,6 +44,7 @@ app.use('*', async (c, next) => {
 // Set up API routes
 app.route('/api/v1/habits', habitRoutes);
 app.route('/api/v1/progress', progressRoutes);
+app.route('/api/v1/achievements', achievementRoutes);
 
 // Health check routes - no authentication required
 app.route('/health', healthRoutes);

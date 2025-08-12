@@ -63,3 +63,51 @@ export interface ProgressOverviewResponse {
     rate: number;
   }>;
 }
+
+export interface Achievement {
+  id: number;
+  key: string;
+  name: string;
+  description: string;
+  icon?: string;
+  type: 'habit_creation' | 'streak' | 'completion' | 'special_achievement' | 'perfect_completion' | 'activity_tracking';
+  category: 'getting_started' | 'consistency' | 'dedication' | 'milestones';
+  requirementType: 'count' | 'streak' | 'days' | 'percentage';
+  requirementValue: number;
+  requirementData?: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface UserAchievement {
+  id: number;
+  userId: string;
+  achievementId: number;
+  earnedAt: string;
+  progressData?: string;
+  achievement?: Achievement;
+}
+
+export interface AchievementProgress {
+  achievementId: number;
+  currentValue: number;
+  targetValue: number;
+  isEarned: boolean;
+  progressPercentage: number;
+}
+
+export interface AchievementResponse {
+  id: string;
+  key: string;
+  name: string;
+  description: string;
+  icon?: string;
+  type: string;
+  category: string;
+  requirementType: string;
+  requirementValue: number;
+  requirementData?: any;
+  isEarned: boolean;
+  earnedAt?: string;
+  progress?: AchievementProgress;
+}
