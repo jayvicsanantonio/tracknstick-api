@@ -295,10 +295,11 @@ export async function updateHabit(
     values.push(habitData.startDate);
   }
 
-  if (habitData.endDate !== undefined) {
-    updateFields.push('end_date = ?');
-    values.push(habitData.endDate);
-  }
+  // Always handle endDate - if not provided, clear it (set to NULL)
+  // This ensures updates without endDate remove any existing end date
+  updateFields.push('end_date = ?');
+  values.push(habitData.endDate === undefined ? null : 
+              (habitData.endDate === null ? null : habitData.endDate));
 
   // Check if there are actual fields to update (excluding timestamp)
   if (updateFields.length === 0) {

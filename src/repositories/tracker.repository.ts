@@ -301,7 +301,7 @@ export async function getUserProgressHistory(
       FROM dates d
       JOIN habits h ON h.user_id = ?
         AND DATE(h.start_date) <= d.date
-        AND (h.end_date IS NULL OR DATE(h.end_date) >= d.date)
+        AND (h.end_date IS NULL OR DATE(h.end_date) > d.date)
         AND (
           h.frequency LIKE '%' || SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', d.date), 3) || '%'
           OR h.frequency = SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', d.date), 3)
@@ -309,13 +309,15 @@ export async function getUserProgressHistory(
       GROUP BY d.date
     ),
     completed_habits AS (
-      -- For each date, count completed habits
+      -- For each date, count completed habits that were actually active on that date
       SELECT 
         DATE(t.timestamp) AS date,
         COUNT(DISTINCT t.habit_id) AS completed_habits
       FROM trackers t
       JOIN habits h ON t.habit_id = h.id AND t.user_id = h.user_id
       WHERE t.user_id = ?
+        AND DATE(h.start_date) <= DATE(t.timestamp)
+        AND (h.end_date IS NULL OR DATE(h.end_date) > DATE(t.timestamp))
       GROUP BY DATE(t.timestamp)
     )
     -- Join to calculate completion rate

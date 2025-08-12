@@ -20,11 +20,11 @@ export const createHabitSchema = z
     icon: z.string().optional(),
     frequency: frequencySchema,
     startDate: z.string().datetime(),
-    endDate: z.string().datetime().optional(),
+    endDate: z.union([z.string().datetime(), z.null()]).optional(),
   })
   .refine(
     (data) => {
-      if (!data.endDate) return true;
+      if (!data.endDate || data.endDate === null) return true;
 
       const startTs = new Date(data.startDate).getTime();
       const endTs = new Date(data.endDate).getTime();
@@ -42,11 +42,11 @@ export const updateHabitSchema = z
     icon: z.string().optional(),
     frequency: frequencySchema.optional(),
     startDate: z.string().datetime(),
-    endDate: z.string().datetime().optional(),
+    endDate: z.union([z.string().datetime(), z.null()]).optional(),
   })
   .refine(
     (data) => {
-      if (!data.endDate) return true;
+      if (!data.endDate || data.endDate === null) return true;
 
       const startTs = new Date(data.startDate).getTime();
       const endTs = new Date(data.endDate).getTime();
