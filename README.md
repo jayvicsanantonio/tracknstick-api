@@ -44,8 +44,7 @@ graph LR
 For detailed information about the API, development practices, and more, please refer to the following documents:
 
 - **[Developer Guide (`docs/DEVELOPER_GUIDE.md`)](docs/DEVELOPER_GUIDE.md)**: The main comprehensive guide for developers. Includes setup, architecture, coding standards, and much more.
-- **[API Endpoint Specifications (`docs/api/endpoints.md`)](docs/api/endpoints.md)**: Detailed information on all API endpoints, including request/response formats and examples.
-- **[Database Schema (`docs/database/schema.md`)](docs/database/schema.md)**: Full details of the database structure, tables, and columns.
+- **[API Documentation (`docs/API_DOCUMENTATION.md`)](docs/API_DOCUMENTATION.md)**: The single source of truth for all API endpoints, data models, and authentication protocols.
 - **[Changelog (`CHANGELOG.md`)](CHANGELOG.md)**: A log of all notable changes, features, and fixes for each version of the API.
 
 ## Getting Started
