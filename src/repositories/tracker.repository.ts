@@ -303,8 +303,8 @@ export async function getUserProgressHistory(
         AND DATE(h.start_date) <= d.date
         AND (h.end_date IS NULL OR DATE(h.end_date) >= d.date)
         AND (
-          h.frequency LIKE '%' || SUBSTR('MonTueWedThuFriSatSun', 1 + 3*STRFTIME('%w', d.date), 3) || '%'
-          OR h.frequency = SUBSTR('MonTueWedThuFriSatSun', 1 + 3*STRFTIME('%w', d.date), 3)
+          h.frequency LIKE '%' || SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', d.date), 3) || '%'
+          OR h.frequency = SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', d.date), 3)
         )
       GROUP BY d.date
     ),
