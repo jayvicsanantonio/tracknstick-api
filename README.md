@@ -431,7 +431,7 @@ We welcome contributions! Please see our contributing guidelines:
 - **GitHub Issues**: [Report bugs or request features](https://github.com/jayvicsanantonio/tracknstick-api/issues)
 - **Documentation**: [Comprehensive API docs](https://github.com/jayvicsanantonio/tracknstick-api/wiki)
 - **Developer**: Jayvic San Antonio
-- **Frontend Repository**: [TrackNStick Web App](https://github.com/jayvicsanantonio/tracknstick)
+- **Frontend Repository**: [TrackNStick Web App](https://github.com/jayvicsanantonio/tracknstick.com)
 
 ---
 
