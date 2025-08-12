@@ -11,7 +11,7 @@
 
 TrackNStick API is a high-performance, serverless REST API that provides the backbone for habit tracking applications. Built with modern web technologies and deployed on Cloudflare's global edge network, it delivers sub-50ms response times worldwide while handling complex habit analytics with precision timezone support.
 
-**🚀 Live Frontend Application:** [TrackNStick Web App](https://github.com/jayvicsanantonio/tracknstick) *(React + TypeScript)*
+**🚀 Live Frontend Application:** [TrackNStick Web App](https://github.com/jayvicsanantonio/tracknstick.com) *(React + TypeScript)*
 
 ### Key Differentiators
 
