@@ -9,9 +9,8 @@ export function getLocaleStartEnd(
   utcDate: Date,
   timeZone: string
 ): { localeStartISO: string; localeEndISO: string } {
-  try {
-    Intl.DateTimeFormat(undefined, { timeZone });
-  } catch (ex) {
+  // Validate timezone
+  if (!isValidTimeZone(timeZone)) {
     throw new Error(
       `Invalid timeZone provided to getLocaleStartEnd: ${timeZone}`
     );
@@ -77,4 +76,57 @@ export function formatDate(date: Date): string {
 export function getDaysBetween(d1: Date, d2: Date): number {
   const diffTime = Math.abs(d2.getTime() - d1.getTime());
   return Math.floor(diffTime / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Validates if a given timezone string is valid
+ * @param timeZone IANA timezone string to validate
+ * @returns boolean indicating if timezone is valid
+ */
+export function isValidTimeZone(timeZone: string): boolean {
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone }).format(new Date());
+    return true;
+  } catch (ex) {
+    return false;
+  }
+}
+
+/**
+ * Safely parse a date string with proper error handling
+ * @param dateString Date string to parse
+ * @returns Date object or null if invalid
+ */
+export function safeDateParse(dateString: string): Date | null {
+  try {
+    const parsed = new Date(dateString);
+    // Check if date is valid
+    if (isNaN(parsed.getTime())) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Convert timestamp to date considering timezone for collision detection
+ * @param timestamp ISO timestamp string
+ * @param timeZone IANA timezone name
+ * @returns Date string in YYYY-MM-DD format for the given timezone
+ */
+export function getDateInTimeZone(timestamp: string, timeZone: string): string {
+  if (!isValidTimeZone(timeZone)) {
+    throw new Error(`Invalid timezone: ${timeZone}`);
+  }
+  
+  const date = safeDateParse(timestamp);
+  if (!date) {
+    throw new Error(`Invalid timestamp: ${timestamp}`);
+  }
+  
+  // Get the date in the specified timezone
+  const localeDate = new Date(date.toLocaleString('en-US', { timeZone }));
+  return formatDate(localeDate);
 }

@@ -1,8 +1,6 @@
 // ABOUTME: Unified database management script for Cloudflare D1 operations
 // ABOUTME: Handles setup, migration, reset, seeding, and query operations
 
-#!/usr/bin/env node
-
 import { execSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
@@ -35,77 +33,49 @@ function executeWrangler(command, options = {}) {
   }
 }
 
-// Get all migration files in order
-function getMigrationFiles() {
-  const files = fs.readdirSync(MIGRATIONS_DIR)
-    .filter(file => file.endsWith('.sql') && file.match(/^\d{4}_/))
-    .sort();
-  
-  return files.map(file => path.join(MIGRATIONS_DIR, file));
-}
-
-// Setup: Apply all migrations from scratch
+// Setup: Apply single schema file
 async function setup() {
   console.log(`🏗️  Setting up database ${isRemote ? '(REMOTE)' : '(LOCAL)'}`);
   
-  const migrations = getMigrationFiles();
+  const schemaFile = path.join(MIGRATIONS_DIR, 'schema.sql');
   
-  if (migrations.length === 0) {
-    console.log('⚠️  No migration files found');
+  if (!fs.existsSync(schemaFile)) {
+    console.log('❌ Schema file not found at migrations/schema.sql');
     return;
   }
   
-  console.log(`📁 Found ${migrations.length} migration files`);
-  
-  for (const migration of migrations) {
-    const filename = path.basename(migration);
-    console.log(`📄 Applying ${filename}...`);
-    executeWrangler(`d1 execute ${DB_NAME} --file=${migration} ${remoteFlag}`);
-  }
+  console.log('📄 Applying schema.sql...');
+  executeWrangler(`d1 execute ${DB_NAME} --file=${schemaFile} ${remoteFlag}`);
   
   console.log('✅ Database setup complete!');
 }
 
-// Reset: Clear all data and reapply schema
+// Reset: Drop all tables and recreate from schema
 async function reset() {
   console.log(`🔄 Resetting database ${isRemote ? '(REMOTE)' : '(LOCAL)'}`);
   
-  // Clear all data
-  const clearCommand = `d1 execute ${DB_NAME} --command "DELETE FROM trackers; DELETE FROM habits; DELETE FROM users;" ${remoteFlag}`;
-  executeWrangler(clearCommand);
+  // Drop all tables to start fresh
+  const dropCommand = `d1 execute ${DB_NAME} --command "DROP TABLE IF EXISTS trackers; DROP TABLE IF EXISTS habits; DROP TABLE IF EXISTS users;" ${remoteFlag}`;
+  executeWrangler(dropCommand);
   
-  console.log('🗑️  All data cleared');
+  console.log('🗑️  All tables dropped');
   
-  // Reapply schema (initial migration only)
-  const initialMigration = path.join(MIGRATIONS_DIR, '0000_initial_schema.sql');
-  if (fs.existsSync(initialMigration)) {
-    console.log('📄 Reapplying initial schema...');
-    executeWrangler(`d1 execute ${DB_NAME} --file=${initialMigration} ${remoteFlag}`);
+  // Reapply schema
+  const schemaFile = path.join(MIGRATIONS_DIR, 'schema.sql');
+  if (fs.existsSync(schemaFile)) {
+    console.log('📄 Applying schema.sql...');
+    executeWrangler(`d1 execute ${DB_NAME} --file=${schemaFile} ${remoteFlag}`);
   }
   
   console.log('✅ Database reset complete!');
 }
 
-// Migrate: Apply any pending migrations
+// Migrate: Same as setup for single schema approach
 async function migrate() {
   console.log(`📊 Running migrations ${isRemote ? '(REMOTE)' : '(LOCAL)'}`);
+  console.log('ℹ️  With single schema approach, migrate = setup');
   
-  // For D1, we'll apply all migrations since there's no built-in migration tracking
-  // In a more sophisticated setup, you'd track applied migrations
-  const migrations = getMigrationFiles();
-  
-  for (const migration of migrations) {
-    const filename = path.basename(migration);
-    try {
-      console.log(`📄 Applying ${filename}...`);
-      executeWrangler(`d1 execute ${DB_NAME} --file=${migration} ${remoteFlag}`);
-      console.log(`✅ Applied ${filename}`);
-    } catch (error) {
-      console.log(`⚠️  ${filename} may already be applied or failed`);
-    }
-  }
-  
-  console.log('✅ Migration complete!');
+  await setup();
 }
 
 // Seed: Add sample/test data

@@ -8,6 +8,7 @@ import {
   calculateDailyStreak,
   calculateNonDailyStreak,
 } from '../utils/streakUtils.js';
+import logger from '../utils/logger.js';
 
 // Interface definitions
 interface TrackerRow {
@@ -19,6 +20,39 @@ interface TrackerRow {
   created_at: string;
   updated_at: string;
 }
+
+export const getAllHabits = async (
+  userId: string,
+  db: D1Database
+) => {
+  try {
+    const habits = await habitRepository.getAllHabits(db, userId);
+
+    if (!habits || habits.length === 0) {
+      return [];
+    }
+
+    // Return habits with basic structure - no completion status since no date context
+    return habits.map((habit) => ({
+      id: habit.id,
+      name: habit.name,
+      icon: habit.icon || '',
+      frequency: habit.frequency.split(','),
+      startDate: habit.start_date,
+      endDate: habit.end_date,
+      streak: habit.streak,
+      totalCompletions: habit.total_completions,
+      lastCompleted: habit.last_completed,
+      completed: false, // No date context, so default to false
+    }));
+  } catch (error) {
+    logger.error(
+      `Error in getAllHabits service for user ${userId}:`,
+      error as Error
+    );
+    throw error;
+  }
+};
 
 export const getHabitsForDate = async (
   userId: string,
@@ -66,7 +100,9 @@ export const getHabitsForDate = async (
         id: habit.id.toString(),
         name: habit.name,
         icon: habit.icon || undefined,
-        frequency: habit.frequency.split(','),
+        frequency: Array.isArray(habit.frequency) 
+          ? habit.frequency 
+          : habit.frequency.split(','),
         startDate: habit.start_date,
         endDate: habit.end_date || undefined,
         streak: habit.streak,
@@ -134,6 +170,23 @@ export const deleteHabit = async (
   }
 };
 
+export const restoreHabit = async (
+  userId: string,
+  habitId: string,
+  db: D1Database
+) => {
+  try {
+    await habitRepository.restoreHabit(db, userId, habitId);
+    return true;
+  } catch (error) {
+    console.error(
+      `Error in restoreHabit service for user ${userId}, habit ${habitId}:`,
+      error
+    );
+    throw error;
+  }
+};
+
 export const getTrackersForHabit = async (
   userId: string,
   habitId: string,
@@ -178,27 +231,76 @@ export const manageTracker = async (
     throw new Error('Database instance is required');
   }
 
+  // Import date utilities
+  const { safeDateParse, isValidTimeZone } = await import('../utils/dateUtils.js');
+
   try {
+    // Validate inputs
+    if (!isValidTimeZone(timeZone)) {
+      throw new Error(`Invalid timezone: ${timeZone}`);
+    }
+
+    if (!safeDateParse(timestamp)) {
+      throw new Error(`Invalid timestamp format: ${timestamp}`);
+    }
+
     // Get habit data to determine frequency and streak info
     const habit = await habitRepository.getHabitById(db, userId, habitId);
 
-    // Add or remove the tracker
-    const result = await habitRepository.manageTracker(
-      db,
-      userId,
-      habitId,
-      timestamp,
-      notes
-    );
+    // Import date utilities to get date in user's timezone
+    const { getDateInTimeZone } = await import('../utils/dateUtils.js');
+    const dateInTimezone = getDateInTimeZone(timestamp, timeZone);
+    
+    // Debug logging
+    console.log(`[DEBUG] manageTracker - habitId: ${habitId}, dateInTimezone: ${dateInTimezone}, timestamp: ${timestamp}`);
+    
+    // Check for existing tracker on the same DATE (not exact timestamp) in user's timezone
+    const existingDayTracker = await db
+      .prepare(`
+        SELECT id, timestamp, deleted_at FROM trackers 
+        WHERE habit_id = ? AND user_id = ? 
+        AND DATE(timestamp, 'localtime') = ?
+        AND deleted_at IS NULL
+        ORDER BY timestamp DESC
+        LIMIT 1
+      `)
+      .bind(habitId, userId, dateInTimezone)
+      .first<{ id: number; timestamp: string; deleted_at: string | null }>();
+      
+    console.log(`[DEBUG] existingDayTracker found:`, existingDayTracker);
+
+    if (existingDayTracker) {
+      // Active tracker found for this date - soft delete it to toggle off
+      await db
+        .prepare('UPDATE trackers SET deleted_at = CURRENT_TIMESTAMP WHERE id = ?')
+        .bind(existingDayTracker.id)
+        .run();
+
+      await updateHabitStreakInfo(db, userId, habitId, habit.frequency);
+      return {
+        status: 'removed',
+        message: 'Habit marked as not completed',
+      };
+    }
+
+    // No existing tracker with this timestamp - create new one
+    const result = await db
+      .prepare('INSERT INTO trackers (habit_id, user_id, timestamp, notes) VALUES (?, ?, ?, ?)')
+      .bind(habitId, userId, timestamp, notes || null)
+      .run();
+
+    if (!result.success) {
+      throw new Error('Failed to add tracker');
+    }
 
     // If we added or removed a tracker, recalculate streak
     await updateHabitStreakInfo(db, userId, habitId, habit.frequency);
 
-    // Return the repository result
+    // Return success result for new tracker
     return {
-      status: result.status,
-      message: result.message,
-      ...(result.trackerId && { trackerId: result.trackerId.toString() }),
+      status: 'added',
+      message: 'Habit marked as completed',
+      trackerId: result.meta.last_row_id?.toString(),
     };
   } catch (error) {
     console.error(
@@ -242,7 +344,9 @@ async function updateHabitStreakInfo(
     );
 
     // Get frequency as array
-    const frequencyDays = frequency.split(',');
+    const frequencyDays = Array.isArray(frequency) 
+      ? frequency 
+      : frequency.split(',');
 
     // Calculate current streak
     let currentStreak = 0;

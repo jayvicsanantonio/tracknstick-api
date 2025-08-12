@@ -32,56 +32,84 @@ interface TrackerRow {
   updated_at: string;
 }
 
-// Create a user if they don't exist
+// Create a user if they don't exist (with race condition handling)
 export async function ensureUserExists(
   db: D1Database,
   clerkUserId: string
 ): Promise<void> {
   try {
-    const user = await db
+    // First check if user exists
+    const existingUser = await db
       .prepare('SELECT id FROM users WHERE clerk_user_id = ?')
       .bind(clerkUserId)
       .first();
 
-    if (!user) {
-      logger.info(`Creating new user with clerk_user_id: ${clerkUserId}`);
-      const result = await db
-        .prepare('INSERT INTO users (clerk_user_id) VALUES (?)')
-        .bind(clerkUserId)
-        .run();
-
-      if (!result.success) {
-        logger.error(
-          `Failed to create user with clerk_user_id: ${clerkUserId}`,
-          { result }
-        );
-        throw new Error(
-          `Failed to create user with clerk_user_id: ${clerkUserId}`
-        );
-      }
-
-      // Verify the user was created
-      const verifyUser = await db
-        .prepare('SELECT id FROM users WHERE clerk_user_id = ?')
-        .bind(clerkUserId)
-        .first();
-
-      if (!verifyUser) {
-        logger.error(
-          `User creation verification failed for clerk_user_id: ${clerkUserId}`
-        );
-        throw new Error(
-          `User creation verification failed for clerk_user_id: ${clerkUserId}`
-        );
-      }
+    if (existingUser) {
+      return; // User already exists
     }
+
+    // Use INSERT OR IGNORE to handle race conditions
+    logger.info(`Creating new user with clerk_user_id: ${clerkUserId}`);
+    const result = await db
+      .prepare('INSERT OR IGNORE INTO users (clerk_user_id) VALUES (?)')
+      .bind(clerkUserId)
+      .run();
+
+    if (!result.success) {
+      logger.error(
+        `Failed to create user with clerk_user_id: ${clerkUserId}`,
+        { result }
+      );
+      throw new Error(
+        `Failed to create user with clerk_user_id: ${clerkUserId}`
+      );
+    }
+
+    // Note: We don't need to verify creation because INSERT OR IGNORE
+    // will succeed even if the user was created by another concurrent request
   } catch (error) {
+    // Handle specific SQLite constraint violations gracefully
+    if (error.message?.includes('UNIQUE constraint failed')) {
+      // Another request created the user concurrently, this is fine
+      logger.info(`User ${clerkUserId} was created by concurrent request`);
+      return;
+    }
+    
     logger.error(
       `Error in ensureUserExists for clerk_user_id: ${clerkUserId}`,
       { error }
     );
     throw error;
   }
+}
+
+// Get all habits for a user (excluding soft deleted)
+export async function getAllHabits(
+  db: D1Database,
+  userId: string
+): Promise<HabitRow[]> {
+  // Ensure user exists
+  await ensureUserExists(db, userId);
+
+  // Get all habits (exclude soft deleted)
+  const habits = await db
+    .prepare(
+      `
+      SELECT * FROM habits 
+      WHERE user_id = ? 
+      AND deleted_at IS NULL
+      ORDER BY created_at DESC
+    `
+    )
+    .bind(userId)
+    .all();
+
+  if (!habits.success) {
+    logger.error('Failed to fetch all habits', { userId });
+    throw new Error('Failed to fetch all habits');
+  }
+
+  return habits.results as HabitRow[];
 }
 
 // Get habits for a given date
@@ -94,12 +122,13 @@ export async function getHabitsByDate(
   // Ensure user exists
   await ensureUserExists(db, userId);
 
-  // Get habits active on the given date
+  // Get habits active on the given date (exclude soft deleted)
   const habits = await db
     .prepare(
       `
       SELECT * FROM habits 
       WHERE user_id = ? 
+      AND deleted_at IS NULL
       AND start_date <= ? 
       AND (end_date IS NULL OR end_date >= ?)
       AND (frequency LIKE ? OR frequency LIKE ? OR frequency LIKE ? OR frequency = ?)
@@ -138,7 +167,7 @@ export async function createHabit(
 
     const frequencyString = Array.isArray(frequency)
       ? frequency.join(',')
-      : frequency;
+      : (typeof frequency === 'string' ? frequency : frequency?.join(',') || '');
 
     const result = await db
       .prepare(
@@ -180,19 +209,19 @@ export async function createHabit(
   }
 }
 
-// Get a single habit by ID
+// Get a single habit by ID (excluding soft deleted)
 export async function getHabitById(
   db: D1Database,
   userId: string,
   habitId: number | string
 ): Promise<HabitRow> {
   const habit = await db
-    .prepare('SELECT * FROM habits WHERE id = ? AND user_id = ?')
+    .prepare('SELECT * FROM habits WHERE id = ? AND user_id = ? AND deleted_at IS NULL')
     .bind(habitId, userId)
     .first();
 
   if (!habit) {
-    throw new NotFoundError(`Habit with ID ${habitId} not found`);
+    throw new NotFoundError(`Habit with ID ${habitId} not found or has been deleted`);
   }
 
   return habit as HabitRow;
@@ -206,7 +235,38 @@ export async function updateHabit(
   habitData: HabitData
 ): Promise<void> {
   // Check if habit exists and belongs to user
-  await getHabitById(db, userId, habitId);
+  const existingHabit = await getHabitById(db, userId, habitId);
+
+  // Validate date consistency if both dates are provided
+  if (habitData.startDate && habitData.endDate) {
+    const startTs = new Date(habitData.startDate).getTime();
+    const endTs = new Date(habitData.endDate).getTime();
+    
+    if (endTs < startTs) {
+      throw new Error('End date cannot be earlier than start date');
+    }
+  }
+
+  // Check if startDate is being moved after existing trackers
+  if (habitData.startDate) {
+    const earliestTracker = await db
+      .prepare(`
+        SELECT MIN(timestamp) as earliest_timestamp 
+        FROM trackers 
+        WHERE habit_id = ? AND user_id = ? AND deleted_at IS NULL
+      `)
+      .bind(habitId, userId)
+      .first();
+
+    if (earliestTracker?.earliest_timestamp) {
+      const newStartDate = new Date(habitData.startDate);
+      const earliestTrackerDate = new Date(earliestTracker.earliest_timestamp);
+      
+      if (newStartDate > earliestTrackerDate) {
+        throw new Error('Cannot set start date after existing tracker entries');
+      }
+    }
+  }
 
   // Build the update query dynamically based on provided fields
   const updateFields: string[] = [];
@@ -225,7 +285,7 @@ export async function updateHabit(
   if (habitData.frequency !== undefined) {
     const frequencyString = Array.isArray(habitData.frequency)
       ? habitData.frequency.join(',')
-      : habitData.frequency;
+      : (typeof habitData.frequency === 'string' ? habitData.frequency : habitData.frequency?.join(',') || '');
     updateFields.push('frequency = ?');
     values.push(frequencyString);
   }
@@ -240,12 +300,13 @@ export async function updateHabit(
     values.push(habitData.endDate);
   }
 
+  // Check if there are actual fields to update (excluding timestamp)
+  if (updateFields.length === 0) {
+    throw new Error('No fields provided for update');
+  }
+
   // Add update timestamp
   updateFields.push('updated_at = CURRENT_TIMESTAMP');
-
-  if (updateFields.length === 0) {
-    return; // Nothing to update
-  }
 
   // Add the habit ID and user ID to the values array
   values.push(habitId);
@@ -267,7 +328,7 @@ export async function updateHabit(
   }
 }
 
-// Delete a habit
+// Soft delete a habit (can be recovered)
 export async function deleteHabit(
   db: D1Database,
   userId: string,
@@ -276,13 +337,90 @@ export async function deleteHabit(
   // Check if habit exists and belongs to user
   await getHabitById(db, userId, habitId);
 
-  const result = await db
-    .prepare('DELETE FROM habits WHERE id = ? AND user_id = ?')
-    .bind(habitId, userId)
-    .run();
+  // Use D1 batch API for atomic operations instead of SQL transactions
+  const statements = [
+    db.prepare('UPDATE habits SET deleted_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ? AND deleted_at IS NULL')
+      .bind(habitId, userId),
+    db.prepare('UPDATE trackers SET deleted_at = CURRENT_TIMESTAMP WHERE habit_id = ? AND user_id = ? AND deleted_at IS NULL')
+      .bind(habitId, userId)
+  ];
 
-  if (!result.success || result.meta.changes === 0) {
-    throw new Error('Failed to delete habit');
+  const results = await db.batch(statements);
+
+  // Check if habit deletion was successful
+  if (!results[0].success || results[0].meta.changes === 0) {
+    throw new Error('Failed to delete habit - habit may already be deleted');
+  }
+
+  // Check if tracker deletion was successful
+  if (!results[1].success) {
+    throw new Error('Failed to delete associated trackers');
+  }
+}
+
+// Restore a soft deleted habit
+export async function restoreHabit(
+  db: D1Database,
+  userId: string,
+  habitId: number | string
+): Promise<void> {
+  // Use D1 batch API for atomic operations instead of SQL transactions
+  const statements = [
+    db.prepare('UPDATE habits SET deleted_at = NULL WHERE id = ? AND user_id = ? AND deleted_at IS NOT NULL')
+      .bind(habitId, userId),
+    db.prepare('UPDATE trackers SET deleted_at = NULL WHERE habit_id = ? AND user_id = ? AND deleted_at IS NOT NULL')
+      .bind(habitId, userId)
+  ];
+
+  const results = await db.batch(statements);
+
+  // Check if habit restoration was successful
+  if (!results[0].success || results[0].meta.changes === 0) {
+    throw new Error('Failed to restore habit - habit may not be deleted or does not exist');
+  }
+
+  // Check if tracker restoration was successful
+  if (!results[1].success) {
+    throw new Error('Failed to restore associated trackers');
+  }
+}
+
+// Permanently delete a habit (cannot be recovered)
+export async function permanentlyDeleteHabit(
+  db: D1Database,
+  userId: string,
+  habitId: number | string
+): Promise<void> {
+  // Check if habit exists and belongs to user (including soft deleted)
+  const habit = await db
+    .prepare('SELECT * FROM habits WHERE id = ? AND user_id = ?')
+    .bind(habitId, userId)
+    .first();
+
+  if (!habit) {
+    throw new NotFoundError(`Habit with ID ${habitId} not found`);
+  }
+
+  // Use D1 batch API for atomic operations instead of SQL transactions
+  const statements = [
+    // Delete trackers first (foreign key constraint)
+    db.prepare('DELETE FROM trackers WHERE habit_id = ? AND user_id = ?')
+      .bind(habitId, userId),
+    // Then delete the habit
+    db.prepare('DELETE FROM habits WHERE id = ? AND user_id = ?')
+      .bind(habitId, userId)
+  ];
+
+  const results = await db.batch(statements);
+
+  // Check if tracker deletion was successful
+  if (!results[0].success) {
+    throw new Error('Failed to permanently delete associated trackers');
+  }
+
+  // Check if habit deletion was successful
+  if (!results[1].success || results[1].meta.changes === 0) {
+    throw new Error('Failed to permanently delete habit');
   }
 }
 
@@ -302,6 +440,7 @@ export async function getTrackers(
       `
       SELECT * FROM trackers 
       WHERE habit_id = ? AND user_id = ? 
+      AND deleted_at IS NULL
       AND timestamp >= ? AND timestamp <= ?
       ORDER BY timestamp DESC
     `
@@ -327,14 +466,10 @@ export async function manageTracker(
   // Check if habit exists and belongs to user
   await getHabitById(db, userId, habitId);
 
-  // Extract date from timestamp for day-based lookup
-  const timestampDate = new Date(timestamp);
-  const dateOnly = timestampDate.toISOString().substring(0, 10); // YYYY-MM-DD format
-
-  // Check if tracker already exists for this date (not exact timestamp)
+  // Check if tracker already exists for this exact timestamp
   const existingTracker = await db
-    .prepare('SELECT id FROM trackers WHERE habit_id = ? AND DATE(timestamp) = ?')
-    .bind(habitId, dateOnly)
+    .prepare('SELECT id FROM trackers WHERE habit_id = ? AND user_id = ? AND timestamp = ? AND deleted_at IS NULL')
+    .bind(habitId, userId, timestamp)
     .first<{ id: number }>();
 
   // If tracker exists, remove it

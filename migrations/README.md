@@ -1,18 +1,10 @@
-# Database Migrations
+# Database Schema
 
-This directory contains database migrations for the TrackNStick API.
+This directory contains the complete database schema for the TrackNStick API.
 
-## Migration Files
+## Schema File
 
-- `0000_initial_schema.sql` - Initial schema setup for users, habits, and trackers tables
-- `0001_add_indexes.sql` - Added indexes for improved query performance
-- `0002_recreate_habits_table.sql` - Modified habits table schema with improved frequency support
-- `0003_fix_habits_old_reference.sql` - Fixed potential issues with partially applied migrations
-- `0004_fix_trackers_fk.sql` - Fixed foreign key in trackers table that referenced non-existent habits_old table
-- `0005_ensure_users_table.sql` - Ensured users table exists with proper structure
-- `0006_fix_user_id_type.sql` - Fixed user ID type consistency
-- `0007_add_timestamp_columns.sql` - Added timestamp columns to tables
-- `0008_add_timestamps_to_trackers.sql` - Added timestamps to trackers table
+- `schema.sql` - Complete database schema with all tables, indexes, and constraints
 
 ## Database Management
 
@@ -21,13 +13,13 @@ Use the simplified database management commands:
 ### Local Development
 
 ```bash
-# Setup database (apply all migrations)
+# Setup database (apply schema)
 pnpm db:setup
 
-# Reset database (clear data, reapply schema)
+# Reset database (drop tables, recreate from schema)
 pnpm db:reset
 
-# Apply migrations
+# Apply schema (same as setup)
 pnpm db:migrate
 
 # Add sample data
@@ -45,27 +37,18 @@ Add `:remote` to any command:
 # Setup remote database
 pnpm db:setup:remote
 
-# Reset remote database
+# Reset remote database (DESTRUCTIVE - drops all data)
 pnpm db:reset:remote
 
 # Query remote database
 pnpm db:query:remote "SELECT COUNT(*) FROM users"
 ```
 
-## Creating New Migrations
+## Schema Changes
 
-1. Create a new migration file with sequential numbering:
-
-   ```bash
-   touch migrations/0009_add_habit_categories.sql
-   ```
-
-2. Write your SQL migration in the file
-
-3. Apply the migration:
-   ```bash
-   pnpm db:migrate
-   ```
+1. Edit the `schema.sql` file directly
+2. Run `pnpm db:reset` to apply changes (WARNING: destroys existing data)
+3. For production, backup data first, then run `pnpm db:reset:remote`
 
 ## Seeding Data
 
