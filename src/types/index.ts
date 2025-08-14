@@ -70,7 +70,14 @@ export interface Achievement {
   name: string;
   description: string;
   icon?: string;
-  type: 'habit_creation' | 'streak' | 'completion' | 'special_achievement' | 'perfect_completion' | 'activity_tracking';
+  type:
+    | 'habit_creation'
+    | 'streak'
+    | 'completion'
+    | 'special_achievement'
+    | 'perfect_completion'
+    | 'activity_tracking'
+    | 'milestone';
   category: 'getting_started' | 'consistency' | 'dedication' | 'milestones';
   requirementType: 'count' | 'streak' | 'days' | 'percentage';
   requirementValue: number;
