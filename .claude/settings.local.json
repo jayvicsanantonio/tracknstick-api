@@ -1,9 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(pnpm db:migrate:*)",
-      "Bash(pnpm dev:*)"
-    ],
-    "deny": []
-  }
-}
