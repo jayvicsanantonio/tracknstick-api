@@ -1,12 +1,32 @@
 import { HabitData } from '../controllers/habit.controller.js';
 
+// Enhanced authentication context interface
+export interface AuthContext {
+  userId: string;
+  sessionId: string;
+  claims: {
+    iss: string;
+    aud: string | string[];
+    exp: number;
+    iat: number;
+    nbf: number;
+    [key: string]: any;
+  };
+  metadata?: {
+    ipAddress?: string;
+    userAgent?: string;
+    requestId?: string;
+  };
+}
+
+// Authentication context designed for performance with minimal data fetching
+// Contains essential JWT claims and security metadata without additional API calls
+
 // Extend Hono's context variable map for middleware use
 declare module 'hono' {
   interface ContextVariableMap {
-    auth: {
-      userId: string;
-      sessionId: string;
-    };
+    auth: AuthContext;
+    userId: string; // Keep for backward compatibility
     validated_json: any;
     validated_query: any;
     validated_param: any;
@@ -70,7 +90,7 @@ export interface Achievement {
   name: string;
   description: string;
   icon?: string;
-  type: 'habit_creation' | 'streak' | 'completion' | 'special_achievement' | 'perfect_completion' | 'activity_tracking';
+  type: 'habit_creation' | 'streak' | 'completion' | 'special_achievement' | 'perfect_completion' | 'activity_tracking' | 'milestone';
   category: 'getting_started' | 'consistency' | 'dedication' | 'milestones';
   requirementType: 'count' | 'streak' | 'days' | 'percentage';
   requirementValue: number;
