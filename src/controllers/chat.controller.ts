@@ -81,8 +81,9 @@ export const chat = async (c: Context) => {
     }));
 
     // Stream response using AI SDK
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = streamText({
-      model: workersai('@cf/meta/llama-3.1-8b-instruct'),
+      model: workersai('@cf/meta/llama-3.1-8b-instruct' as any),
       system: chatService.getSystemPrompt(context),
       messages: coreMessages,
     });

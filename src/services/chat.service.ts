@@ -41,8 +41,9 @@ export async function retrieveContext(
   try {
     // Generate embedding for the user's query using AI SDK
     const workersai = createWorkersAI({ binding: ai });
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { embedding } = await embed({
-      model: workersai.textEmbeddingModel('@cf/baai/bge-base-en-v1.5'),
+      model: workersai.textEmbeddingModel('@cf/baai/bge-base-en-v1.5' as any),
       value: lastUserMessage.content,
     });
 
