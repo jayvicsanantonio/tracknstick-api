@@ -7,6 +7,7 @@ import { initBindings } from './middlewares/initBindings.js';
 import { withFailureHandling } from './middlewares/middlewareFailureHandler.js';
 import { requestLogger } from './middlewares/requestLogger.js';
 import { achievementRoutes } from './routes/achievements.js';
+import { chatRoutes } from './routes/chat.js';
 import { habitRoutes } from './routes/habits.js';
 import { healthRoutes } from './routes/health.js';
 import progressRoutes from './routes/progress.js';
@@ -17,6 +18,8 @@ type Bindings = {
   ENVIRONMENT: string;
   CLERK_SECRET_KEY: string;
   DB: D1Database;
+  AI: Ai;
+  PINECONE_API_KEY: string;
 };
 
 // Create the main Hono app
@@ -91,6 +94,7 @@ app.use('*', async (c, next) => {
 app.route('/api/v1/habits', habitRoutes);
 app.route('/api/v1/progress', progressRoutes);
 app.route('/api/v1/achievements', achievementRoutes);
+app.route('/api/v1/chat', chatRoutes);
 
 // Health check routes - no authentication required
 app.route('/health', healthRoutes);

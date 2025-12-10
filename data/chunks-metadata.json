@@ -1,0 +1,11 @@
+{
+  "source": "Atomic Habits.pdf",
+  "totalCharacters": 459806,
+  "totalChunks": 1126,
+  "avgChunkSize": 408,
+  "chunkConfig": {
+    "CHUNK_SIZE": 500,
+    "CHUNK_OVERLAP": 50
+  },
+  "createdAt": "2025-12-10T21:26:07.849Z"
+}
