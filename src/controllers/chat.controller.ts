@@ -5,15 +5,43 @@ import { z } from 'zod';
 import * as chatService from '../services/chat.service.js';
 import logger from '../utils/logger.js';
 
-// Request validation schema
+// AI SDK 5.0 message part schema
+const textPartSchema = z.object({
+  type: z.literal('text'),
+  text: z.string(),
+});
+
+// Request validation schema - handles AI SDK 5.0 format with parts array
 const chatRequestSchema = z.object({
   messages: z.array(
     z.object({
-      role: z.enum(['user', 'assistant']),
-      content: z.string(),
+      id: z.string().optional(),
+      role: z.enum(['user', 'assistant', 'system']),
+      // AI SDK 5.0 uses parts array instead of content
+      parts: z.array(textPartSchema).optional(),
+      // Keep content for backward compatibility
+      content: z.string().optional(),
     })
   ),
 });
+
+/**
+ * Extract text content from a message (handles both old and new formats)
+ */
+function getMessageContent(message: {
+  parts?: { type: string; text: string }[];
+  content?: string;
+}): string {
+  // Try parts first (AI SDK 5.0 format)
+  if (message.parts && message.parts.length > 0) {
+    return message.parts
+      .filter((p) => p.type === 'text')
+      .map((p) => p.text)
+      .join('');
+  }
+  // Fall back to content (legacy format)
+  return message.content || '';
+}
 
 /**
  * Handle chat requests with streaming responses.
@@ -30,18 +58,24 @@ export const chat = async (c: Context) => {
       `Chat request from user ${userId} with ${messages.length} messages`
     );
 
+    // Convert to simple format for RAG service
+    const simpleMessages = messages.map((m) => ({
+      role: m.role as 'user' | 'assistant',
+      content: getMessageContent(m),
+    }));
+
     // Get RAG context from Pinecone
     const context = await chatService.retrieveContext(
       c.env.AI,
       c.env.PINECONE_API_KEY,
-      messages
+      simpleMessages
     );
 
     // Create Workers AI provider using AI SDK
     const workersai = createWorkersAI({ binding: c.env.AI });
 
     // Convert messages to CoreMessage format for AI SDK
-    const coreMessages: CoreMessage[] = messages.map((m) => ({
+    const coreMessages: CoreMessage[] = simpleMessages.map((m) => ({
       role: m.role,
       content: m.content,
     }));
