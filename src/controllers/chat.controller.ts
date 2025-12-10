@@ -88,14 +88,8 @@ export const chat = async (c: Context) => {
       messages: coreMessages,
     });
 
-    // Return streaming response with proper headers for Cloudflare Workers
-    return result.toTextStreamResponse({
-      headers: {
-        'Content-Type': 'text/x-unknown',
-        'content-encoding': 'identity',
-        'transfer-encoding': 'chunked',
-      },
-    });
+    // Return streaming response as text stream
+    return result.toTextStreamResponse();
   } catch (error: unknown) {
     const errorMessage =
       error instanceof Error ? error.message : 'Unknown error';
