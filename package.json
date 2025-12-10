@@ -8,7 +8,7 @@
     "pnpm": ">=8.0.0"
   },
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --remote",
     "dev:local": "wrangler dev --local",
     "build": "tsc",
     "deploy": "wrangler deploy",

@@ -64,12 +64,16 @@ export const chat = async (c: Context) => {
       content: getMessageContent(m),
     }));
 
+    logger.info(`[Chat] Simple messages: ${JSON.stringify(simpleMessages)}`);
+
     // Get RAG context from Pinecone
     const context = await chatService.retrieveContext(
       c.env.AI,
       c.env.PINECONE_API_KEY,
       simpleMessages
     );
+
+    logger.info(`[Chat] Retrieved context length: ${context.length}`);
 
     // Create Workers AI provider using AI SDK
     const workersai = createWorkersAI({ binding: c.env.AI });
@@ -80,13 +84,19 @@ export const chat = async (c: Context) => {
       content: m.content,
     }));
 
+    const systemPrompt = chatService.getSystemPrompt(context);
+    logger.info(`[Chat] System prompt length: ${systemPrompt.length}`);
+    logger.info(`[Chat] Core messages: ${JSON.stringify(coreMessages)}`);
+
     // Stream response using AI SDK
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const result = streamText({
       model: workersai('@cf/meta/llama-3.1-8b-instruct' as any),
-      system: chatService.getSystemPrompt(context),
+      system: systemPrompt,
       messages: coreMessages,
     });
+
+    logger.info(`[Chat] streamText called, returning response...`);
 
     // Return streaming response as text stream
     return result.toTextStreamResponse();
