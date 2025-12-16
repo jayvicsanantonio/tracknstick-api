@@ -7,6 +7,10 @@
 
 > **A modern, scalable habit tracking API built for the edge** - powering personal growth through consistent habit formation and intelligent progress analytics.
 
+<img width="1667" height="1087" alt="Screenshot 2025-12-16 at 11 43 22 AM" src="https://github.com/user-attachments/assets/20bd926c-2375-4d6c-8fab-f36913ccff15" />
+
+
+
 ## 🌟 Overview
 
 TrackNStick API is a high-performance, serverless REST API that provides the backbone for habit tracking applications. Built with modern web technologies and deployed on Cloudflare's global edge network, it delivers sub-50ms response times worldwide while handling complex habit analytics with precision timezone support.
