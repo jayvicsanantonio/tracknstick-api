@@ -1,4 +1,4 @@
-# 🎯 TrackNStick API
+#  TrackNStick API
 
 [![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange?logo=cloudflare)](https://workers.cloudflare.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8-blue?logo=typescript)](https://www.typescriptlang.org/)
@@ -7,27 +7,31 @@
 
 > **A modern, scalable habit tracking API built for the edge** - powering personal growth through consistent habit formation and intelligent progress analytics.
 
+<<<<<<< HEAD
 <img width="1667" height="1087" alt="Screenshot 2025-12-16 at 11 43 22 AM" src="https://github.com/user-attachments/assets/20bd926c-2375-4d6c-8fab-f36913ccff15" />
 
 
 
 ## 🌟 Overview
+=======
+##  Overview
+>>>>>>> 4d5691e (docs: Remove emojis from headings and list items across various documentation files.)
 
 TrackNStick API is a high-performance, serverless REST API that provides the backbone for habit tracking applications. Built with modern web technologies and deployed on Cloudflare's global edge network, it delivers sub-50ms response times worldwide while handling complex habit analytics with precision timezone support.
 
-**🚀 Live Frontend Application:** [Track N' Stick Web App](https://tracknstick.com/) *(React + TypeScript)*
+** Live Frontend Application:** [Track N' Stick Web App](https://tracknstick.com/) *(React + TypeScript)*
 
 ### Key Differentiators
 
-- **⚡ Edge-First Architecture**: Deployed on Cloudflare Workers for global low-latency access
-- **🌍 Comprehensive Timezone Support**: Accurate habit tracking across all timezones with DST handling
-- **📊 Advanced Analytics**: Real-time streak calculations, progress trends, and completion statistics
-- **🔒 Enterprise-Grade Security**: Clerk-powered authentication with JWT validation
-- **📱 Mobile-Optimized**: RESTful design perfect for native mobile and progressive web apps
+- ** Edge-First Architecture**: Deployed on Cloudflare Workers for global low-latency access
+- ** Comprehensive Timezone Support**: Accurate habit tracking across all timezones with DST handling
+- ** Advanced Analytics**: Real-time streak calculations, progress trends, and completion statistics
+- ** Enterprise-Grade Security**: Clerk-powered authentication with JWT validation
+- ** Mobile-Optimized**: RESTful design perfect for native mobile and progressive web apps
 
 ---
 
-## 🏗️ Technical Architecture
+## ️ Technical Architecture
 
 ```mermaid
 graph TB
@@ -85,27 +89,27 @@ graph TB
 
 ---
 
-## 🚀 Core Features
+##  Core Features
 
-### 📋 Habit Management
+###  Habit Management
 - **CRUD Operations**: Complete habit lifecycle management
 - **Flexible Scheduling**: Support for daily, weekly, and custom frequency patterns
 - **Smart Defaults**: Intelligent habit creation with timezone-aware scheduling
 - **Bulk Operations**: Efficient multi-habit management
 
-### 📊 Advanced Analytics
+###  Advanced Analytics
 - **Real-time Streak Calculation**: Current and longest streaks with timezone accuracy
 - **Progress Insights**: Daily, weekly, and monthly completion rates
 - **Trend Analysis**: Historical data analysis for pattern recognition
 - **Achievement System**: Milestone tracking and progress celebrations
 
-### ⏰ Timezone Intelligence
+###  Timezone Intelligence
 - **Global Support**: Accurate tracking across all IANA timezones
 - **DST Handling**: Automatic daylight saving time adjustments
 - **Localized Calculations**: Streaks and progress calculated in user's local time
 - **Migration Support**: Seamless timezone changes for traveling users
 
-### 🔐 Security & Performance
+###  Security & Performance
 - **JWT Authentication**: Stateless, secure authentication via Clerk
 - **Request Validation**: Comprehensive input validation with Zod schemas
 - **Rate Limiting**: Intelligent throttling to prevent abuse
@@ -113,7 +117,7 @@ graph TB
 
 ---
 
-## 📚 API Documentation
+##  API Documentation
 
 ### Base URL
 ```
@@ -137,7 +141,7 @@ GET /habits?date=2025-01-15&timeZone=America/New_York
 POST /habits
 {
   "name": "Morning Meditation",
-  "icon": "🧘",
+  "icon": "",
   "frequency": ["Mon", "Wed", "Fri"],
   "startDate": "2025-01-01T00:00:00.000Z"
 }
@@ -202,7 +206,7 @@ All API responses follow a consistent JSON structure:
 
 ---
 
-## 🛠️ Development Setup
+## ️ Development Setup
 
 ### Prerequisites
 - **Node.js**: 20.12.2+ (LTS recommended)
@@ -259,7 +263,7 @@ pnpm run test:coverage # Generate coverage report
 
 ---
 
-## 🏢 Project Structure
+##  Project Structure
 
 ```
 src/
@@ -299,7 +303,7 @@ src/
 
 ---
 
-## 🧪 Testing Strategy
+##  Testing Strategy
 
 The project employs a comprehensive testing approach:
 
@@ -321,7 +325,7 @@ pnpm run test:watch
 
 ---
 
-## 🌍 Timezone Handling
+##  Timezone Handling
 
 One of TrackNStick's key differentiators is its sophisticated timezone handling:
 
@@ -349,7 +353,7 @@ GET /progress/history?timeZone=America/Los_Angeles
 
 ---
 
-## 🚀 Performance Metrics
+##  Performance Metrics
 
 - **Response Time**: <50ms average globally (edge deployment)
 - **Availability**: 99.9% uptime SLA via Cloudflare infrastructure
@@ -358,7 +362,7 @@ GET /progress/history?timeZone=America/Los_Angeles
 
 ---
 
-## 🔒 Security Implementation
+##  Security Implementation
 
 ### Authentication Flow
 1. Frontend authenticates with Clerk
@@ -376,7 +380,7 @@ GET /progress/history?timeZone=America/Los_Angeles
 
 ---
 
-## 📈 Roadmap & Future Enhancements
+##  Roadmap & Future Enhancements
 
 ### Phase 1: Core Enhancements
 - [ ] Habit templates and categories
@@ -400,7 +404,7 @@ GET /progress/history?timeZone=America/Los_Angeles
 
 ---
 
-## 👥 Contributing
+##  Contributing
 
 We welcome contributions! Please see our contributing guidelines:
 
@@ -420,7 +424,7 @@ We welcome contributions! Please see our contributing guidelines:
 
 ---
 
-## 📊 Project Statistics
+##  Project Statistics
 
 - **Lines of Code**: ~5,000+ TypeScript lines
 - **Test Coverage**: 90%+
@@ -430,7 +434,7 @@ We welcome contributions! Please see our contributing guidelines:
 
 ---
 
-## 📞 Support & Contact
+##  Support & Contact
 
 - **GitHub Issues**: [Report bugs or request features](https://github.com/jayvicsanantonio/tracknstick-api/issues)
 - **Documentation**: [Comprehensive API docs](https://github.com/jayvicsanantonio/tracknstick-api/wiki)
@@ -439,7 +443,7 @@ We welcome contributions! Please see our contributing guidelines:
 
 ---
 
-## 📜 License
+##  License
 
 This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
 
@@ -447,8 +451,8 @@ This project is licensed under the ISC License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Built with ❤️ for developers who value quality, performance, and user experience**
+**Built with ️ for developers who value quality, performance, and user experience**
 
-[⭐ Star this repo](https://github.com/jayvicsanantonio/tracknstick-api) | [🐛 Report Bug](https://github.com/jayvicsanantonio/tracknstick-api/issues) | [✨ Request Feature](https://github.com/jayvicsanantonio/tracknstick-api/issues)
+[ Star this repo](https://github.com/jayvicsanantonio/tracknstick-api) | [ Report Bug](https://github.com/jayvicsanantonio/tracknstick-api/issues) | [ Request Feature](https://github.com/jayvicsanantonio/tracknstick-api/issues)
 
 </div>

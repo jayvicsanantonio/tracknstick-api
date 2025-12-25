@@ -20,15 +20,15 @@
 
 ## Security Findings Summary
 
-### 🔒 Critical Issues
+###  Critical Issues
 - **JWT Authentication Bypass:** Manual token parsing without signature verification allows complete authentication bypass
 - **Missing Rate Limiting:** No protection against abuse, DDoS, or brute force attacks
 
-### ⚠️ High-Risk Issues
+### ️ High-Risk Issues
 - **Information Disclosure:** Detailed error messages and stack traces exposed in production
 - **Overly Permissive CORS:** Development URLs exposed in production configuration
 
-### ✅ Security Strengths
+###  Security Strengths
 - **Excellent SQL Injection Prevention:** Consistent use of parameterized queries throughout codebase
 - **Strong Input Validation:** Comprehensive Zod schema validation with proper error handling
 - **Good Architecture:** Well-structured layered approach with proper separation of concerns
