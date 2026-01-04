@@ -2,11 +2,19 @@
 // Provides proper error propagation and security monitoring for middleware failures
 
 import { Context, Next } from 'hono';
-import { BaseError, UnauthorizedError, RateLimitError } from '../utils/errors.js';
+import {
+  BaseError,
+  UnauthorizedError,
+  RateLimitError,
+} from '../utils/errors.js';
 import logger from '../utils/logger.js';
 
 export interface SecurityEvent {
-  type: 'middleware_failure' | 'auth_failure' | 'rate_limit_exceeded' | 'validation_failure';
+  type:
+    | 'middleware_failure'
+    | 'auth_failure'
+    | 'rate_limit_exceeded'
+    | 'validation_failure';
   severity: 'low' | 'medium' | 'high' | 'critical';
   source: string;
   details: Record<string, any>;
@@ -35,17 +43,24 @@ class SecurityEventLogger {
   /**
    * Log a security event with proper context
    */
-  logEvent(context: Context, event: Omit<SecurityEvent, 'path' | 'method' | 'timestamp' | 'ipAddress' | 'userAgent'>): void {
+  logEvent(
+    context: Context,
+    event: Omit<
+      SecurityEvent,
+      'path' | 'method' | 'timestamp' | 'ipAddress' | 'userAgent'
+    >
+  ): void {
     const auth = context.get('auth');
-    
+
     const securityEvent: SecurityEvent = {
       ...event,
       path: context.req.path,
       method: context.req.method,
       timestamp: new Date().toISOString(),
-      ipAddress: context.req.header('CF-Connecting-IP') || 
-                 context.req.header('X-Forwarded-For') || 
-                 'unknown',
+      ipAddress:
+        context.req.header('CF-Connecting-IP') ||
+        context.req.header('X-Forwarded-For') ||
+        'unknown',
       userAgent: context.req.header('User-Agent') || 'unknown',
       requestId: auth?.metadata?.requestId,
       userId: auth?.userId,
@@ -54,10 +69,18 @@ class SecurityEventLogger {
     // Log with appropriate level based on severity
     switch (event.severity) {
       case 'critical':
-        logger.error(`Security Event: ${event.type}`, undefined, securityEvent as any);
+        logger.error(
+          `Security Event: ${event.type}`,
+          undefined,
+          securityEvent as any
+        );
         break;
       case 'high':
-        logger.error(`Security Event: ${event.type}`, undefined, securityEvent as any);
+        logger.error(
+          `Security Event: ${event.type}`,
+          undefined,
+          securityEvent as any
+        );
         break;
       case 'medium':
         logger.warn(`Security Event: ${event.type}`, securityEvent as any);
@@ -82,7 +105,9 @@ class SecurityEventLogger {
       details: {
         error: error.message,
         errorType: error.constructor.name,
-        authorizationHeader: context.req.header('Authorization') ? 'present' : 'missing',
+        authorizationHeader: context.req.header('Authorization')
+          ? 'present'
+          : 'missing',
       },
     });
   }
@@ -119,7 +144,7 @@ class SecurityEventLogger {
    */
   logMiddlewareFailure(context: Context, error: Error, source: string): void {
     const severity = this.determineSeverity(error);
-    
+
     this.logEvent(context, {
       type: 'middleware_failure',
       severity,
@@ -163,7 +188,7 @@ export function withFailureHandling(
       return await middleware(c, next);
     } catch (error: unknown) {
       const err = error instanceof Error ? error : new Error(String(error));
-      
+
       // Log the middleware failure with security context
       securityLogger.logMiddlewareFailure(c, err, middlewareName);
 
@@ -179,11 +204,14 @@ export function withFailureHandling(
 
       // Ensure request is blocked on critical failures
       if (shouldBlockRequest(err)) {
-        logger.warn(`Request blocked due to middleware failure: ${middlewareName}`, {
-          path: c.req.path,
-          method: c.req.method,
-          error: err.message,
-        } as any);
+        logger.warn(
+          `Request blocked due to middleware failure: ${middlewareName}`,
+          {
+            path: c.req.path,
+            method: c.req.method,
+            error: err.message,
+          } as any
+        );
       }
 
       // Re-throw the error to maintain error handling chain
@@ -217,14 +245,18 @@ export function withFailureHandling(
 /**
  * Enhanced Clerk middleware with failure handling
  */
-export function withClerkFailureHandling(clerkMiddleware: (c: Context, next: Next) => Promise<void | Response>) {
+export function withClerkFailureHandling(
+  clerkMiddleware: (c: Context, next: Next) => Promise<void | Response>
+) {
   return withFailureHandling('clerk_auth', clerkMiddleware);
 }
 
 /**
  * Enhanced rate limit middleware with failure handling
  */
-export function withRateLimitFailureHandling(rateLimitMiddleware: (c: Context, next: Next) => Promise<void | Response>) {
+export function withRateLimitFailureHandling(
+  rateLimitMiddleware: (c: Context, next: Next) => Promise<void | Response>
+) {
   return withFailureHandling('rate_limit', rateLimitMiddleware);
 }
 
@@ -272,10 +304,13 @@ export class MiddlewareChainMonitor {
     // Log excessive failures
     const newCount = current + 1;
     if (newCount > 10 && newCount % 5 === 0) {
-      logger.warn(`High failure rate detected for middleware: ${middlewareName}`, {
-        failures: newCount,
-        timeWindow: '15 minutes',
-      } as any);
+      logger.warn(
+        `High failure rate detected for middleware: ${middlewareName}`,
+        {
+          failures: newCount,
+          timeWindow: '15 minutes',
+        } as any
+      );
     }
   }
 

@@ -3,7 +3,12 @@
 
 import type { D1Database } from '@cloudflare/workers-types';
 import { AchievementRepository } from '../repositories/achievement.repository.js';
-import { Achievement, UserAchievement, AchievementResponse, AchievementProgress } from '../types/index.js';
+import {
+  Achievement,
+  UserAchievement,
+  AchievementResponse,
+  AchievementProgress,
+} from '../types/index.js';
 
 export class AchievementService {
   private repository: AchievementRepository;
@@ -12,36 +17,44 @@ export class AchievementService {
     this.repository = new AchievementRepository(db);
   }
 
-  async getAllAchievementsForUser(userId: string): Promise<AchievementResponse[]> {
+  async getAllAchievementsForUser(
+    userId: string
+  ): Promise<AchievementResponse[]> {
     const [allAchievements, userAchievements] = await Promise.all([
       this.repository.getAllAchievements(),
       this.repository.getUserAchievements(userId),
     ]);
 
     const userAchievementMap = new Map(
-      userAchievements.map(ua => [ua.achievementId, ua])
+      userAchievements.map((ua) => [ua.achievementId, ua])
     );
 
-    return Promise.all(allAchievements.map(async achievement => {
-      const userAchievement = userAchievementMap.get(achievement.id);
-      const isEarned = !!userAchievement;
-      
-      return {
-        id: achievement.id.toString(),
-        key: achievement.key,
-        name: achievement.name,
-        description: achievement.description,
-        icon: achievement.icon,
-        type: achievement.type,
-        category: achievement.category,
-        requirementType: achievement.requirementType,
-        requirementValue: achievement.requirementValue,
-        requirementData: achievement.requirementData ? JSON.parse(achievement.requirementData) : undefined,
-        isEarned,
-        earnedAt: userAchievement?.earnedAt,
-        progress: isEarned ? undefined : await this.calculateProgress(userId, achievement),
-      };
-    }));
+    return Promise.all(
+      allAchievements.map(async (achievement) => {
+        const userAchievement = userAchievementMap.get(achievement.id);
+        const isEarned = !!userAchievement;
+
+        return {
+          id: achievement.id.toString(),
+          key: achievement.key,
+          name: achievement.name,
+          description: achievement.description,
+          icon: achievement.icon,
+          type: achievement.type,
+          category: achievement.category,
+          requirementType: achievement.requirementType,
+          requirementValue: achievement.requirementValue,
+          requirementData: achievement.requirementData
+            ? JSON.parse(achievement.requirementData)
+            : undefined,
+          isEarned,
+          earnedAt: userAchievement?.earnedAt,
+          progress: isEarned
+            ? undefined
+            : await this.calculateProgress(userId, achievement),
+        };
+      })
+    );
   }
 
   async getUserAchievements(userId: string): Promise<UserAchievement[]> {
@@ -51,8 +64,10 @@ export class AchievementService {
   async checkAndAwardAchievements(userId: string): Promise<Achievement[]> {
     const allAchievements = await this.repository.getAllAchievements();
     const userAchievements = await this.repository.getUserAchievements(userId);
-    const earnedAchievementIds = new Set(userAchievements.map(ua => ua.achievementId));
-    
+    const earnedAchievementIds = new Set(
+      userAchievements.map((ua) => ua.achievementId)
+    );
+
     const newlyEarned: Achievement[] = [];
 
     for (const achievement of allAchievements) {
@@ -72,7 +87,10 @@ export class AchievementService {
     await this.repository.initializeAchievements();
   }
 
-  private async calculateProgress(userId: string, achievement: Achievement): Promise<AchievementProgress> {
+  private async calculateProgress(
+    userId: string,
+    achievement: Achievement
+  ): Promise<AchievementProgress> {
     const stats = await this.repository.getUserHabitStats(userId);
     let currentValue = 0;
 
@@ -80,21 +98,28 @@ export class AchievementService {
       case 'habit_creation':
         currentValue = stats.totalHabits;
         break;
-      
+
       case 'completion':
         currentValue = stats.totalCompletions;
         break;
-      
+
       case 'streak':
         currentValue = stats.longestStreak;
         break;
-      
+
       case 'milestone':
-        currentValue = await this.calculateMilestoneProgress(userId, achievement, stats);
+        currentValue = await this.calculateMilestoneProgress(
+          userId,
+          achievement,
+          stats
+        );
         break;
     }
 
-    const progressPercentage = Math.min(100, (currentValue / achievement.requirementValue) * 100);
+    const progressPercentage = Math.min(
+      100,
+      (currentValue / achievement.requirementValue) * 100
+    );
 
     return {
       achievementId: achievement.id,
@@ -105,19 +130,22 @@ export class AchievementService {
     };
   }
 
-  private async evaluateAchievement(userId: string, achievement: Achievement): Promise<boolean> {
+  private async evaluateAchievement(
+    userId: string,
+    achievement: Achievement
+  ): Promise<boolean> {
     const stats = await this.repository.getUserHabitStats(userId);
 
     switch (achievement.type) {
       case 'habit_creation':
         return stats.totalHabits >= achievement.requirementValue;
-      
+
       case 'completion':
         return stats.totalCompletions >= achievement.requirementValue;
-      
+
       case 'streak':
         return stats.longestStreak >= achievement.requirementValue;
-      
+
       case 'milestone':
         return await this.evaluateMilestone(userId, achievement, stats);
     }
@@ -125,8 +153,14 @@ export class AchievementService {
     return false;
   }
 
-  private async calculateMilestoneProgress(userId: string, achievement: Achievement, stats: any): Promise<number> {
-    const requirementData = achievement.requirementData ? JSON.parse(achievement.requirementData) : {};
+  private async calculateMilestoneProgress(
+    userId: string,
+    achievement: Achievement,
+    stats: any
+  ): Promise<number> {
+    const requirementData = achievement.requirementData
+      ? JSON.parse(achievement.requirementData)
+      : {};
 
     switch (achievement.requirementType) {
       case 'days':
@@ -134,7 +168,7 @@ export class AchievementService {
           return stats.perfectDays;
         }
         return stats.activeDays;
-      
+
       case 'count':
         if (requirementData.type === 'single_day_completions') {
           // Would need additional query to check max completions in single day
@@ -145,7 +179,7 @@ export class AchievementService {
           return 0; // Placeholder
         }
         return 0;
-      
+
       case 'percentage':
         if (requirementData.type === 'completion_rate') {
           // Would need additional calculation for completion rate
@@ -157,8 +191,14 @@ export class AchievementService {
     return 0;
   }
 
-  private async evaluateMilestone(userId: string, achievement: Achievement, stats: any): Promise<boolean> {
-    const requirementData = achievement.requirementData ? JSON.parse(achievement.requirementData) : {};
+  private async evaluateMilestone(
+    userId: string,
+    achievement: Achievement,
+    stats: any
+  ): Promise<boolean> {
+    const requirementData = achievement.requirementData
+      ? JSON.parse(achievement.requirementData)
+      : {};
 
     switch (achievement.requirementType) {
       case 'days':
@@ -166,20 +206,34 @@ export class AchievementService {
           return stats.perfectDays >= achievement.requirementValue;
         }
         return stats.activeDays >= achievement.requirementValue;
-      
+
       case 'count':
         // Handle complex milestone requirements
-        return await this.evaluateComplexMilestone(userId, achievement, requirementData, stats);
-      
+        return await this.evaluateComplexMilestone(
+          userId,
+          achievement,
+          requirementData,
+          stats
+        );
+
       case 'percentage':
         // Handle percentage-based milestones
-        return await this.evaluatePercentageMilestone(userId, achievement, requirementData);
+        return await this.evaluatePercentageMilestone(
+          userId,
+          achievement,
+          requirementData
+        );
     }
 
     return false;
   }
 
-  private async evaluateComplexMilestone(userId: string, achievement: Achievement, requirementData: any, stats: any): Promise<boolean> {
+  private async evaluateComplexMilestone(
+    userId: string,
+    achievement: Achievement,
+    requirementData: any,
+    stats: any
+  ): Promise<boolean> {
     // Placeholder for complex milestone evaluation
     // This would include logic for achievements like:
     // - single_day_completions
@@ -188,14 +242,18 @@ export class AchievementService {
     // - habit_variety
     // - achievement_count
     // etc.
-    
+
     return false; // For now, these achievements won't be automatically awarded
   }
 
-  private async evaluatePercentageMilestone(userId: string, achievement: Achievement, requirementData: any): Promise<boolean> {
+  private async evaluatePercentageMilestone(
+    userId: string,
+    achievement: Achievement,
+    requirementData: any
+  ): Promise<boolean> {
     // Placeholder for percentage-based milestone evaluation
     // This would include logic for completion rates over time periods
-    
+
     return false; // For now, these achievements won't be automatically awarded
   }
 }
@@ -206,17 +264,26 @@ export const createAchievementService = (db: D1Database) => {
 };
 
 // Convenience functions for controllers
-export const getAllAchievementsForUser = async (userId: string, db: D1Database): Promise<AchievementResponse[]> => {
+export const getAllAchievementsForUser = async (
+  userId: string,
+  db: D1Database
+): Promise<AchievementResponse[]> => {
   const service = createAchievementService(db);
   return service.getAllAchievementsForUser(userId);
 };
 
-export const getUserAchievements = async (userId: string, db: D1Database): Promise<UserAchievement[]> => {
+export const getUserAchievements = async (
+  userId: string,
+  db: D1Database
+): Promise<UserAchievement[]> => {
   const service = createAchievementService(db);
   return service.getUserAchievements(userId);
 };
 
-export const checkAndAwardAchievements = async (userId: string, db: D1Database): Promise<Achievement[]> => {
+export const checkAndAwardAchievements = async (
+  userId: string,
+  db: D1Database
+): Promise<Achievement[]> => {
   const service = createAchievementService(db);
   return service.checkAndAwardAchievements(userId);
 };

@@ -11,10 +11,16 @@ export const getAllAchievements = async (c: Context) => {
   const { userId } = c.get('auth');
 
   try {
-    const achievements = await achievementService.getAllAchievementsForUser(userId, c.env.DB);
+    const achievements = await achievementService.getAllAchievementsForUser(
+      userId,
+      c.env.DB
+    );
     return c.json({ achievements });
   } catch (error) {
-    console.error(`Error in getAllAchievements controller for user ${userId}:`, error);
+    console.error(
+      `Error in getAllAchievements controller for user ${userId}:`,
+      error
+    );
     throw error;
   }
 };
@@ -26,9 +32,12 @@ export const getUserEarnedAchievements = async (c: Context) => {
   const { userId } = c.get('auth');
 
   try {
-    const userAchievements = await achievementService.getUserAchievements(userId, c.env.DB);
-    
-    const response = userAchievements.map(ua => ({
+    const userAchievements = await achievementService.getUserAchievements(
+      userId,
+      c.env.DB
+    );
+
+    const response = userAchievements.map((ua) => ({
       id: ua.achievement?.id.toString(),
       key: ua.achievement?.key,
       name: ua.achievement?.name,
@@ -42,7 +51,10 @@ export const getUserEarnedAchievements = async (c: Context) => {
 
     return c.json({ achievements: response });
   } catch (error) {
-    console.error(`Error in getUserEarnedAchievements controller for user ${userId}:`, error);
+    console.error(
+      `Error in getUserEarnedAchievements controller for user ${userId}:`,
+      error
+    );
     throw error;
   }
 };
@@ -54,9 +66,12 @@ export const checkAchievements = async (c: Context) => {
   const { userId } = c.get('auth');
 
   try {
-    const newlyEarned = await achievementService.checkAndAwardAchievements(userId, c.env.DB);
-    
-    const response = newlyEarned.map(achievement => ({
+    const newlyEarned = await achievementService.checkAndAwardAchievements(
+      userId,
+      c.env.DB
+    );
+
+    const response = newlyEarned.map((achievement) => ({
       id: achievement.id.toString(),
       key: achievement.key,
       name: achievement.name,
@@ -72,7 +87,10 @@ export const checkAchievements = async (c: Context) => {
       count: newlyEarned.length,
     });
   } catch (error) {
-    console.error(`Error in checkAchievements controller for user ${userId}:`, error);
+    console.error(
+      `Error in checkAchievements controller for user ${userId}:`,
+      error
+    );
     throw error;
   }
 };
@@ -104,27 +122,34 @@ export const getAchievementStats = async (c: Context) => {
 
     const totalAchievements = allAchievements.length;
     const earnedAchievements = userAchievements.length;
-    const completionPercentage = totalAchievements > 0 
-      ? Math.round((earnedAchievements / totalAchievements) * 100) 
-      : 0;
+    const completionPercentage =
+      totalAchievements > 0
+        ? Math.round((earnedAchievements / totalAchievements) * 100)
+        : 0;
 
     // Group by category
-    const categoryStats = allAchievements.reduce((acc, achievement) => {
-      if (!acc[achievement.category]) {
-        acc[achievement.category] = { total: 0, earned: 0 };
-      }
-      acc[achievement.category].total++;
-      if (achievement.isEarned) {
-        acc[achievement.category].earned++;
-      }
-      return acc;
-    }, {} as Record<string, { total: number; earned: number }>);
+    const categoryStats = allAchievements.reduce(
+      (acc, achievement) => {
+        if (!acc[achievement.category]) {
+          acc[achievement.category] = { total: 0, earned: 0 };
+        }
+        acc[achievement.category].total++;
+        if (achievement.isEarned) {
+          acc[achievement.category].earned++;
+        }
+        return acc;
+      },
+      {} as Record<string, { total: number; earned: number }>
+    );
 
     // Recent achievements (last 10)
     const recentAchievements = userAchievements
-      .sort((a, b) => new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime())
+      .sort(
+        (a, b) =>
+          new Date(b.earnedAt).getTime() - new Date(a.earnedAt).getTime()
+      )
       .slice(0, 10)
-      .map(ua => ({
+      .map((ua) => ({
         id: ua.achievement?.id.toString(),
         key: ua.achievement?.key,
         name: ua.achievement?.name,
@@ -142,7 +167,10 @@ export const getAchievementStats = async (c: Context) => {
       recentAchievements,
     });
   } catch (error) {
-    console.error(`Error in getAchievementStats controller for user ${userId}:`, error);
+    console.error(
+      `Error in getAchievementStats controller for user ${userId}:`,
+      error
+    );
     throw error;
   }
 };

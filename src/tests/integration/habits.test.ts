@@ -3,27 +3,29 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { createTestEnv, mockAuthentication, resetMocks } from '../setup.js';
 import { habitRoutes } from '../../routes/habits.js';
-import { clerkMiddleware } from '../../middlewares/clerkMiddleware.js';
+import { errorHandlerEnhanced } from '../../middlewares/errorHandlerEnhanced.js';
 
 describe('Habits API Integration', () => {
-  const { app, env, mockDb, mockResults } = createTestEnv();
+  let app: any;
+  let env: any;
+  let mockDb: any;
+  let mockResults: any;
 
   beforeEach(() => {
     resetMocks();
     mockAuthentication();
 
-    // Configure the app with routes and middleware
-    app.use('*', (c, next) => {
-      // Set the environment bindings
-      c.env = env;
-      return next();
-    });
-
-    // Add authentication middleware
-    app.use('*', clerkMiddleware());
+    const testEnv = createTestEnv();
+    app = testEnv.app;
+    env = testEnv.env;
+    mockDb = testEnv.mockDb;
+    mockResults = testEnv.mockResults;
 
     // Add habit routes
-    app.route('/', habitRoutes);
+    app.route('/habits', habitRoutes);
+
+    // Global error handler
+    app.onError(errorHandlerEnhanced);
   });
 
   afterEach(() => {
@@ -33,44 +35,33 @@ describe('Habits API Integration', () => {
   describe('GET /habits', () => {
     it('should return a list of habits', async () => {
       // Set up mock data
-      const mockHabits = [
-        {
-          id: 1,
-          user_id: 'test-user-123',
-          name: 'Meditate',
-          icon: '🧘',
-          frequency_type: 'daily',
-          frequency_days: null,
-          frequency_dates: null,
-          start_date: '2023-06-01',
-          end_date: null,
-          streak: 5,
-          best_streak: 10,
-          created_at: '2023-06-01T00:00:00Z',
-          updated_at: '2023-06-01T00:00:00Z',
+      const habit = {
+        id: 1,
+        user_id: 'test-user-123',
+        name: 'Test Habit',
+        icon: '🏃',
+        frequency: 'Mon,Wed,Fri',
+        start_date: '2023-01-01T00:00:00Z',
+        streak: 5,
+      };
+
+      // Configure mock results
+      mockResults.results = [habit];
+
+      // Make the request
+      const req = new Request('http://localhost/habits', {
+        headers: {
+          Authorization: 'Bearer test-token',
         },
-      ];
-
-      // Configure the mock D1 to return our test data
-      mockResults.results = mockHabits;
-
-      const prepare = mockDb.prepare as vi.Mock;
-      prepare.mockReturnValue({
-        bind: vi.fn().mockReturnThis(),
-        first: vi.fn().mockResolvedValue(null),
-        all: vi.fn().mockResolvedValue(mockResults),
-        run: vi.fn().mockResolvedValue(mockResults),
       });
-
-      // Make the request - today's date should be used as the default
-      const req = new Request('http://localhost/habits');
-      const res = await app.fetch(req);
+      const res = await app.fetch(req, env);
 
       expect(res.status).toBe(200);
 
       const data = await res.json();
-      expect(data).toHaveProperty('habits');
-      expect(Array.isArray(data.habits)).toBe(true);
+      expect(Array.isArray(data)).toBe(true);
+      expect(data).toHaveLength(1);
+      expect(data[0]).toHaveProperty('name', 'Test Habit');
     });
   });
 
@@ -78,33 +69,32 @@ describe('Habits API Integration', () => {
     it('should create a new habit', async () => {
       // Set up mock data for successful creation
       mockResults.meta.last_row_id = 42;
+      mockResults.success = true;
 
       // Create the request with habit data
       const habitData = {
         name: 'New Habit',
         icon: '🏃',
-        frequency: {
-          type: 'weekly',
-          days: [1, 3, 5],
-        },
-        startDate: '2023-06-01',
+        frequency: ['Mon', 'Wed', 'Fri'],
+        startDate: '2023-01-01T00:00:00Z',
       };
 
       const req = new Request('http://localhost/habits', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
         },
         body: JSON.stringify(habitData),
       });
 
-      const res = await app.fetch(req);
+      const res = await app.fetch(req, env);
 
       // Check response
       expect(res.status).toBe(201);
 
       const data = await res.json();
-      expect(data).toHaveProperty('id');
+      expect(data).toHaveProperty('habitId', '42');
       expect(data).toHaveProperty('message', 'Habit created successfully');
     });
 
@@ -118,11 +108,12 @@ describe('Habits API Integration', () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: 'Bearer test-token',
         },
         body: JSON.stringify(invalidData),
       });
 
-      const res = await app.fetch(req);
+      const res = await app.fetch(req, env);
 
       // Check response
       expect(res.status).toBe(400);
@@ -143,30 +134,21 @@ describe('Habits API Integration', () => {
         name: 'Delete Me',
       };
 
-      // Configure mock to return the habit when queried
+      // Configure mock results
+      // First call (getHabitById) will return this habit
       mockResults.results = [habit];
-
-      const prepare = mockDb.prepare as vi.Mock;
-      prepare
-        .mockReturnValueOnce({
-          // For finding the habit
-          bind: vi.fn().mockReturnThis(),
-          first: vi.fn().mockResolvedValue(habit),
-        })
-        .mockReturnValueOnce({
-          // For deleting the habit
-          bind: vi.fn().mockReturnThis(),
-          run: vi
-            .fn()
-            .mockResolvedValue({ success: true, meta: { changes: 1 } }),
-        });
+      mockResults.success = true;
+      mockResults.meta.changes = 1;
 
       // Make the delete request
       const req = new Request(`http://localhost/habits/${habitId}`, {
         method: 'DELETE',
+        headers: {
+          Authorization: 'Bearer test-token',
+        },
       });
 
-      const res = await app.fetch(req);
+      const res = await app.fetch(req, env);
 
       // Check response
       expect(res.status).toBe(200);

@@ -1,0 +1,456 @@
+
+ RUN  v3.1.3 /Users/jayvicsanantonio/Developer/tracknstick-api
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+stderr | D1Plugin.setup (/Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@miniflare/d1/src/plugin.ts:65:17)
+Not injecting D1 Database for 'DB' as this version of Miniflare only supports D1 beta bindings. Upgrade Wrangler and/or Miniflare and try again.
+
+ ✓ src/utils/__tests__/dateUtils.test.ts > dateUtils > getLocaleStartEnd > should calculate start and end timestamps for a given date and timezone 5ms
+ ✓ src/utils/__tests__/dateUtils.test.ts > dateUtils > getLocaleStartEnd > should throw an error for invalid timezone 0ms
+ ✓ src/repositories/__tests__/tracker.repository.test.ts > Tracker Repository > findTrackersByDateRange > should return an empty array if no habit IDs provided 1ms
+ × src/repositories/__tests__/tracker.repository.test.ts > Tracker Repository > findTrackersByDateRange > should query trackers for the given habits and date range 1ms
+   → Cannot read properties of undefined (reading 'bind')
+ × src/repositories/__tests__/tracker.repository.test.ts > Tracker Repository > findTrackersByDateRange > should throw error if the database query fails 0ms
+   → Cannot read properties of undefined (reading 'all')
+ × src/repositories/__tests__/tracker.repository.test.ts > Tracker Repository > create > should create a new tracker 0ms
+   → Cannot read properties of undefined (reading 'bind')
+ ✓ src/repositories/__tests__/tracker.repository.test.ts > Tracker Repository > removeTrackersByIds > should return 0 changes if no tracker IDs provided 0ms
+ × src/repositories/__tests__/tracker.repository.test.ts > Tracker Repository > removeTrackersByIds > should delete trackers by IDs 0ms
+   → Cannot read properties of undefined (reading 'bind')
+stdout | src/tests/integration/health.test.ts > Health API Integration > GET /health > should return a 200 OK response
+[2026-01-04T05:38:17.565Z] [INFO] [api] Health check requested
+
+stderr | src/utils/__tests__/streakUtils.test.ts > streakUtils > calculateCurrentStreak > should handle invalid timezone
+[2026-01-04T05:38:17.568Z] [ERROR] [api] Invalid timeZone provided to calculateCurrentStreak: invalid-timezone
+
+stdout | src/tests/integration/health.test.ts > Health API Integration > GET /health/db > should return OK when the database check passes
+[2026-01-04T05:38:17.569Z] [INFO] [api] Database health check successful {"duration":"0ms"}
+
+stderr | src/tests/integration/health.test.ts > Health API Integration > GET /health/db > should return error status when the database check fails
+[2026-01-04T05:38:17.569Z] [ERROR] [api] Database health check failed: No result returned
+
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > detectEnvironment > should detect production from ENVIRONMENT global 1ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > detectEnvironment > should detect development from ENVIRONMENT global 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > detectEnvironment > should detect test from ENVIRONMENT global 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > detectEnvironment > should fall back to NODE_ENV when ENVIRONMENT is not set 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > detectEnvironment > should default to production when no environment variables are set 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > detectEnvironment > should default to production for invalid environment values 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > getSecurityConfig > should return development config for development environment 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > getSecurityConfig > should return production config for production environment 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > getSecurityConfig > should return test config for test environment 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > getSecurityConfig > should have different rate limits per environment 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > validateSecurityConfig > should validate a correct configuration 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > validateSecurityConfig > should reject config with empty CORS origins 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > validateSecurityConfig > should reject config with negative global rate limit 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > validateSecurityConfig > should reject config with zero rate limit window 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > validateSecurityConfig > should reject config with negative endpoint rate limit 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > validateSecurityConfig > should reject config with zero endpoint window 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > validateSecurityConfig > should collect multiple validation errors 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > environment-specific configurations > should have stricter production CORS settings 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > environment-specific configurations > should have different error handling per environment 0ms
+ ✓ src/config/__tests__/security.test.ts > Security Configuration > environment-specific configurations > should enable HSTS only in production 0ms
+ ✓ src/tests/integration/health.test.ts > Health API Integration > GET /health > should return a 200 OK response 5ms
+ ✓ src/tests/integration/health.test.ts > Health API Integration > GET /health/db > should return OK when the database check passes 1ms
+ ✓ src/tests/integration/health.test.ts > Health API Integration > GET /health/db > should return error status when the database check fails 1ms
+ ✓ src/tests/integration/health.test.ts > Health API Integration > GET /health/details > should return detailed health information 1ms
+ ✓ src/utils/__tests__/streakUtils.test.ts > streakUtils > calculateCurrentStreak > should return 0 for empty tracker array 1ms
+ ✓ src/utils/__tests__/streakUtils.test.ts > streakUtils > calculateCurrentStreak > should handle invalid timezone 4ms
+ ✓ src/utils/__tests__/streakUtils.test.ts > streakUtils > calculateCurrentStreak > should calculate streak based on frequency 1ms
+ ✓ src/utils/__tests__/streakUtils.test.ts > streakUtils > calculateCurrentStreak > should break streak if a day is missed 0ms
+ ✓ src/utils/__tests__/streakUtils.test.ts > streakUtils > updateStreakInfo > should return existing longest streak for empty tracker array 0ms
+ ✓ src/utils/__tests__/streakUtils.test.ts > streakUtils > updateStreakInfo > should update longest streak if current streak is longer 0ms
+ ✓ src/utils/__tests__/streakUtils.test.ts > streakUtils > updateStreakInfo > should maintain longest streak if current streak is shorter 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > withFailureHandling > should execute middleware successfully when no errors occur 1ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > withFailureHandling > should log security event and re-throw UnauthorizedError 1ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > withFailureHandling > should log security event and re-throw RateLimitError 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > withFailureHandling > should handle non-Error objects gracefully 1ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > withFailureHandling > should log middleware failure with proper context 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > SecurityEventLogger > should log authentication failure with high severity 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > SecurityEventLogger > should log rate limit exceeded with medium severity 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > SecurityEventLogger > should log validation failure with low severity 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > SecurityEventLogger > should extract security context properly 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > MiddlewareChainMonitor > should record middleware failures 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > MiddlewareChainMonitor > should provide failure statistics 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > MiddlewareChainMonitor > should handle empty failure stats 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > Enhanced wrapper functions > should create enhanced Clerk middleware wrapper 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > Enhanced wrapper functions > should create enhanced rate limit middleware wrapper 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > Enhanced wrapper functions > should handle Clerk middleware failures 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > Enhanced wrapper functions > should handle rate limit middleware failures 0ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > Context extraction edge cases > should handle missing auth context 2ms
+ ✓ src/middlewares/__tests__/middlewareFailureHandler.test.ts > Middleware Failure Handler > Context extraction edge cases > should handle missing headers gracefully 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > global rate limiting > should allow requests within global limit 2ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > global rate limiting > should reject requests exceeding global limit 1ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > endpoint-specific rate limiting > should apply endpoint-specific limits for /api/auth 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > endpoint-specific rate limiting > should reject requests exceeding endpoint-specific limit 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > endpoint-specific rate limiting > should skip rate limiting for configured endpoints 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > identifier handling > should prefer user ID over IP address for authenticated users 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > identifier handling > should use IP address for anonymous users 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > identifier handling > should fall back to X-Forwarded-For when CF-Connecting-IP is missing 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > identifier handling > should use "unknown" when no identifier is available 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > sliding window behavior > should reset count when window expires 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > rate limit headers > should set all required rate limit headers 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > rate limit headers > should set Retry-After header when limit exceeded 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > cleanup functionality > should clean up expired entries 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > statistics and monitoring > should provide rate limiting statistics 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > statistics and monitoring > should clear all data when requested 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > singleton instance > should provide a singleton instance 0ms
+ ✓ src/middlewares/__tests__/rateLimitEnhanced.test.ts > RateLimitMiddleware > singleton instance > should provide a convenience function 0ms
+ × src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > successful authentication > should authenticate valid request and set auth context 3ms
+   → Authentication required
+ × src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > successful authentication > should handle request without session ID 1ms
+   → Authentication required
+ ✓ src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > authentication failures > should reject request when user is not signed in 1ms
+ ✓ src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > authentication failures > should reject request when Clerk secret key is missing 1ms
+ ✓ src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > authentication failures > should reject request when auth has no user ID 1ms
+ ✓ src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > authentication failures > should handle Clerk authentication errors 1ms
+ ✓ src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > error handling > should handle unexpected errors gracefully 0ms
+ ✓ src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > error handling > should propagate UnauthorizedError instances without wrapping 0ms
+ × src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > security metadata > should extract IP address from CF-Connecting-IP header 1ms
+   → Authentication required
+ × src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > security metadata > should fall back to X-Forwarded-For when CF-Connecting-IP is missing 0ms
+   → Authentication required
+ × src/controllers/__tests__/habit.controller.test.ts > Habit Controller > getHabits > should return habits for the given date 2ms
+   → Cannot destructure property 'userId' of 'c.get(...)' as it is undefined.
+ × src/controllers/__tests__/habit.controller.test.ts > Habit Controller > createHabit > should create a new habit 0ms
+   → Cannot destructure property 'userId' of 'c.get(...)' as it is undefined.
+ × src/controllers/__tests__/habit.controller.test.ts > Habit Controller > updateHabit > should update an existing habit 0ms
+   → Cannot destructure property 'userId' of 'c.get(...)' as it is undefined.
+ × src/controllers/__tests__/habit.controller.test.ts > Habit Controller > deleteHabit > should delete a habit 0ms
+   → Cannot destructure property 'userId' of 'c.get(...)' as it is undefined.
+ × src/controllers/__tests__/habit.controller.test.ts > Habit Controller > manageTracker > should add a tracker for a habit 0ms
+   → Cannot destructure property 'userId' of 'c.get(...)' as it is undefined.
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > production environment behavior > should hide error details in production 2ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > production environment behavior > should not include stack traces in production 0ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > production environment behavior > should sanitize validation error details in production 0ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > production environment behavior > should use generic message for unauthorized errors 0ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > development environment behavior > should show detailed error messages in development 1ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > development environment behavior > should include stack traces in development 1ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > development environment behavior > should show validation error details in development 0ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > error type handling > should handle NotFoundError correctly 1ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > error type handling > should handle ForbiddenError correctly 1ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > error type handling > should handle RateLimitError correctly 1ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > error type handling > should handle HTTPException correctly 0ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > error type handling > should handle custom BaseError correctly 0ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > database error handling > should handle SQLite errors with information hiding 0ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > database error handling > should show database errors in development 0ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > security features > should sanitize sensitive fields from error details 1ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > security features > should include request context in error logging 1ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > security features > should generate unique request IDs for error tracking 0ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > logging behavior > should log client errors as warnings 0ms
+ ✓ src/middlewares/__tests__/errorHandlerEnhanced.test.ts > errorHandlerEnhanced > logging behavior > should log server errors as errors 0ms
+stdout | src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/history > should return progress history data
+[2026-01-04T05:38:17.611Z] [DEBUG] [api] Authentication successful {"userId":"test-user-123","sessionId":"test-session","path":"/api/v1/progress/history","method":"GET"}
+[2026-01-04T05:38:17.611Z] [INFO] [api] Fetching progress history for user test-user-123
+
+stdout | src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/history > should filter history by date range
+[2026-01-04T05:38:17.614Z] [DEBUG] [api] Authentication successful {"userId":"test-user-123","sessionId":"test-session","path":"/api/v1/progress/history","method":"GET"}
+[2026-01-04T05:38:17.614Z] [INFO] [api] Fetching progress history for user test-user-123
+
+stdout | src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/history > should validate date format
+[2026-01-04T05:38:17.615Z] [DEBUG] [api] Authentication successful {"userId":"test-user-123","sessionId":"test-session","path":"/api/v1/progress/history","method":"GET"}
+
+stderr | src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/history > should validate date format
+[2026-01-04T05:38:17.616Z] [WARN] [api] Client error occurred {"path":"/api/v1/progress/history","method":"GET","userId":"test-user-123","requestId":"err_1767505097615_7zbbtf3ug","errorType":"ValidationError","errorMessage":"Validation failed","timestamp":"2026-01-04T05:38:17.615Z","stack":"ValidationError: Validation failed\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/middlewares/validateRequest.ts:36:15\n    at dispatch (file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/compose.js:22:23)\n    at file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/compose.js:22:46\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/middlewares/clerkMiddleware.ts:95:13\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at dispatch (file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/compose.js:22:17)\n    at file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/hono-base.js:198:25\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/tests/integration/progress.test.ts:90:24\n    at file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@vitest/runner/dist/index.js:596:20"}
+
+stdout | src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/streaks > should return streak information
+[2026-01-04T05:38:17.617Z] [DEBUG] [api] Authentication successful {"userId":"test-user-123","sessionId":"test-session","path":"/api/v1/progress/streaks","method":"GET"}
+[2026-01-04T05:38:17.617Z] [INFO] [api] Fetching streak information for user test-user-123
+
+stdout | src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/overview > should return combined history and streak data
+[2026-01-04T05:38:17.618Z] [DEBUG] [api] Authentication successful {"userId":"test-user-123","sessionId":"test-session","path":"/api/v1/progress/overview","method":"GET"}
+[2026-01-04T05:38:17.618Z] [INFO] [api] Fetching progress overview for user test-user-123
+[2026-01-04T05:38:17.618Z] [INFO] [api] Fetching progress history for user test-user-123
+[2026-01-04T05:38:17.618Z] [INFO] [api] Fetching streak information for user test-user-123
+
+stdout | src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/overview > should filter overview by date range
+[2026-01-04T05:38:17.618Z] [DEBUG] [api] Authentication successful {"userId":"test-user-123","sessionId":"test-session","path":"/api/v1/progress/overview","method":"GET"}
+[2026-01-04T05:38:17.619Z] [INFO] [api] Fetching progress overview for user test-user-123
+[2026-01-04T05:38:17.619Z] [INFO] [api] Fetching progress history for user test-user-123
+[2026-01-04T05:38:17.619Z] [INFO] [api] Fetching streak information for user test-user-123
+
+stderr | src/tests/integration/progress.test.ts > Progress API Integration Tests > Authentication > should require authentication for all progress endpoints
+[2026-01-04T05:38:17.619Z] [WARN] [api] Authentication failed - user not signed in {"path":"/api/v1/progress/history","method":"GET","reason":"test-reason"}
+[2026-01-04T05:38:17.619Z] [WARN] [api] Authentication failed {"path":"/api/v1/progress/history","method":"GET","error":"Authentication required"}
+
+stderr | src/tests/integration/progress.test.ts > Progress API Integration Tests > Authentication > should require authentication for all progress endpoints
+[2026-01-04T05:38:17.619Z] [WARN] [api] Client error occurred {"path":"/api/v1/progress/history","method":"GET","requestId":"err_1767505097619_ea6etf9pp","errorType":"UnauthorizedError","errorMessage":"Authentication required","timestamp":"2026-01-04T05:38:17.619Z","stack":"UnauthorizedError: Authentication required\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/middlewares/clerkMiddleware.ts:108:13\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at dispatch (file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/compose.js:22:17)\n    at file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/hono-base.js:198:25\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/tests/integration/progress.test.ts:189:26\n    at file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@vitest/runner/dist/index.js:596:20"}
+
+stderr | src/tests/integration/progress.test.ts > Progress API Integration Tests > Authentication > should require authentication for all progress endpoints
+[2026-01-04T05:38:17.619Z] [WARN] [api] Authentication failed - user not signed in {"path":"/api/v1/progress/streaks","method":"GET","reason":"test-reason"}
+[2026-01-04T05:38:17.619Z] [WARN] [api] Authentication failed {"path":"/api/v1/progress/streaks","method":"GET","error":"Authentication required"}
+
+stdout | src/tests/integration/habits.test.ts > Habits API Integration > GET /habits > should return a list of habits
+[2026-01-04T05:38:17.619Z] [DEBUG] [api] Authentication successful {"userId":"test-user-123","sessionId":"test-session","path":"/habits","method":"GET"}
+
+stderr | src/tests/integration/progress.test.ts > Progress API Integration Tests > Authentication > should require authentication for all progress endpoints
+[2026-01-04T05:38:17.619Z] [WARN] [api] Client error occurred {"path":"/api/v1/progress/streaks","method":"GET","requestId":"err_1767505097619_7zvz61ryb","errorType":"UnauthorizedError","errorMessage":"Authentication required","timestamp":"2026-01-04T05:38:17.619Z","stack":"UnauthorizedError: Authentication required\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/middlewares/clerkMiddleware.ts:108:13\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at dispatch (file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/compose.js:22:17)\n    at file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/hono-base.js:198:25\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/tests/integration/progress.test.ts:189:26\n    at file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@vitest/runner/dist/index.js:596:20"}
+
+stderr | src/tests/integration/progress.test.ts > Progress API Integration Tests > Authentication > should require authentication for all progress endpoints
+[2026-01-04T05:38:17.620Z] [WARN] [api] Authentication failed - user not signed in {"path":"/api/v1/progress/overview","method":"GET","reason":"test-reason"}
+[2026-01-04T05:38:17.620Z] [WARN] [api] Authentication failed {"path":"/api/v1/progress/overview","method":"GET","error":"Authentication required"}
+
+stderr | src/tests/integration/progress.test.ts > Progress API Integration Tests > Authentication > should require authentication for all progress endpoints
+[2026-01-04T05:38:17.620Z] [WARN] [api] Client error occurred {"path":"/api/v1/progress/overview","method":"GET","requestId":"err_1767505097620_puc0a0jbl","errorType":"UnauthorizedError","errorMessage":"Authentication required","timestamp":"2026-01-04T05:38:17.620Z","stack":"UnauthorizedError: Authentication required\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/middlewares/clerkMiddleware.ts:108:13\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at dispatch (file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/compose.js:22:17)\n    at file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/hono-base.js:198:25\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/tests/integration/progress.test.ts:189:26\n    at file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@vitest/runner/dist/index.js:596:20"}
+
+ ✓ src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/history > should return progress history data 5ms
+ ✓ src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/history > should filter history by date range 1ms
+ ✓ src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/history > should validate date format 2ms
+ ✓ src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/streaks > should return streak information 1ms
+ ✓ src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/overview > should return combined history and streak data 1ms
+ ✓ src/tests/integration/progress.test.ts > Progress API Integration Tests > GET /api/v1/progress/overview > should filter overview by date range 1ms
+ ✓ src/tests/integration/progress.test.ts > Progress API Integration Tests > Authentication > should require authentication for all progress endpoints 2ms
+stdout | src/tests/integration/habits.test.ts > Habits API Integration > POST /habits > should create a new habit
+[2026-01-04T05:38:17.629Z] [DEBUG] [api] Authentication successful {"userId":"test-user-123","sessionId":"test-session","path":"/habits","method":"POST"}
+
+stdout | src/tests/integration/habits.test.ts > Habits API Integration > POST /habits > should create a new habit
+[2026-01-04T05:38:17.630Z] [INFO] [api] Creating new user with clerk_user_id: test-user-123
+
+stdout | src/tests/integration/habits.test.ts > Habits API Integration > POST /habits > should validate the request body
+[2026-01-04T05:38:17.631Z] [DEBUG] [api] Authentication successful {"userId":"test-user-123","sessionId":"test-session","path":"/habits","method":"POST"}
+
+stderr | src/tests/integration/habits.test.ts > Habits API Integration > POST /habits > should validate the request body
+[2026-01-04T05:38:17.633Z] [WARN] [api] Client error occurred {"path":"/habits","method":"POST","userId":"test-user-123","requestId":"err_1767505097632_pib3scq1t","errorType":"ValidationError","errorMessage":"Validation failed","timestamp":"2026-01-04T05:38:17.632Z","stack":"ValidationError: Validation failed\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/middlewares/validateRequest.ts:36:15\n    at processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at dispatch (file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/compose.js:22:17)\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/middlewares/clerkMiddleware.ts:95:7\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/middlewares/middlewareFailureHandler.ts:188:14\n    at dispatch (file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/compose.js:22:17)\n    at file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/hono/dist/hono-base.js:198:25\n    at /Users/jayvicsanantonio/Developer/tracknstick-api/src/tests/integration/habits.test.ts:116:19\n    at file:///Users/jayvicsanantonio/Developer/tracknstick-api/node_modules/@vitest/runner/dist/index.js:596:20"}
+
+stdout | src/tests/integration/habits.test.ts > Habits API Integration > DELETE /habits/:habitId > should delete a habit
+[2026-01-04T05:38:17.634Z] [DEBUG] [api] Authentication successful {"userId":"test-user-123","sessionId":"test-session","path":"/habits/1","method":"DELETE"}
+
+ ✓ src/tests/integration/habits.test.ts > Habits API Integration > GET /habits > should return a list of habits 12ms
+ ✓ src/tests/integration/habits.test.ts > Habits API Integration > POST /habits > should create a new habit 2ms
+ ✓ src/tests/integration/habits.test.ts > Habits API Integration > POST /habits > should validate the request body 3ms
+ ✓ src/tests/integration/habits.test.ts > Habits API Integration > DELETE /habits/:habitId > should delete a habit 1ms
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/tests/integration/security.test.ts [ src/tests/integration/security.test.ts ]
+ReferenceError: app is not defined
+ ❯ src/index.ts:9:1
+      7| 
+      8| // 3. Rate limiting - Block excessive requests before processing (with…
+      9| app.use('*', withRateLimitFailureHandling(createRateLimit()));
+       | ^
+     10| 
+     11| // 4. CORS - Handle cross-origin requests with environment-aware confi…
+ ❯ src/tests/integration/security.test.ts:7:1
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/14]⎯
+
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 13 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/controllers/__tests__/habit.controller.test.ts > Habit Controller > getHabits > should return habits for the given date
+TypeError: Cannot destructure property 'userId' of 'c.get(...)' as it is undefined.
+ ❯ Module.getHabits src/controllers/habit.controller.ts:23:11
+     21|  */
+     22| export const getHabits = async (c: Context) => {
+     23|   const { userId } = c.get('auth');
+       |           ^
+     24|   const { date, timeZone } = c.get('validated_query');
+     25| 
+ ❯ src/controllers/__tests__/habit.controller.test.ts:52:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/14]⎯
+
+ FAIL  src/controllers/__tests__/habit.controller.test.ts > Habit Controller > createHabit > should create a new habit
+TypeError: Cannot destructure property 'userId' of 'c.get(...)' as it is undefined.
+ ❯ Module.createHabit src/controllers/habit.controller.ts:63:11
+     61|  */
+     62| export const createHabit = async (c: Context) => {
+     63|   const { userId } = c.get('auth');
+       |           ^
+     64|   const habitData = c.get('validated_json');
+     65| 
+ ❯ src/controllers/__tests__/habit.controller.test.ts:81:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/14]⎯
+
+ FAIL  src/controllers/__tests__/habit.controller.test.ts > Habit Controller > updateHabit > should update an existing habit
+TypeError: Cannot destructure property 'userId' of 'c.get(...)' as it is undefined.
+ ❯ Module.updateHabit src/controllers/habit.controller.ts:85:11
+     83|  */
+     84| export const updateHabit = async (c: Context) => {
+     85|   const { userId } = c.get('auth');
+       |           ^
+     86|   const { habitId } = c.get('validated_param');
+     87|   const habitData = c.get('validated_json');
+ ❯ src/controllers/__tests__/habit.controller.test.ts:109:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/14]⎯
+
+ FAIL  src/controllers/__tests__/habit.controller.test.ts > Habit Controller > deleteHabit > should delete a habit
+TypeError: Cannot destructure property 'userId' of 'c.get(...)' as it is undefined.
+ ❯ Module.deleteHabit src/controllers/habit.controller.ts:105:11
+    103|  */
+    104| export const deleteHabit = async (c: Context) => {
+    105|   const { userId } = c.get('auth');
+       |           ^
+    106|   const { habitId } = c.get('validated_param');
+    107| 
+ ❯ src/controllers/__tests__/habit.controller.test.ts:132:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/14]⎯
+
+ FAIL  src/controllers/__tests__/habit.controller.test.ts > Habit Controller > manageTracker > should add a tracker for a habit
+TypeError: Cannot destructure property 'userId' of 'c.get(...)' as it is undefined.
+ ❯ Module.manageTracker src/controllers/habit.controller.ts:159:11
+    157|  */
+    158| export const manageTracker = async (c: Context) => {
+    159|   const { userId } = c.get('auth');
+       |           ^
+    160|   const { habitId } = c.get('validated_param');
+    161|   const { timestamp, timeZone, notes } = c.get('validated_json');
+ ❯ src/controllers/__tests__/habit.controller.test.ts:165:29
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/14]⎯
+
+ FAIL  src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > successful authentication > should authenticate valid request and set auth context
+UnauthorizedError: Authentication required
+ ❯ src/middlewares/clerkMiddleware.ts:108:13
+    106|       });
+    107| 
+    108|       throw new UnauthorizedError('Authentication required');
+       |             ^
+    109|     }
+    110|   } catch (error: unknown) {
+ ❯ src/middlewares/__tests__/clerkMiddleware.test.ts:75:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { statusCode: 401, code: 'unauthorized', details: undefined }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/14]⎯
+
+ FAIL  src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > successful authentication > should handle request without session ID
+UnauthorizedError: Authentication required
+ ❯ src/middlewares/clerkMiddleware.ts:108:13
+    106|       });
+    107| 
+    108|       throw new UnauthorizedError('Authentication required');
+       |             ^
+    109|     }
+    110|   } catch (error: unknown) {
+ ❯ src/middlewares/__tests__/clerkMiddleware.test.ts:120:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { statusCode: 401, code: 'unauthorized', details: undefined }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/14]⎯
+
+ FAIL  src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > security metadata > should extract IP address from CF-Connecting-IP header
+UnauthorizedError: Authentication required
+ ❯ src/middlewares/clerkMiddleware.ts:108:13
+    106|       });
+    107| 
+    108|       throw new UnauthorizedError('Authentication required');
+       |             ^
+    109|     }
+    110|   } catch (error: unknown) {
+ ❯ src/middlewares/__tests__/clerkMiddleware.test.ts:244:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { statusCode: 401, code: 'unauthorized', details: undefined }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/14]⎯
+
+ FAIL  src/middlewares/__tests__/clerkMiddleware.test.ts > clerkMiddleware > security metadata > should fall back to X-Forwarded-For when CF-Connecting-IP is missing
+UnauthorizedError: Authentication required
+ ❯ src/middlewares/clerkMiddleware.ts:108:13
+    106|       });
+    107| 
+    108|       throw new UnauthorizedError('Authentication required');
+       |             ^
+    109|     }
+    110|   } catch (error: unknown) {
+ ❯ src/middlewares/__tests__/clerkMiddleware.test.ts:274:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯
+Serialized Error: { statusCode: 401, code: 'unauthorized', details: undefined }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/14]⎯
+
+ FAIL  src/repositories/__tests__/tracker.repository.test.ts > Tracker Repository > findTrackersByDateRange > should query trackers for the given habits and date range
+TypeError: Cannot read properties of undefined (reading 'bind')
+ ❯ Module.findTrackersByDateRange src/repositories/tracker.repository.ts:44:5
+     42|        AND timestamp >= ? 
+     43|        AND timestamp <= ?`
+     44|     )
+       |     ^
+     45|     .bind(...params)
+     46|     .all();
+ ❯ src/repositories/__tests__/tracker.repository.test.ts:70:31
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/14]⎯
+
+ FAIL  src/repositories/__tests__/tracker.repository.test.ts > Tracker Repository > findTrackersByDateRange > should throw error if the database query fails
+TypeError: Cannot read properties of undefined (reading 'all')
+ ❯ src/repositories/__tests__/tracker.repository.test.ts:90:19
+     88|       const mockFailedResult = { ...mockD1Result, success: false };
+     89|       const mockPrepare = mockDB.prepare as jest.Mock;
+     90|       mockPrepare().all.mockResolvedValue(mockFailedResult);
+       |                   ^
+     91| 
+     92|       await expect(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/14]⎯
+
+ FAIL  src/repositories/__tests__/tracker.repository.test.ts > Tracker Repository > create > should create a new tracker
+TypeError: Cannot read properties of undefined (reading 'bind')
+ ❯ Module.create src/repositories/tracker.repository.ts:199:17
+    197| 
+    198|   const result = await db
+    199|     .prepare(sql)
+       |                 ^
+    200|     .bind(...params)
+    201|     .run();
+ ❯ src/repositories/__tests__/tracker.repository.test.ts:112:46
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/14]⎯
+
+ FAIL  src/repositories/__tests__/tracker.repository.test.ts > Tracker Repository > removeTrackersByIds > should delete trackers by IDs
+TypeError: Cannot read properties of undefined (reading 'bind')
+ ❯ Module.removeTrackersByIds src/repositories/tracker.repository.ts:148:17
+    146| 
+    147|   const result = await db
+    148|     .prepare(sql)
+       |                 ^
+    149|     .bind(...params)
+    150|     .run();
+ ❯ src/repositories/__tests__/tracker.repository.test.ts:144:46
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/14]⎯
+
+
+ Test Files  4 failed | 9 passed (13)
+      Tests  13 failed | 106 passed (119)
+   Start at  21:38:16
+   Duration  654ms (transform 697ms, setup 254ms, collect 1000ms, tests 104ms, environment 557ms, prepare 3.29s)
+

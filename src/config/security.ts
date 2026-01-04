@@ -48,17 +48,35 @@ export type Environment = 'development' | 'production' | 'test';
 
 /**
  * Detects the current environment from various sources
+ * @param providedEnv - Optional explicit environment string to use
  */
-export function detectEnvironment(): Environment {
-  // Check ENVIRONMENT variable first (from wrangler.toml)
+export function detectEnvironment(providedEnv?: string): Environment {
+  // 1. Check explicitly provided environment first
+  if (
+    providedEnv === 'development' ||
+    providedEnv === 'production' ||
+    providedEnv === 'test'
+  ) {
+    return providedEnv as Environment;
+  }
+
+  // 2. Check ENVIRONMENT variable from globalThis (compatibility)
   const envVar = (globalThis as any).ENVIRONMENT;
-  if (envVar === 'development' || envVar === 'production' || envVar === 'test') {
-    return envVar;
+  if (
+    envVar === 'development' ||
+    envVar === 'production' ||
+    envVar === 'test'
+  ) {
+    return envVar as Environment;
   }
 
   // Check NODE_ENV as fallback
   const nodeEnv = process?.env?.NODE_ENV;
-  if (nodeEnv === 'development' || nodeEnv === 'production' || nodeEnv === 'test') {
+  if (
+    nodeEnv === 'development' ||
+    nodeEnv === 'production' ||
+    nodeEnv === 'test'
+  ) {
     return nodeEnv;
   }
 
@@ -71,7 +89,11 @@ export function detectEnvironment(): Environment {
  */
 const developmentConfig: SecurityConfig = {
   cors: {
-    origins: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:5174'],
+    origins: [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'http://localhost:5174',
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
@@ -116,10 +138,10 @@ const productionConfig: SecurityConfig = {
       '/api/auth': { limit: 10, windowMs: 15 * 60 * 1000 },
       '/api/habits': { limit: 50, windowMs: 15 * 60 * 1000 },
       '/api/progress': { limit: 30, windowMs: 15 * 60 * 1000 },
-      '/api/health': { 
-        limit: 1000, 
+      '/api/health': {
+        limit: 1000,
         windowMs: 15 * 60 * 1000,
-        skipIf: (path: string) => path === '/api/health'
+        skipIf: (path: string) => path === '/api/health',
       },
     },
     skipSuccessfulRequests: false,
@@ -162,18 +184,19 @@ const testConfig: SecurityConfig = {
   },
   headers: {
     enableHsts: false,
-    enableContentTypeOptions: false,
-    enableFrameOptions: false,
-    enableXssProtection: false,
+    enableContentTypeOptions: true,
+    enableFrameOptions: true,
+    enableXssProtection: true,
   },
 };
 
 /**
  * Gets security configuration based on current environment
+ * @param env - Optional explicit environment string
  */
-export function getSecurityConfig(): SecurityConfig {
-  const environment = detectEnvironment();
-  
+export function getSecurityConfig(env?: string): SecurityConfig {
+  const environment = detectEnvironment(env);
+
   switch (environment) {
     case 'development':
       return developmentConfig;
@@ -188,9 +211,9 @@ export function getSecurityConfig(): SecurityConfig {
 /**
  * Validates security configuration for completeness
  */
-export function validateSecurityConfig(config: SecurityConfig): { 
-  valid: boolean; 
-  errors: string[] 
+export function validateSecurityConfig(config: SecurityConfig): {
+  valid: boolean;
+  errors: string[];
 } {
   const errors: string[] = [];
 
@@ -209,7 +232,9 @@ export function validateSecurityConfig(config: SecurityConfig): {
   }
 
   // Validate endpoint limits
-  for (const [endpoint, limit] of Object.entries(config.rateLimit.endpointLimits)) {
+  for (const [endpoint, limit] of Object.entries(
+    config.rateLimit.endpointLimits
+  )) {
     if (limit.limit <= 0) {
       errors.push(`Rate limit for ${endpoint} must be positive`);
     }

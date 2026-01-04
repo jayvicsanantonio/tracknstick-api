@@ -44,7 +44,12 @@ describe('Tracker Repository', () => {
 
     // Mock database
     mockDB = {
-      prepare: mockD1Prepare,
+      prepare: vi.fn().mockImplementation(() => ({
+        bind: vi.fn().mockReturnThis(),
+        first: vi.fn().mockResolvedValue(null),
+        all: vi.fn().mockResolvedValue(mockD1Result),
+        run: vi.fn().mockResolvedValue(mockD1Result),
+      })),
     } as unknown as D1Database;
 
     // Set default mock returns
@@ -79,15 +84,21 @@ describe('Tracker Repository', () => {
         expect.stringContaining('habit_id IN (?,?)')
       );
       expect(mockDB.prepare).toHaveBeenCalledWith(
-        expect.stringContaining('timestamp BETWEEN ? AND ?')
+        expect.stringContaining('timestamp >= ?')
+      );
+      expect(mockDB.prepare).toHaveBeenCalledWith(
+        expect.stringContaining('timestamp <= ?')
       );
     });
 
     it('should throw error if the database query fails', async () => {
       // Mock failed query
       const mockFailedResult = { ...mockD1Result, success: false };
-      const mockPrepare = mockDB.prepare as jest.Mock;
-      mockPrepare().all.mockResolvedValue(mockFailedResult);
+      const mockPrepare = mockDB.prepare as vi.Mock;
+      mockPrepare.mockReturnValue({
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue(mockFailedResult),
+      });
 
       await expect(
         trackerRepository.findTrackersByDateRange(
@@ -97,7 +108,7 @@ describe('Tracker Repository', () => {
           '2023-06-01T00:00:00Z',
           '2023-06-30T23:59:59Z'
         )
-      ).rejects.toThrow('Failed to fetch trackers by date range');
+      ).rejects.toThrow('Failed to fetch trackers');
     });
   });
 

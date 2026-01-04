@@ -10,7 +10,11 @@ import {
   middlewareChainMonitor,
   type SecurityEvent,
 } from '../middlewareFailureHandler.js';
-import { UnauthorizedError, RateLimitError, BaseError } from '../../utils/errors.js';
+import {
+  UnauthorizedError,
+  RateLimitError,
+  BaseError,
+} from '../../utils/errors.js';
 
 // Mock logger
 vi.mock('../../utils/logger.js', () => ({
@@ -62,8 +66,11 @@ describe('Middleware Failure Handler', () => {
         await next();
       });
 
-      const wrappedMiddleware = withFailureHandling('test_middleware', successMiddleware);
-      
+      const wrappedMiddleware = withFailureHandling(
+        'test_middleware',
+        successMiddleware
+      );
+
       await wrappedMiddleware(mockContext, mockNext);
 
       expect(successMiddleware).toHaveBeenCalledWith(mockContext, mockNext);
@@ -76,9 +83,14 @@ describe('Middleware Failure Handler', () => {
         throw error;
       });
 
-      const wrappedMiddleware = withFailureHandling('auth_middleware', failingMiddleware);
+      const wrappedMiddleware = withFailureHandling(
+        'auth_middleware',
+        failingMiddleware
+      );
 
-      await expect(wrappedMiddleware(mockContext, mockNext)).rejects.toThrow(UnauthorizedError);
+      await expect(wrappedMiddleware(mockContext, mockNext)).rejects.toThrow(
+        UnauthorizedError
+      );
       expect(failingMiddleware).toHaveBeenCalledWith(mockContext, mockNext);
     });
 
@@ -88,9 +100,14 @@ describe('Middleware Failure Handler', () => {
         throw error;
       });
 
-      const wrappedMiddleware = withFailureHandling('rate_limit_middleware', failingMiddleware);
+      const wrappedMiddleware = withFailureHandling(
+        'rate_limit_middleware',
+        failingMiddleware
+      );
 
-      await expect(wrappedMiddleware(mockContext, mockNext)).rejects.toThrow(RateLimitError);
+      await expect(wrappedMiddleware(mockContext, mockNext)).rejects.toThrow(
+        RateLimitError
+      );
       expect(failingMiddleware).toHaveBeenCalledWith(mockContext, mockNext);
     });
 
@@ -99,9 +116,14 @@ describe('Middleware Failure Handler', () => {
         throw 'String error';
       });
 
-      const wrappedMiddleware = withFailureHandling('test_middleware', failingMiddleware);
+      const wrappedMiddleware = withFailureHandling(
+        'test_middleware',
+        failingMiddleware
+      );
 
-      await expect(wrappedMiddleware(mockContext, mockNext)).rejects.toThrow('String error');
+      await expect(wrappedMiddleware(mockContext, mockNext)).rejects.toThrow(
+        'String error'
+      );
     });
 
     it('should log middleware failure with proper context', async () => {
@@ -110,9 +132,14 @@ describe('Middleware Failure Handler', () => {
         throw error;
       });
 
-      const wrappedMiddleware = withFailureHandling('custom_middleware', failingMiddleware);
+      const wrappedMiddleware = withFailureHandling(
+        'custom_middleware',
+        failingMiddleware
+      );
 
-      await expect(wrappedMiddleware(mockContext, mockNext)).rejects.toThrow(BaseError);
+      await expect(wrappedMiddleware(mockContext, mockNext)).rejects.toThrow(
+        BaseError
+      );
       expect(failingMiddleware).toHaveBeenCalledWith(mockContext, mockNext);
     });
   });
@@ -126,7 +153,7 @@ describe('Middleware Failure Handler', () => {
 
     it('should log authentication failure with high severity', () => {
       const error = new UnauthorizedError('Invalid token');
-      
+
       securityLogger.logAuthFailure(mockContext, error, 'clerk_middleware');
 
       // Verify that the error logger was called (implementation logs to console.error for high severity)
@@ -149,8 +176,12 @@ describe('Middleware Failure Handler', () => {
 
     it('should log validation failure with low severity', () => {
       const error = new Error('Invalid request format');
-      
-      securityLogger.logValidationFailure(mockContext, error, 'validation_middleware');
+
+      securityLogger.logValidationFailure(
+        mockContext,
+        error,
+        'validation_middleware'
+      );
 
       // Verify the logger captured the error context
       expect(mockContext.req.header).toHaveBeenCalled();
@@ -158,8 +189,12 @@ describe('Middleware Failure Handler', () => {
 
     it('should extract security context properly', () => {
       const error = new Error('Test error');
-      
-      securityLogger.logMiddlewareFailure(mockContext, error, 'test_middleware');
+
+      securityLogger.logMiddlewareFailure(
+        mockContext,
+        error,
+        'test_middleware'
+      );
 
       // Verify all context extraction calls
       expect(mockContext.get).toHaveBeenCalledWith('auth');
@@ -180,7 +215,7 @@ describe('Middleware Failure Handler', () => {
       middlewareChainMonitor.recordFailure('other_middleware');
 
       const stats = middlewareChainMonitor.getFailureStats();
-      
+
       expect(stats['test_middleware']).toBe(2);
       expect(stats['other_middleware']).toBe(1);
     });
@@ -191,14 +226,14 @@ describe('Middleware Failure Handler', () => {
       middlewareChainMonitor.recordFailure('auth_middleware');
 
       const stats = middlewareChainMonitor.getFailureStats();
-      
+
       expect(stats['auth_middleware']).toBe(2);
       expect(stats['rate_limit_middleware']).toBe(1);
     });
 
     it('should handle empty failure stats', () => {
       const stats = middlewareChainMonitor.getFailureStats();
-      
+
       expect(Object.keys(stats).length).toBeGreaterThanOrEqual(0);
     });
   });
@@ -207,14 +242,14 @@ describe('Middleware Failure Handler', () => {
     it('should create enhanced Clerk middleware wrapper', () => {
       const mockClerkMiddleware = vi.fn();
       const enhanced = withClerkFailureHandling(mockClerkMiddleware);
-      
+
       expect(typeof enhanced).toBe('function');
     });
 
     it('should create enhanced rate limit middleware wrapper', () => {
       const mockRateLimitMiddleware = vi.fn();
       const enhanced = withRateLimitFailureHandling(mockRateLimitMiddleware);
-      
+
       expect(typeof enhanced).toBe('function');
     });
 
@@ -226,8 +261,13 @@ describe('Middleware Failure Handler', () => {
 
       const enhanced = withClerkFailureHandling(failingClerkMiddleware);
 
-      await expect(enhanced(mockContext, mockNext)).rejects.toThrow(UnauthorizedError);
-      expect(failingClerkMiddleware).toHaveBeenCalledWith(mockContext, mockNext);
+      await expect(enhanced(mockContext, mockNext)).rejects.toThrow(
+        UnauthorizedError
+      );
+      expect(failingClerkMiddleware).toHaveBeenCalledWith(
+        mockContext,
+        mockNext
+      );
     });
 
     it('should handle rate limit middleware failures', async () => {
@@ -238,36 +278,51 @@ describe('Middleware Failure Handler', () => {
 
       const enhanced = withRateLimitFailureHandling(failingRateLimitMiddleware);
 
-      await expect(enhanced(mockContext, mockNext)).rejects.toThrow(RateLimitError);
-      expect(failingRateLimitMiddleware).toHaveBeenCalledWith(mockContext, mockNext);
+      await expect(enhanced(mockContext, mockNext)).rejects.toThrow(
+        RateLimitError
+      );
+      expect(failingRateLimitMiddleware).toHaveBeenCalledWith(
+        mockContext,
+        mockNext
+      );
     });
   });
 
   describe('Context extraction edge cases', () => {
     it('should handle missing auth context', async () => {
       mockContext.get = vi.fn(() => undefined);
-      
+
       const error = new Error('Test error');
       const failingMiddleware = vi.fn(async () => {
         throw error;
       });
 
-      const wrappedMiddleware = withFailureHandling('test_middleware', failingMiddleware);
+      const wrappedMiddleware = withFailureHandling(
+        'test_middleware',
+        failingMiddleware
+      );
 
-      await expect(wrappedMiddleware(mockContext, mockNext)).rejects.toThrow('Test error');
+      await expect(wrappedMiddleware(mockContext, mockNext)).rejects.toThrow(
+        'Test error'
+      );
     });
 
     it('should handle missing headers gracefully', async () => {
       mockContext.req.header = vi.fn(() => undefined);
-      
+
       const error = new Error('Test error');
       const failingMiddleware = vi.fn(async () => {
         throw error;
       });
 
-      const wrappedMiddleware = withFailureHandling('test_middleware', failingMiddleware);
+      const wrappedMiddleware = withFailureHandling(
+        'test_middleware',
+        failingMiddleware
+      );
 
-      await expect(wrappedMiddleware(mockContext, mockNext)).rejects.toThrow('Test error');
+      await expect(wrappedMiddleware(mockContext, mockNext)).rejects.toThrow(
+        'Test error'
+      );
       expect(mockContext.req.header).toHaveBeenCalledWith('CF-Connecting-IP');
     });
   });

@@ -12,6 +12,7 @@ export default defineConfig({
     },
     include: ['src/**/*.test.ts'],
     exclude: ['node_modules', 'dist'],
+    setupFiles: ['./src/tests/setup.ts'],
     coverage: {
       reporter: ['text', 'json', 'html'],
       exclude: ['node_modules/', 'dist/'],

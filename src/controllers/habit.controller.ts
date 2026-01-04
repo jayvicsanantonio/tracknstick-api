@@ -25,7 +25,7 @@ export const getHabits = async (c: Context) => {
 
   try {
     let habits;
-    
+
     if (date && timeZone) {
       // Get habits for a specific date
       habits = await habitService.getHabitsForDate(
@@ -36,10 +36,7 @@ export const getHabits = async (c: Context) => {
       );
     } else {
       // Get all habits
-      habits = await habitService.getAllHabits(
-        userId,
-        c.env.DB
-      );
+      habits = await habitService.getAllHabits(userId, c.env.DB);
     }
 
     return c.json(
@@ -164,8 +161,10 @@ export const manageTracker = async (c: Context) => {
   const { timestamp, timeZone, notes } = c.get('validated_json');
 
   try {
-    console.log(`[CONTROLLER] Starting manageTracker: user=${userId}, habit=${habitId}, timestamp=${timestamp}, timeZone=${timeZone}`);
-    
+    console.log(
+      `[CONTROLLER] Starting manageTracker: user=${userId}, habit=${habitId}, timestamp=${timestamp}, timeZone=${timeZone}`
+    );
+
     const result = await habitService.manageTracker(
       userId,
       habitId,
@@ -176,15 +175,17 @@ export const manageTracker = async (c: Context) => {
     );
 
     console.log(`[CONTROLLER] Service result: ${JSON.stringify(result)}`);
-    
+
     const statusCode = result.status === 'added' ? 201 : 200;
     const response = {
       message: result.message,
       ...(result.trackerId && { trackerId: result.trackerId }),
     };
-    
-    console.log(`[CONTROLLER] Returning response: status=${statusCode}, body=${JSON.stringify(response)}`);
-    
+
+    console.log(
+      `[CONTROLLER] Returning response: status=${statusCode}, body=${JSON.stringify(response)}`
+    );
+
     return c.json(response, statusCode);
   } catch (error) {
     console.error(
@@ -248,7 +249,7 @@ export const getProgressOverview = async (c: Context) => {
       c.env.DB,
       userId,
       undefined, // startDate
-      undefined  // endDate  
+      undefined // endDate
     );
     return c.json(overview);
   } catch (error) {
