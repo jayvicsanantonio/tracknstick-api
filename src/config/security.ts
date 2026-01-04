@@ -48,16 +48,26 @@ export type Environment = 'development' | 'production' | 'test';
 
 /**
  * Detects the current environment from various sources
+ * @param providedEnv - Optional explicit environment string to use
  */
-export function detectEnvironment(): Environment {
-  // Check ENVIRONMENT variable first (from wrangler.toml)
+export function detectEnvironment(providedEnv?: string): Environment {
+  // 1. Check explicitly provided environment first
+  if (
+    providedEnv === 'development' ||
+    providedEnv === 'production' ||
+    providedEnv === 'test'
+  ) {
+    return providedEnv as Environment;
+  }
+
+  // 2. Check ENVIRONMENT variable from globalThis (compatibility)
   const envVar = (globalThis as any).ENVIRONMENT;
   if (
     envVar === 'development' ||
     envVar === 'production' ||
     envVar === 'test'
   ) {
-    return envVar;
+    return envVar as Environment;
   }
 
   // Check NODE_ENV as fallback
@@ -182,9 +192,10 @@ const testConfig: SecurityConfig = {
 
 /**
  * Gets security configuration based on current environment
+ * @param env - Optional explicit environment string
  */
-export function getSecurityConfig(): SecurityConfig {
-  const environment = detectEnvironment();
+export function getSecurityConfig(env?: string): SecurityConfig {
+  const environment = detectEnvironment(env);
 
   switch (environment) {
     case 'development':

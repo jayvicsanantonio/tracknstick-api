@@ -11,7 +11,7 @@ import { RateLimitError } from '../../utils/errors.js';
 
 // Mock security configuration
 vi.mock('../../config/security.js', () => ({
-  getSecurityConfig: vi.fn(() => ({
+  getSecurityConfig: vi.fn((env?: string) => ({
     rateLimit: {
       globalLimit: 100,
       windowMs: 60000, // 1 minute
@@ -55,6 +55,7 @@ describe('RateLimitMiddleware', () => {
         method: 'GET',
         header: vi.fn(),
       },
+      env: { ENVIRONMENT: 'test' },
       get: vi.fn(),
       header: vi.fn(),
     };
@@ -327,7 +328,7 @@ describe('RateLimitMiddleware', () => {
 
   describe('statistics and monitoring', () => {
     it('should provide rate limiting statistics', () => {
-      const stats = middleware.getStats();
+      const stats = middleware.getStats(mockContext);
 
       expect(stats).toHaveProperty('totalKeys');
       expect(stats).toHaveProperty('memoryUsage');

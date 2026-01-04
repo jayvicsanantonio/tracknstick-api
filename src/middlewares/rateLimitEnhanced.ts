@@ -36,13 +36,22 @@ interface RateLimitStore {
  */
 export class RateLimitMiddleware {
   private store: RateLimitStore;
-  private config: RateLimitConfig;
+  private _config: RateLimitConfig | null = null;
   private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.store = new Map<string, RateLimitEntry>();
-    this.config = getSecurityConfig().rateLimit;
-    // Don't initialize cleanup in constructor for Cloudflare Workers compatibility
+    // Don't initialize cleanup or config in constructor for Cloudflare Workers compatibility
+  }
+
+  /**
+   * Get merged configuration for the current environment
+   */
+  private getConfig(c: Context): RateLimitConfig {
+    if (!this._config) {
+      this._config = getSecurityConfig(c.env.ENVIRONMENT).rateLimit;
+    }
+    return this._config;
   }
 
   /**
@@ -83,14 +92,16 @@ export class RateLimitMiddleware {
   /**
    * Get rate limit configuration for a specific endpoint
    */
-  private getEndpointConfig(path: string): EndpointLimit | null {
+  private getEndpointConfig(c: Context, path: string): EndpointLimit | null {
+    const config = this.getConfig(c);
+
     // Check for exact path match first
-    if (this.config.endpointLimits[path]) {
-      return this.config.endpointLimits[path];
+    if (config.endpointLimits[path]) {
+      return config.endpointLimits[path];
     }
 
     // Check for pattern matches
-    for (const [pattern, limit] of Object.entries(this.config.endpointLimits)) {
+    for (const [pattern, limit] of Object.entries(config.endpointLimits)) {
       if (path.startsWith(pattern)) {
         return limit;
       }
@@ -103,15 +114,18 @@ export class RateLimitMiddleware {
    * Generate rate limit key for tracking
    */
   private generateKey(
+    c: Context,
     identifier: string,
     path: string,
     endpointConfig: EndpointLimit | null
   ): string {
+    const config = this.getConfig(c);
+
     // Use endpoint-specific path grouping if configured
     if (endpointConfig) {
       // Group by endpoint pattern for specific limits
       const endpointPattern =
-        Object.keys(this.config.endpointLimits).find((pattern) =>
+        Object.keys(config.endpointLimits).find((pattern) =>
           path.startsWith(pattern)
         ) || path;
       return `${identifier}:${endpointPattern}`;
@@ -166,8 +180,11 @@ export class RateLimitMiddleware {
         this.cleanup();
       }
 
+      // Get merged config for this environment
+      const config = this.getConfig(c);
+
       // Get endpoint-specific configuration
-      const endpointConfig = this.getEndpointConfig(path);
+      const endpointConfig = this.getEndpointConfig(c, path);
 
       // Check if this request should skip rate limiting
       if (this.shouldSkip(path, endpointConfig)) {
@@ -176,12 +193,12 @@ export class RateLimitMiddleware {
       }
 
       // Determine rate limit and window
-      const limit = endpointConfig?.limit || this.config.globalLimit;
-      const windowMs = endpointConfig?.windowMs || this.config.windowMs;
+      const limit = endpointConfig?.limit || config.globalLimit;
+      const windowMs = endpointConfig?.windowMs || config.windowMs;
 
       // Generate tracking key
       const identifier = this.getIdentifier(c);
-      const key = this.generateKey(identifier, path, endpointConfig);
+      const key = this.generateKey(c, identifier, path, endpointConfig);
 
       const now = Date.now();
 
@@ -251,7 +268,7 @@ export class RateLimitMiddleware {
   /**
    * Get current rate limit statistics (for monitoring)
    */
-  getStats(): {
+  getStats(c: Context): {
     totalKeys: number;
     memoryUsage: number;
     config: RateLimitConfig;
@@ -259,7 +276,7 @@ export class RateLimitMiddleware {
     return {
       totalKeys: Array.from(this.store.entries()).length,
       memoryUsage: JSON.stringify(Array.from(this.store.entries())).length,
-      config: this.config,
+      config: this.getConfig(c),
     };
   }
 

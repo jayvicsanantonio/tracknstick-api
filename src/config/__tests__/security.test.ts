@@ -66,6 +66,14 @@ describe('Security Configuration', () => {
 
       expect(result).toBe('production');
     });
+
+    it('should prioritize explicitly provided environment', () => {
+      (globalThis as any).ENVIRONMENT = 'production';
+
+      const result = detectEnvironment('development');
+
+      expect(result).toBe('development');
+    });
   });
 
   describe('getSecurityConfig', () => {
@@ -102,6 +110,13 @@ describe('Security Configuration', () => {
       expect(config.rateLimit.globalLimit).toBe(10000);
       expect(config.rateLimit.skipSuccessfulRequests).toBe(true);
       expect(config.headers.enableHsts).toBe(false);
+    });
+
+    it('should return config for explicitly provided environment', () => {
+      const config = getSecurityConfig('production');
+
+      expect(config.cors.origins).toEqual(['https://tracknstick.com']);
+      expect(config.headers.enableHsts).toBe(true);
     });
 
     it('should have different rate limits per environment', () => {

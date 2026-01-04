@@ -31,7 +31,7 @@ app.use('*', withRateLimitFailureHandling(createRateLimit()));
 app.use(
   '*',
   withFailureHandling('cors_middleware', async (c, next) => {
-    const config = getSecurityConfig();
+    const config = getSecurityConfig(c.env.ENVIRONMENT);
     return cors({
       origin: config.cors.origins,
       allowMethods: config.cors.methods,
@@ -46,7 +46,7 @@ app.use(
 app.use(
   '*',
   withFailureHandling('security_headers', async (c, next) => {
-    const config = getSecurityConfig();
+    const config = getSecurityConfig(c.env.ENVIRONMENT);
 
     // Apply environment-specific security headers
     if (config.headers.enableHsts) {

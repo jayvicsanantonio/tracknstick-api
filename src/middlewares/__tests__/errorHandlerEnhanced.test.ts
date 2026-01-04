@@ -42,7 +42,11 @@ const mockSecurityConfig = {
 let currentEnvironment = 'production';
 
 vi.mock('../../config/security.js', () => ({
-  getSecurityConfig: vi.fn(() => mockSecurityConfig[currentEnvironment]),
+  getSecurityConfig: vi.fn((env?: string) => {
+    const targetEnv = env || currentEnvironment;
+    return mockSecurityConfig[targetEnv] || mockSecurityConfig.production;
+  }),
+  detectEnvironment: vi.fn((env?: string) => env || currentEnvironment),
 }));
 
 // Mock logger
@@ -68,6 +72,7 @@ describe('errorHandlerEnhanced', () => {
         method: 'GET',
         header: vi.fn(),
       },
+      env: { ENVIRONMENT: currentEnvironment },
       get: vi.fn(),
       status: vi.fn(),
       json: vi.fn(),
@@ -77,6 +82,7 @@ describe('errorHandlerEnhanced', () => {
   describe('production environment behavior', () => {
     beforeEach(() => {
       currentEnvironment = 'production';
+      mockContext.env.ENVIRONMENT = 'production';
     });
 
     it('should hide error details in production', () => {
@@ -140,6 +146,7 @@ describe('errorHandlerEnhanced', () => {
   describe('development environment behavior', () => {
     beforeEach(() => {
       currentEnvironment = 'development';
+      mockContext.env.ENVIRONMENT = 'development';
     });
 
     it('should show detailed error messages in development', () => {
@@ -291,6 +298,7 @@ describe('errorHandlerEnhanced', () => {
 
     it('should show database errors in development', () => {
       currentEnvironment = 'development';
+      mockContext.env.ENVIRONMENT = 'development';
       const error = new Error(
         'SQLITE_CONSTRAINT: UNIQUE constraint failed: users.email'
       );
@@ -308,6 +316,7 @@ describe('errorHandlerEnhanced', () => {
   describe('security features', () => {
     it('should sanitize sensitive fields from error details', () => {
       currentEnvironment = 'development';
+      mockContext.env.ENVIRONMENT = 'development';
       const error = new ValidationError('Validation failed', {
         username: 'valid-user',
         password: 'should-be-hidden',

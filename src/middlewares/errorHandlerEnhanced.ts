@@ -135,7 +135,7 @@ function extractErrorContext(c: Context, error: Error): Record<string, any> {
  * Enhanced error handler with environment awareness
  */
 export const errorHandlerEnhanced = (err: Error, c: Context) => {
-  const errorConfig = getSecurityConfig().errorHandling;
+  const errorConfig = getSecurityConfig(c.env.ENVIRONMENT).errorHandling;
   const requestId = generateRequestId();
 
   // Extract error context for logging
