@@ -318,6 +318,10 @@ export async function getUserProgressHistory(
       WHERE t.user_id = ?
         AND DATE(h.start_date) <= DATE(t.timestamp)
         AND (h.end_date IS NULL OR DATE(h.end_date) > DATE(t.timestamp))
+        AND (
+          h.frequency LIKE '%' || SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', DATE(t.timestamp)), 3) || '%'
+          OR h.frequency = SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', DATE(t.timestamp)), 3)
+        )
       GROUP BY DATE(t.timestamp)
     )
     -- Join to calculate completion rate

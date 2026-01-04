@@ -12,17 +12,22 @@ import {
 
 export class AchievementService {
   private repository: AchievementRepository;
+  private db: D1Database;
 
   constructor(db: D1Database) {
+    this.db = db;
     this.repository = new AchievementRepository(db);
   }
 
   async getAllAchievementsForUser(
     userId: string
   ): Promise<AchievementResponse[]> {
-    const [allAchievements, userAchievements] = await Promise.all([
+    const [allAchievements, userAchievements, userStreaks] = await Promise.all([
       this.repository.getAllAchievements(),
       this.repository.getUserAchievements(userId),
+      import('../repositories/tracker.repository.js').then((m) =>
+        m.getUserStreaks(this.db, userId)
+      ),
     ]);
 
     const userAchievementMap = new Map(
@@ -51,7 +56,7 @@ export class AchievementService {
           earnedAt: userAchievement?.earnedAt,
           progress: isEarned
             ? undefined
-            : await this.calculateProgress(userId, achievement),
+            : await this.calculateProgress(userId, achievement, userStreaks),
         };
       })
     );
@@ -68,12 +73,21 @@ export class AchievementService {
       userAchievements.map((ua) => ua.achievementId)
     );
 
+    // Get user streaks for evaluation
+    const userStreaks = await import(
+      '../repositories/tracker.repository.js'
+    ).then((m) => m.getUserStreaks(this.db, userId));
+
     const newlyEarned: Achievement[] = [];
 
     for (const achievement of allAchievements) {
       if (earnedAchievementIds.has(achievement.id)) continue;
 
-      const hasEarned = await this.evaluateAchievement(userId, achievement);
+      const hasEarned = await this.evaluateAchievement(
+        userId,
+        achievement,
+        userStreaks
+      );
       if (hasEarned) {
         await this.repository.earnAchievement(userId, achievement.id);
         newlyEarned.push(achievement);
@@ -89,10 +103,17 @@ export class AchievementService {
 
   private async calculateProgress(
     userId: string,
-    achievement: Achievement
+    achievement: Achievement,
+    userStreaks?: { currentStreak: number; longestStreak: number }
   ): Promise<AchievementProgress> {
     const stats = await this.repository.getUserHabitStats(userId);
     let currentValue = 0;
+
+    if (!userStreaks) {
+      userStreaks = await import('../repositories/tracker.repository.js').then(
+        (m) => m.getUserStreaks(this.db, userId)
+      );
+    }
 
     switch (achievement.type) {
       case 'habit_creation':
@@ -104,7 +125,7 @@ export class AchievementService {
         break;
 
       case 'streak':
-        currentValue = stats.longestStreak;
+        currentValue = userStreaks?.longestStreak || 0;
         break;
 
       case 'milestone':
@@ -132,9 +153,16 @@ export class AchievementService {
 
   private async evaluateAchievement(
     userId: string,
-    achievement: Achievement
+    achievement: Achievement,
+    userStreaks?: { currentStreak: number; longestStreak: number }
   ): Promise<boolean> {
     const stats = await this.repository.getUserHabitStats(userId);
+
+    if (!userStreaks && achievement.type === 'streak') {
+      userStreaks = await import('../repositories/tracker.repository.js').then(
+        (m) => m.getUserStreaks(this.db, userId)
+      );
+    }
 
     switch (achievement.type) {
       case 'habit_creation':
@@ -144,7 +172,9 @@ export class AchievementService {
         return stats.totalCompletions >= achievement.requirementValue;
 
       case 'streak':
-        return stats.longestStreak >= achievement.requirementValue;
+        return (
+          (userStreaks?.longestStreak || 0) >= achievement.requirementValue
+        );
 
       case 'milestone':
         return await this.evaluateMilestone(userId, achievement, stats);
@@ -170,20 +200,14 @@ export class AchievementService {
         return stats.activeDays;
 
       case 'count':
-        if (requirementData.type === 'single_day_completions') {
-          // Would need additional query to check max completions in single day
-          return 0; // Placeholder
-        }
-        if (requirementData.type === 'notes_added') {
-          // Would need additional query to count tracker entries with notes
-          return 0; // Placeholder
-        }
+        // For simple counts we can't easily calculate progress without specific queries
+        // But for now we can return 0 if complicated
         return 0;
 
       case 'percentage':
         if (requirementData.type === 'completion_rate') {
-          // Would need additional calculation for completion rate
-          return 0; // Placeholder
+          // We could fetch history and calculate, but it's expensive.
+          return 0;
         }
         return 0;
     }
