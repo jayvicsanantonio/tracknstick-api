@@ -21,10 +21,7 @@ interface TrackerRow {
   updated_at: string;
 }
 
-export const getAllHabits = async (
-  userId: string,
-  db: D1Database
-) => {
+export const getAllHabits = async (userId: string, db: D1Database) => {
   try {
     const habits = await habitRepository.getAllHabits(db, userId);
 
@@ -45,11 +42,12 @@ export const getAllHabits = async (
       const startDate = new Date(habit.start_date);
       const endDate = habit.end_date ? new Date(habit.end_date) : null;
       const frequency = habit.frequency.split(',');
-      
+
       // Check if habit is active today
-      const isActiveToday = startDate <= today && (!endDate || endDate >= today);
+      const isActiveToday =
+        startDate <= today && (!endDate || endDate >= today);
       const isScheduledToday = frequency.includes(dayOfWeek);
-      
+
       return isActiveToday && isScheduledToday;
     });
 
@@ -151,8 +149,8 @@ export const getHabitsForDate = async (
         id: habit.id.toString(),
         name: habit.name,
         icon: habit.icon || undefined,
-        frequency: Array.isArray(habit.frequency) 
-          ? habit.frequency 
+        frequency: Array.isArray(habit.frequency)
+          ? habit.frequency
           : habit.frequency.split(','),
         startDate: habit.start_date,
         endDate: habit.end_date || undefined,
@@ -283,11 +281,15 @@ export const manageTracker = async (
   }
 
   // Import date utilities
-  const { safeDateParse, isValidTimeZone } = await import('../utils/dateUtils.js');
+  const { safeDateParse, isValidTimeZone } = await import(
+    '../utils/dateUtils.js'
+  );
 
   try {
-    console.log(`[SERVICE] Starting manageTracker: habit=${habitId}, timestamp=${timestamp}, timezone=${timeZone}`);
-    
+    console.log(
+      `[SERVICE] Starting manageTracker: habit=${habitId}, timestamp=${timestamp}, timezone=${timeZone}`
+    );
+
     // Validate inputs
     if (!isValidTimeZone(timeZone)) {
       throw new Error(`Invalid timezone: ${timeZone}`);
@@ -299,44 +301,67 @@ export const manageTracker = async (
 
     // Get habit data to determine frequency and streak info
     const habit = await habitRepository.getHabitById(db, userId, habitId);
-    console.log(`[SERVICE] Found habit: id=${habit.id}, name=${habit.name}, frequency=${habit.frequency}`);
+    console.log(
+      `[SERVICE] Found habit: id=${habit.id}, name=${habit.name}, frequency=${habit.frequency}`
+    );
 
-    // Import date utilities to get date in user's timezone
-    const { getDateInTimeZone } = await import('../utils/dateUtils.js');
-    const dateInTimezone = getDateInTimeZone(timestamp, timeZone);
-    console.log(`[SERVICE] Date in timezone: ${dateInTimezone}`);
-    
-    // Check for existing tracker on the same DATE (simplified - no soft-deletion)
+    // Import date utilities to get date range in user's timezone
+    const { getLocaleStartEnd } = await import('../utils/dateUtils.js');
+    const parsedTimestamp = new Date(timestamp);
+    const { localeStartISO, localeEndISO } = getLocaleStartEnd(
+      parsedTimestamp,
+      timeZone
+    );
+    console.log(
+      `[SERVICE] Day boundaries in user timezone: start=${localeStartISO}, end=${localeEndISO}`
+    );
+
+    // Check for existing tracker on the same DATE using UTC range comparison
+    // This properly handles user timezones by querying trackers within the day boundaries
     const existingDayTrackerQuery = `
       SELECT id, timestamp FROM trackers 
       WHERE habit_id = ? AND user_id = ? 
-      AND DATE(timestamp, 'localtime') = ?
+      AND timestamp >= ? AND timestamp <= ?
       ORDER BY timestamp DESC
       LIMIT 1
     `;
-    console.log(`[SERVICE] Checking for existing day tracker with query: ${existingDayTrackerQuery}`);
-    console.log(`[SERVICE] Query params: habitId=${habitId}, userId=${userId}, dateInTimezone=${dateInTimezone}`);
-    
+    console.log(
+      `[SERVICE] Checking for existing day tracker with UTC range query`
+    );
+    console.log(
+      `[SERVICE] Query params: habitId=${habitId}, userId=${userId}, start=${localeStartISO}, end=${localeEndISO}`
+    );
+
     const existingDayTracker = await db
       .prepare(existingDayTrackerQuery)
-      .bind(habitId, userId, dateInTimezone)
+      .bind(habitId, userId, localeStartISO, localeEndISO)
       .first<{ id: number; timestamp: string }>();
 
-    console.log(`[SERVICE] Existing day tracker result: ${JSON.stringify(existingDayTracker)}`);
+    console.log(
+      `[SERVICE] Existing day tracker result: ${JSON.stringify(existingDayTracker)}`
+    );
 
     if (existingDayTracker) {
-      console.log(`[SERVICE] Found existing tracker ${existingDayTracker.id}, deleting it`);
-      
+      console.log(
+        `[SERVICE] Found existing tracker ${existingDayTracker.id}, deleting it`
+      );
+
       // Tracker exists for this date - delete it to toggle off
       const deleteResult = await db
         .prepare('DELETE FROM trackers WHERE id = ?')
         .bind(existingDayTracker.id)
         .run();
-        
+
       console.log(`[SERVICE] Delete result: ${JSON.stringify(deleteResult)}`);
 
-      await updateHabitStreakInfo(db, userId, habitId, habit.frequency, timeZone);
-      
+      await updateHabitStreakInfo(
+        db,
+        userId,
+        habitId,
+        habit.frequency,
+        timeZone
+      );
+
       const response = {
         status: 'removed' as const,
         message: 'Habit marked as not completed',
@@ -351,29 +376,43 @@ export const manageTracker = async (
       WHERE habit_id = ? AND user_id = ? 
       AND timestamp = ?
     `;
-    console.log(`[SERVICE] Checking for exact timestamp match: ${exactTimestampQuery}`);
-    console.log(`[SERVICE] Query params: habitId=${habitId}, userId=${userId}, timestamp=${timestamp}`);
-    
+    console.log(
+      `[SERVICE] Checking for exact timestamp match: ${exactTimestampQuery}`
+    );
+    console.log(
+      `[SERVICE] Query params: habitId=${habitId}, userId=${userId}, timestamp=${timestamp}`
+    );
+
     const exactTimestampTracker = await db
       .prepare(exactTimestampQuery)
       .bind(habitId, userId, timestamp)
       .first<{ id: number }>();
 
-    console.log(`[SERVICE] Exact timestamp tracker result: ${JSON.stringify(exactTimestampTracker)}`);
+    console.log(
+      `[SERVICE] Exact timestamp tracker result: ${JSON.stringify(exactTimestampTracker)}`
+    );
 
     if (exactTimestampTracker) {
-      console.log(`[SERVICE] Found exact timestamp tracker ${exactTimestampTracker.id}, deleting it`);
-      
+      console.log(
+        `[SERVICE] Found exact timestamp tracker ${exactTimestampTracker.id}, deleting it`
+      );
+
       // Exact timestamp already exists - delete it (toggle off)
       const deleteResult = await db
         .prepare('DELETE FROM trackers WHERE id = ?')
         .bind(exactTimestampTracker.id)
         .run();
-        
+
       console.log(`[SERVICE] Delete result: ${JSON.stringify(deleteResult)}`);
 
-      await updateHabitStreakInfo(db, userId, habitId, habit.frequency, timeZone);
-      
+      await updateHabitStreakInfo(
+        db,
+        userId,
+        habitId,
+        habit.frequency,
+        timeZone
+      );
+
       const response = {
         status: 'removed' as const,
         message: 'Habit marked as not completed',
@@ -384,10 +423,14 @@ export const manageTracker = async (
 
     // No existing tracker - create new one
     console.log(`[SERVICE] No existing tracker found, creating new one`);
-    console.log(`[SERVICE] Insert params: habitId=${habitId}, userId=${userId}, timestamp=${timestamp}, notes=${notes || null}`);
-    
+    console.log(
+      `[SERVICE] Insert params: habitId=${habitId}, userId=${userId}, timestamp=${timestamp}, notes=${notes || null}`
+    );
+
     const insertResult = await db
-      .prepare('INSERT INTO trackers (habit_id, user_id, timestamp, notes) VALUES (?, ?, ?, ?)')
+      .prepare(
+        'INSERT INTO trackers (habit_id, user_id, timestamp, notes) VALUES (?, ?, ?, ?)'
+      )
       .bind(habitId, userId, timestamp, notes || null)
       .run();
 
@@ -448,23 +491,31 @@ async function updateHabitStreakInfo(
     }
 
     // Get frequency as array
-    const frequencyDays = Array.isArray(frequency) 
-      ? frequency 
+    const frequencyDays = Array.isArray(frequency)
+      ? frequency
       : frequency.split(',');
 
     // Import timezone utilities
-    const { 
-      calculateCurrentStreak, 
+    const {
+      calculateCurrentStreak,
       calculateLongestStreakFromTrackers,
-      getMostRecentCompletionDate 
+      getMostRecentCompletionDate,
     } = await import('../utils/streakUtils.js');
 
     // Calculate timezone-aware streaks
-    const currentStreak = calculateCurrentStreak(trackers, frequencyDays, timeZone);
-    const historicalLongestStreak = calculateLongestStreakFromTrackers(trackers, frequencyDays, timeZone);
+    const currentStreak = calculateCurrentStreak(
+      trackers,
+      frequencyDays,
+      timeZone
+    );
+    const historicalLongestStreak = calculateLongestStreakFromTrackers(
+      trackers,
+      frequencyDays,
+      timeZone
+    );
     const longestStreak = Math.max(currentStreak, historicalLongestStreak);
     const lastCompleted = getMostRecentCompletionDate(trackers, timeZone);
-    
+
     // Count only active (non-deleted) trackers for total completions
     const totalCompletions = trackers.length;
 
