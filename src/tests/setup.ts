@@ -5,22 +5,21 @@ import { D1Database } from '@cloudflare/workers-types';
 /**
  * Creates a mock D1 database for testing
  */
-export function createMockD1Database(): D1Database {
-  const mockResults = {
-    results: [],
-    success: true,
-    meta: { changes: 0, last_row_id: 0 },
-  };
-
+export function createMockD1Database(mockResults: any): D1Database {
+  // Create a more robust mock DB
   const mockD1 = {
     prepare: vi.fn().mockReturnValue({
       bind: vi.fn().mockReturnThis(),
-      first: vi.fn().mockResolvedValue(null),
-      all: vi.fn().mockResolvedValue(mockResults),
+      first: vi
+        .fn()
+        .mockImplementation(async () => mockResults.results[0] || null),
       run: vi.fn().mockResolvedValue(mockResults),
+      all: vi.fn().mockResolvedValue(mockResults),
     }),
-    batch: vi.fn().mockResolvedValue([]),
-    exec: vi.fn().mockResolvedValue({ results: [] }),
+    batch: vi.fn().mockImplementation(async (statements) => {
+      return statements.map(() => mockResults);
+    }),
+    // exec is intentionally omitted to test for missing methods or to be added as needed
   } as unknown as D1Database;
 
   return mockD1;
@@ -30,12 +29,19 @@ export function createMockD1Database(): D1Database {
  * Creates a test environment with a mock Cloudflare Workers context
  */
 export function createTestEnv() {
-  const mockDb = createMockD1Database();
+  const mockResults = {
+    results: [],
+    success: true,
+    meta: { changes: 1, last_row_id: 1 },
+  };
+
+  const mockDb = createMockD1Database(mockResults);
 
   // Mock Cloudflare environment bindings
   const env = {
     ENVIRONMENT: 'test',
     CLERK_SECRET_KEY: 'test-clerk-key',
+    CLERK_PUBLISHABLE_KEY: 'test-clerk-publishable-key',
     DB: mockDb,
   };
 
@@ -45,27 +51,57 @@ export function createTestEnv() {
     app,
     env,
     mockDb,
-    mockResults: {
-      results: [],
-      success: true,
-      meta: { changes: 0, last_row_id: 0 },
-    },
+    mockResults,
   };
 }
+
+// Mock Clerk state - must be prefixed with 'mock' for Vitest
+const mockClerkState = {
+  userId: 'test-user-123',
+  isAuthenticated: true,
+};
+
+// Mock the Clerk SDK verification at the top level
+vi.mock('@clerk/backend', () => {
+  return {
+    createClerkClient: () => ({
+      authenticateRequest: async (req: Request) => {
+        const authHeader = req.headers.get('Authorization');
+        const isActuallyAuthenticated =
+          mockClerkState.isAuthenticated &&
+          !!authHeader &&
+          authHeader.startsWith('Bearer ') &&
+          !authHeader.toLowerCase().includes('invalid');
+
+        return {
+          isAuthenticated: isActuallyAuthenticated,
+          reason: isActuallyAuthenticated ? undefined : 'test-reason',
+          toAuth: () => ({
+            userId: mockClerkState.userId,
+            sessionId: 'test-session',
+            sessionClaims: {
+              iss: 'https://clerk.test',
+              aud: 'test-app',
+              exp: Math.floor(Date.now() / 1000) + 3600,
+              iat: Math.floor(Date.now() / 1000),
+              nbf: Math.floor(Date.now() / 1000),
+            },
+          }),
+        };
+      },
+    }),
+  };
+});
 
 /**
  * Mocks authentication to bypass Clerk verification
  */
-export function mockAuthentication(userId = 'test-user-123') {
-  // Mock the Clerk SDK verification
-  vi.mock('@clerk/backend', () => ({
-    ClerkClient: {
-      verifyToken: vi.fn().mockImplementation(() => ({
-        sub: userId,
-        sid: 'test-session',
-      })),
-    },
-  }));
+export function mockAuthentication(
+  userId = 'test-user-123',
+  authenticated = true
+) {
+  mockClerkState.userId = userId;
+  mockClerkState.isAuthenticated = authenticated;
 }
 
 /**

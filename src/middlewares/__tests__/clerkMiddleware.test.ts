@@ -33,7 +33,7 @@ describe('clerkMiddleware', () => {
     vi.clearAllMocks();
     mockNext = vi.fn();
     middleware = clerkMiddleware();
-    
+
     // Set up mock context
     mockContext = {
       req: {
@@ -41,7 +41,7 @@ describe('clerkMiddleware', () => {
         path: '/api/test',
         method: 'GET',
         raw: new Request('https://example.com/api/test', {
-          headers: { 'Authorization': 'Bearer valid.token' }
+          headers: { Authorization: 'Bearer valid.token' },
         }),
       },
       set: vi.fn(),
@@ -66,7 +66,7 @@ describe('clerkMiddleware', () => {
       };
 
       const mockRequestState = {
-        isSignedIn: true,
+        isAuthenticated: true,
         toAuth: () => mockAuth,
       };
 
@@ -78,19 +78,22 @@ describe('clerkMiddleware', () => {
         mockContext.req.raw,
         { authorizedParties: [] }
       );
-      
-      expect(mockContext.set).toHaveBeenCalledWith('auth', expect.objectContaining({
-        userId: 'user_123',
-        sessionId: 'session_456',
-        claims: expect.objectContaining({
-          iss: 'https://clerk.dev',
-          aud: 'test-audience',
-        }),
-        metadata: expect.objectContaining({
-          requestId: expect.stringMatching(/^req_\d+_/),
-        }),
-      }));
-      
+
+      expect(mockContext.set).toHaveBeenCalledWith(
+        'auth',
+        expect.objectContaining({
+          userId: 'user_123',
+          sessionId: 'session_456',
+          claims: expect.objectContaining({
+            iss: 'https://clerk.dev',
+            aud: 'test-audience',
+          }),
+          metadata: expect.objectContaining({
+            requestId: expect.stringMatching(/^req_\d+_/),
+          }),
+        })
+      );
+
       expect(mockContext.set).toHaveBeenCalledWith('userId', 'user_123');
       expect(mockNext).toHaveBeenCalled();
     });
@@ -108,7 +111,7 @@ describe('clerkMiddleware', () => {
       };
 
       const mockRequestState = {
-        isSignedIn: true,
+        isAuthenticated: true,
         toAuth: () => mockAuth,
       };
 
@@ -116,33 +119,42 @@ describe('clerkMiddleware', () => {
 
       await middleware(mockContext, mockNext);
 
-      expect(mockContext.set).toHaveBeenCalledWith('auth', expect.objectContaining({
-        userId: 'user_123',
-        sessionId: '',
-      }));
+      expect(mockContext.set).toHaveBeenCalledWith(
+        'auth',
+        expect.objectContaining({
+          userId: 'user_123',
+          sessionId: '',
+        })
+      );
     });
   });
 
   describe('authentication failures', () => {
     it('should reject request when user is not signed in', async () => {
       const mockRequestState = {
-        isSignedIn: false,
+        isAuthenticated: false,
         reason: 'invalid-token',
       };
 
       mockClerkClient.authenticateRequest.mockResolvedValue(mockRequestState);
 
-      await expect(middleware(mockContext, mockNext)).rejects.toThrow(UnauthorizedError);
-      await expect(middleware(mockContext, mockNext)).rejects.toThrow('Authentication required');
-      
+      await expect(middleware(mockContext, mockNext)).rejects.toThrow(
+        UnauthorizedError
+      );
+      await expect(middleware(mockContext, mockNext)).rejects.toThrow(
+        'Authentication required'
+      );
+
       expect(mockNext).not.toHaveBeenCalled();
     });
 
     it('should reject request when Clerk secret key is missing', async () => {
       mockContext.env.CLERK_SECRET_KEY = undefined;
 
-      await expect(middleware(mockContext, mockNext)).rejects.toThrow('Service configuration error');
-      
+      await expect(middleware(mockContext, mockNext)).rejects.toThrow(
+        'Service configuration error'
+      );
+
       expect(mockNext).not.toHaveBeenCalled();
     });
 
@@ -155,15 +167,19 @@ describe('clerkMiddleware', () => {
       };
 
       const mockRequestState = {
-        isSignedIn: true,
+        isAuthenticated: true,
         toAuth: () => mockAuth,
       };
 
       mockClerkClient.authenticateRequest.mockResolvedValue(mockRequestState);
 
-      await expect(middleware(mockContext, mockNext)).rejects.toThrow(UnauthorizedError);
-      await expect(middleware(mockContext, mockNext)).rejects.toThrow('Authentication required');
-      
+      await expect(middleware(mockContext, mockNext)).rejects.toThrow(
+        UnauthorizedError
+      );
+      await expect(middleware(mockContext, mockNext)).rejects.toThrow(
+        'Authentication required'
+      );
+
       expect(mockNext).not.toHaveBeenCalled();
     });
 
@@ -171,9 +187,13 @@ describe('clerkMiddleware', () => {
       const authError = new Error('Token signature verification failed');
       mockClerkClient.authenticateRequest.mockRejectedValue(authError);
 
-      await expect(middleware(mockContext, mockNext)).rejects.toThrow(UnauthorizedError);
-      await expect(middleware(mockContext, mockNext)).rejects.toThrow('Authentication required');
-      
+      await expect(middleware(mockContext, mockNext)).rejects.toThrow(
+        UnauthorizedError
+      );
+      await expect(middleware(mockContext, mockNext)).rejects.toThrow(
+        'Authentication required'
+      );
+
       expect(mockNext).not.toHaveBeenCalled();
     });
   });
@@ -183,17 +203,21 @@ describe('clerkMiddleware', () => {
       const unexpectedError = new Error('Database connection failed');
       mockClerkClient.authenticateRequest.mockRejectedValue(unexpectedError);
 
-      await expect(middleware(mockContext, mockNext)).rejects.toThrow(UnauthorizedError);
-      await expect(middleware(mockContext, mockNext)).rejects.toThrow('Authentication required');
-      
+      await expect(middleware(mockContext, mockNext)).rejects.toThrow(
+        UnauthorizedError
+      );
+      await expect(middleware(mockContext, mockNext)).rejects.toThrow(
+        'Authentication required'
+      );
+
       expect(mockNext).not.toHaveBeenCalled();
     });
 
     it('should propagate UnauthorizedError instances without wrapping', async () => {
       mockContext.env.CLERK_SECRET_KEY = undefined;
-      
-      const error = await middleware(mockContext, mockNext).catch(e => e);
-      
+
+      const error = await middleware(mockContext, mockNext).catch((e) => e);
+
       expect(error.message).toBe('Service configuration error');
     });
   });
@@ -211,7 +235,7 @@ describe('clerkMiddleware', () => {
       };
 
       const mockRequestState = {
-        isSignedIn: true,
+        isAuthenticated: true,
         toAuth: () => mockAuth,
       };
 
@@ -219,11 +243,14 @@ describe('clerkMiddleware', () => {
 
       await middleware(mockContext, mockNext);
 
-      expect(mockContext.set).toHaveBeenCalledWith('auth', expect.objectContaining({
-        metadata: expect.objectContaining({
-          ipAddress: '192.168.1.1',
-        }),
-      }));
+      expect(mockContext.set).toHaveBeenCalledWith(
+        'auth',
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            ipAddress: '192.168.1.1',
+          }),
+        })
+      );
     });
 
     it('should fall back to X-Forwarded-For when CF-Connecting-IP is missing', async () => {
@@ -238,7 +265,7 @@ describe('clerkMiddleware', () => {
       };
 
       const mockRequestState = {
-        isSignedIn: true,
+        isAuthenticated: true,
         toAuth: () => mockAuth,
       };
 
@@ -246,11 +273,14 @@ describe('clerkMiddleware', () => {
 
       await middleware(mockContext, mockNext);
 
-      expect(mockContext.set).toHaveBeenCalledWith('auth', expect.objectContaining({
-        metadata: expect.objectContaining({
-          ipAddress: '10.0.0.1',
-        }),
-      }));
+      expect(mockContext.set).toHaveBeenCalledWith(
+        'auth',
+        expect.objectContaining({
+          metadata: expect.objectContaining({
+            ipAddress: '10.0.0.1',
+          }),
+        })
+      );
     });
   });
 });

@@ -3,7 +3,11 @@
 
 import { Context, MiddlewareHandler, Next } from 'hono';
 import { RateLimitError } from '../utils/errors.js';
-import { getSecurityConfig, type RateLimitConfig, type EndpointLimit } from '../config/security.js';
+import {
+  getSecurityConfig,
+  type RateLimitConfig,
+  type EndpointLimit,
+} from '../config/security.js';
 import logger from '../utils/logger.js';
 
 interface RateLimitEntry {
@@ -21,7 +25,7 @@ interface RateLimitStore {
 
 /**
  * Production-grade rate limiting middleware with configurable policies
- * 
+ *
  * Features:
  * - Environment-aware configuration
  * - Sliding window implementation
@@ -98,12 +102,18 @@ export class RateLimitMiddleware {
   /**
    * Generate rate limit key for tracking
    */
-  private generateKey(identifier: string, path: string, endpointConfig: EndpointLimit | null): string {
+  private generateKey(
+    identifier: string,
+    path: string,
+    endpointConfig: EndpointLimit | null
+  ): string {
     // Use endpoint-specific path grouping if configured
     if (endpointConfig) {
       // Group by endpoint pattern for specific limits
-      const endpointPattern = Object.keys(this.config.endpointLimits)
-        .find(pattern => path.startsWith(pattern)) || path;
+      const endpointPattern =
+        Object.keys(this.config.endpointLimits).find((pattern) =>
+          path.startsWith(pattern)
+        ) || path;
       return `${identifier}:${endpointPattern}`;
     }
 
@@ -123,16 +133,20 @@ export class RateLimitMiddleware {
     }
 
     // Fall back to IP address
-    const ip = c.req.header('CF-Connecting-IP') || 
-               c.req.header('X-Forwarded-For') || 
-               'unknown';
+    const ip =
+      c.req.header('CF-Connecting-IP') ||
+      c.req.header('X-Forwarded-For') ||
+      'unknown';
     return `ip:${ip}`;
   }
 
   /**
    * Check if request should skip rate limiting
    */
-  private shouldSkip(path: string, endpointConfig: EndpointLimit | null): boolean {
+  private shouldSkip(
+    path: string,
+    endpointConfig: EndpointLimit | null
+  ): boolean {
     if (endpointConfig?.skipIf) {
       return endpointConfig.skipIf(path);
     }
@@ -146,15 +160,15 @@ export class RateLimitMiddleware {
     return async (c: Context, next: Next) => {
       const path = c.req.path;
       const method = c.req.method;
-      
+
       // Do periodic cleanup on-demand (every ~100 requests to avoid overhead)
       if (Math.random() < 0.01) {
         this.cleanup();
       }
-      
+
       // Get endpoint-specific configuration
       const endpointConfig = this.getEndpointConfig(path);
-      
+
       // Check if this request should skip rate limiting
       if (this.shouldSkip(path, endpointConfig)) {
         await next();
@@ -194,7 +208,10 @@ export class RateLimitMiddleware {
 
       // Set rate limit headers (RFC 6585 compliant)
       c.header('X-RateLimit-Limit', limit.toString());
-      c.header('X-RateLimit-Remaining', Math.max(0, limit - entry.count).toString());
+      c.header(
+        'X-RateLimit-Remaining',
+        Math.max(0, limit - entry.count).toString()
+      );
       c.header('X-RateLimit-Reset', Math.ceil(entry.resetAt / 1000).toString());
       c.header('X-RateLimit-Window', Math.ceil(windowMs / 1000).toString());
 

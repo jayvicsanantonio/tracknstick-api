@@ -5,9 +5,18 @@ import { createTestEnv, resetMocks } from '../setup.js';
 import { healthRoutes } from '../../routes/health.js';
 
 describe('Health API Integration', () => {
-  const { app, env, mockDb, mockResults } = createTestEnv();
+  let app: any;
+  let env: any;
+  let mockDb: any;
+  let mockResults: any;
 
   beforeEach(() => {
+    const testEnv = createTestEnv();
+    app = testEnv.app;
+    env = testEnv.env;
+    mockDb = testEnv.mockDb;
+    mockResults = testEnv.mockResults;
+
     resetMocks();
 
     // Configure the app with environment and routes
@@ -17,7 +26,7 @@ describe('Health API Integration', () => {
     });
 
     // Add health routes
-    app.route('/', healthRoutes);
+    app.route('/health', healthRoutes);
   });
 
   afterEach(() => {

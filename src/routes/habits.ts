@@ -1,7 +1,10 @@
 import { Hono } from 'hono';
 import { clerkMiddleware } from '../middlewares/clerkMiddleware.js';
 import { validateRequest } from '../middlewares/validateRequest.js';
-import { withClerkFailureHandling, withValidationFailureHandling } from '../middlewares/middlewareFailureHandler.js';
+import {
+  withClerkFailureHandling,
+  withValidationFailureHandling,
+} from '../middlewares/middlewareFailureHandler.js';
 import * as habitValidator from '../validators/habit.validator.js';
 import * as habitController from '../controllers/habit.controller.js';
 

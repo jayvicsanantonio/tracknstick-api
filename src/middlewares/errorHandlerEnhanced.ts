@@ -67,15 +67,18 @@ function sanitizeErrorDetails(details: any, showDetails: boolean): any {
   }
 
   if (Array.isArray(details)) {
-    return details.map(item => sanitizeErrorDetails(item, showDetails));
+    return details.map((item) => sanitizeErrorDetails(item, showDetails));
   }
 
   if (details && typeof details === 'object') {
     const sanitized: any = {};
     for (const [key, value] of Object.entries(details)) {
       // Skip sensitive fields that might leak information
-      if (['password', 'token', 'secret', 'key', 'auth'].some(sensitive => 
-        key.toLowerCase().includes(sensitive))) {
+      if (
+        ['password', 'token', 'secret', 'key', 'auth'].some((sensitive) =>
+          key.toLowerCase().includes(sensitive)
+        )
+      ) {
         continue;
       }
 
@@ -94,7 +97,11 @@ function sanitizeErrorDetails(details: any, showDetails: boolean): any {
 /**
  * Format error message for environment
  */
-function formatErrorMessage(error: Error, showDetails: boolean, fallbackMessage: string): string {
+function formatErrorMessage(
+  error: Error,
+  showDetails: boolean,
+  fallbackMessage: string
+): string {
   if (!showDetails) {
     // In production, use generic messages for unknown errors
     return fallbackMessage;
@@ -109,14 +116,15 @@ function formatErrorMessage(error: Error, showDetails: boolean, fallbackMessage:
  */
 function extractErrorContext(c: Context, error: Error): Record<string, any> {
   const auth = c.get('auth');
-  
+
   return {
     path: c.req.path,
     method: c.req.method,
     userId: auth?.userId,
     requestId: auth?.metadata?.requestId,
     userAgent: c.req.header('User-Agent'),
-    ipAddress: c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For'),
+    ipAddress:
+      c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For'),
     errorType: error.constructor.name,
     errorMessage: error.message,
     timestamp: new Date().toISOString(),
@@ -129,7 +137,7 @@ function extractErrorContext(c: Context, error: Error): Record<string, any> {
 export const errorHandlerEnhanced = (err: Error, c: Context) => {
   const errorConfig = getSecurityConfig().errorHandling;
   const requestId = generateRequestId();
-  
+
   // Extract error context for logging
   const errorContext = extractErrorContext(c, err);
   errorContext.requestId = requestId;
@@ -153,7 +161,11 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
   if (err instanceof HTTPException) {
     const response: ErrorResponse = {
       error: {
-        message: formatErrorMessage(err, errorConfig.showErrorDetails, 'Request failed'),
+        message: formatErrorMessage(
+          err,
+          errorConfig.showErrorDetails,
+          'Request failed'
+        ),
         code: getErrorCodeFromStatus(err.status),
         requestId,
         timestamp: new Date().toISOString(),
@@ -161,7 +173,10 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
     };
 
     if (errorConfig.showErrorDetails && err.cause) {
-      response.error.details = sanitizeErrorDetails(err.cause, errorConfig.showErrorDetails);
+      response.error.details = sanitizeErrorDetails(
+        err.cause,
+        errorConfig.showErrorDetails
+      );
     }
 
     c.status(err.status);
@@ -172,7 +187,11 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
   if (err instanceof NotFoundError) {
     const response: ErrorResponse = {
       error: {
-        message: formatErrorMessage(err, errorConfig.showErrorDetails, 'Resource not found'),
+        message: formatErrorMessage(
+          err,
+          errorConfig.showErrorDetails,
+          'Resource not found'
+        ),
         code: 'not_found',
         requestId,
         timestamp: new Date().toISOString(),
@@ -187,7 +206,11 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
   if (err instanceof ValidationError) {
     const response: ErrorResponse = {
       error: {
-        message: formatErrorMessage(err, errorConfig.showErrorDetails, 'Invalid request data'),
+        message: formatErrorMessage(
+          err,
+          errorConfig.showErrorDetails,
+          'Invalid request data'
+        ),
         code: 'validation_error',
         requestId,
         timestamp: new Date().toISOString(),
@@ -195,7 +218,10 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
     };
 
     if (errorConfig.showErrorDetails && err.details) {
-      response.error.details = sanitizeErrorDetails(err.details, errorConfig.showErrorDetails);
+      response.error.details = sanitizeErrorDetails(
+        err.details,
+        errorConfig.showErrorDetails
+      );
     }
 
     c.status(StatusCodes.BAD_REQUEST);
@@ -221,7 +247,11 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
   if (err instanceof ForbiddenError) {
     const response: ErrorResponse = {
       error: {
-        message: formatErrorMessage(err, errorConfig.showErrorDetails, 'Access denied'),
+        message: formatErrorMessage(
+          err,
+          errorConfig.showErrorDetails,
+          'Access denied'
+        ),
         code: 'forbidden',
         requestId,
         timestamp: new Date().toISOString(),
@@ -251,7 +281,11 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
   if (err instanceof BaseError) {
     const response: ErrorResponse = {
       error: {
-        message: formatErrorMessage(err, errorConfig.showErrorDetails, 'Request failed'),
+        message: formatErrorMessage(
+          err,
+          errorConfig.showErrorDetails,
+          'Request failed'
+        ),
         code: err.code || 'internal_server_error',
         requestId,
         timestamp: new Date().toISOString(),
@@ -259,7 +293,10 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
     };
 
     if (errorConfig.showErrorDetails && err.details) {
-      response.error.details = sanitizeErrorDetails(err.details, errorConfig.showErrorDetails);
+      response.error.details = sanitizeErrorDetails(
+        err.details,
+        errorConfig.showErrorDetails
+      );
     }
 
     c.status((err.statusCode as any) || 500);
@@ -275,9 +312,9 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
 
     const response: ErrorResponse = {
       error: {
-        message: errorConfig.showErrorDetails ? 
-          `Database error: ${err.message}` : 
-          'Internal server error',
+        message: errorConfig.showErrorDetails
+          ? `Database error: ${err.message}`
+          : 'Internal server error',
         code: 'database_error',
         requestId,
         timestamp: new Date().toISOString(),
@@ -296,9 +333,9 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
 
   const response: ErrorResponse = {
     error: {
-      message: errorConfig.showErrorDetails ? 
-        err.message || 'Unknown error occurred' : 
-        'Internal server error',
+      message: errorConfig.showErrorDetails
+        ? err.message || 'Unknown error occurred'
+        : 'Internal server error',
       code: 'internal_server_error',
       requestId,
       timestamp: new Date().toISOString(),

@@ -9,7 +9,8 @@ export class AchievementRepository {
 
   async getAllAchievements(): Promise<Achievement[]> {
     const results = await this.db
-      .prepare(`
+      .prepare(
+        `
         SELECT 
           id, key, name, description, icon, type, category,
           requirement_type as requirementType,
@@ -20,9 +21,10 @@ export class AchievementRepository {
         FROM achievements 
         WHERE is_active = 1
         ORDER BY category, type, requirement_value
-      `)
+      `
+      )
       .all();
-    
+
     return results.results.map((row: any) => ({
       id: row.id as number,
       key: row.key as string,
@@ -41,7 +43,8 @@ export class AchievementRepository {
 
   async getUserAchievements(userId: string): Promise<UserAchievement[]> {
     const results = await this.db
-      .prepare(`
+      .prepare(
+        `
         SELECT 
           ua.id, ua.user_id as userId, ua.achievement_id as achievementId,
           ua.earned_at as earnedAt, ua.progress_data as progressData,
@@ -55,11 +58,12 @@ export class AchievementRepository {
         JOIN achievements a ON ua.achievement_id = a.id
         WHERE ua.user_id = ? AND a.is_active = 1
         ORDER BY ua.earned_at DESC
-      `)
+      `
+      )
       .bind(userId)
       .all();
-    
-    return results.results.map(row => ({
+
+    return results.results.map((row) => ({
       id: row.id as number,
       userId: row.userId as string,
       achievementId: row.achievementId as number,
@@ -78,43 +82,60 @@ export class AchievementRepository {
         requirementData: row.requirementData as string,
         isActive: Boolean(row.isActive),
         createdAt: row.createdAt as string,
-      }
+      },
     }));
   }
 
-  async earnAchievement(userId: string, achievementId: number, progressData?: any): Promise<void> {
+  async earnAchievement(
+    userId: string,
+    achievementId: number,
+    progressData?: any
+  ): Promise<void> {
     await this.db
-      .prepare(`
+      .prepare(
+        `
         INSERT INTO user_achievements (user_id, achievement_id, progress_data)
         VALUES (?, ?, ?)
         ON CONFLICT(user_id, achievement_id) DO NOTHING
-      `)
-      .bind(userId, achievementId, progressData ? JSON.stringify(progressData) : null)
+      `
+      )
+      .bind(
+        userId,
+        achievementId,
+        progressData ? JSON.stringify(progressData) : null
+      )
       .run();
   }
 
-  async hasUserEarnedAchievement(userId: string, achievementId: number): Promise<boolean> {
+  async hasUserEarnedAchievement(
+    userId: string,
+    achievementId: number
+  ): Promise<boolean> {
     const result = await this.db
-      .prepare(`
+      .prepare(
+        `
         SELECT 1 FROM user_achievements 
         WHERE user_id = ? AND achievement_id = ?
-      `)
+      `
+      )
       .bind(userId, achievementId)
       .first();
-    
+
     return !!result;
   }
 
   async initializeAchievements(): Promise<void> {
     const achievements = this.getDefaultAchievements();
-    
+
     for (const achievement of achievements) {
       await this.db
-        .prepare(`
+        .prepare(
+          `
           INSERT OR REPLACE INTO achievements 
           (key, name, description, icon, type, category, requirement_type, requirement_value, requirement_data, is_active)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `)
+        `
+        )
         .bind(
           achievement.key,
           achievement.name,
@@ -141,41 +162,52 @@ export class AchievementRepository {
   }> {
     // Get total habits created
     const habitCountResult = await this.db
-      .prepare(`SELECT COUNT(*) as count FROM habits WHERE user_id = ? AND deleted_at IS NULL`)
+      .prepare(
+        `SELECT COUNT(*) as count FROM habits WHERE user_id = ? AND deleted_at IS NULL`
+      )
       .bind(userId)
       .first();
-    
+
     // Get total completions
     const completionsResult = await this.db
-      .prepare(`SELECT COUNT(*) as count FROM trackers WHERE user_id = ? AND deleted_at IS NULL`)
+      .prepare(
+        `SELECT COUNT(*) as count FROM trackers WHERE user_id = ? AND deleted_at IS NULL`
+      )
       .bind(userId)
       .first();
-    
+
     // Get longest streak across all habits
     const longestStreakResult = await this.db
-      .prepare(`SELECT MAX(longest_streak) as maxStreak FROM habits WHERE user_id = ? AND deleted_at IS NULL`)
+      .prepare(
+        `SELECT MAX(longest_streak) as maxStreak FROM habits WHERE user_id = ? AND deleted_at IS NULL`
+      )
       .bind(userId)
       .first();
-    
+
     // Get current streaks
     const currentStreaksResult = await this.db
-      .prepare(`SELECT streak FROM habits WHERE user_id = ? AND deleted_at IS NULL AND streak > 0`)
+      .prepare(
+        `SELECT streak FROM habits WHERE user_id = ? AND deleted_at IS NULL AND streak > 0`
+      )
       .bind(userId)
       .all();
-    
+
     // Get active days (days with at least one completion)
     const activeDaysResult = await this.db
-      .prepare(`
+      .prepare(
+        `
         SELECT COUNT(DISTINCT DATE(timestamp)) as count 
         FROM trackers 
         WHERE user_id = ? AND deleted_at IS NULL
-      `)
+      `
+      )
       .bind(userId)
       .first();
-    
+
     // Get perfect days (days where user completed all active habits)
     const perfectDaysQuery = await this.db
-      .prepare(`
+      .prepare(
+        `
         WITH daily_stats AS (
           SELECT 
             DATE(t.timestamp) as date,
@@ -189,7 +221,8 @@ export class AchievementRepository {
           GROUP BY DATE(t.timestamp)
         )
         SELECT COUNT(*) as count FROM daily_stats WHERE completions = active_habits
-      `)
+      `
+      )
       .bind(userId)
       .first();
 
@@ -197,7 +230,9 @@ export class AchievementRepository {
       totalHabits: (habitCountResult?.count as number) || 0,
       totalCompletions: (completionsResult?.count as number) || 0,
       longestStreak: (longestStreakResult?.maxStreak as number) || 0,
-      currentStreaks: currentStreaksResult.results.map(row => row.streak as number),
+      currentStreaks: currentStreaksResult.results.map(
+        (row) => row.streak as number
+      ),
       activeDays: (activeDaysResult?.count as number) || 0,
       perfectDays: (perfectDaysQuery?.count as number) || 0,
     };
@@ -488,7 +523,7 @@ export class AchievementRepository {
         isActive: true,
       },
 
-      // Milestones Category  
+      // Milestones Category
       {
         key: 'ten_habits',
         name: 'Habit Enthusiast',
@@ -643,7 +678,8 @@ export class AchievementRepository {
       {
         key: 'habit_architect_advanced',
         name: 'Habit Architect',
-        description: 'Create, complete, and maintain habits across all frequency types',
+        description:
+          'Create, complete, and maintain habits across all frequency types',
         icon: 'Building',
         type: 'special_achievement',
         category: 'milestones',
@@ -666,7 +702,8 @@ export class AchievementRepository {
       {
         key: 'habit_guru',
         name: 'Habit Guru',
-        description: 'Achieve 90% completion rate across all habits for 30 days',
+        description:
+          'Achieve 90% completion rate across all habits for 30 days',
         icon: 'User',
         type: 'special_achievement',
         category: 'milestones',
@@ -710,7 +747,7 @@ export class AchievementRepository {
         requirementValue: 40, // Less than total since this is one of them
         requirementData: '{"type": "achievement_count"}',
         isActive: true,
-      }
+      },
     ];
   }
 }

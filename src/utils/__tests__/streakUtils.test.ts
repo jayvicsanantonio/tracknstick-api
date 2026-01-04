@@ -13,17 +13,26 @@ describe('streakUtils', () => {
   let trackers: { timestamp: string }[];
 
   beforeEach(() => {
-    // Mock fixed date for testing (2023-06-15)
-    today = new Date('2023-06-15T12:00:00Z');
-    yesterday = new Date('2023-06-14T12:00:00Z');
-    twoDaysAgo = new Date('2023-06-13T12:00:00Z');
-    threeDaysAgo = new Date('2023-06-12T12:00:00Z');
+    // Mock date for testing relative to "now"
+    const now = new Date();
+    today = new Date(now);
 
+    // Create past dates
+    yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+
+    twoDaysAgo = new Date(now);
+    twoDaysAgo.setDate(now.getDate() - 2);
+
+    threeDaysAgo = new Date(now);
+    threeDaysAgo.setDate(now.getDate() - 3);
+
+    // Ensure timestamps are ISO strings
     trackers = [
-      { timestamp: today.toISOString() }, // June 15
-      { timestamp: yesterday.toISOString() }, // June 14
-      { timestamp: twoDaysAgo.toISOString() }, // June 13
-      { timestamp: threeDaysAgo.toISOString() }, // June 12
+      { timestamp: today.toISOString() },
+      { timestamp: yesterday.toISOString() },
+      { timestamp: twoDaysAgo.toISOString() },
+      { timestamp: threeDaysAgo.toISOString() },
     ];
   });
 
@@ -47,15 +56,19 @@ describe('streakUtils', () => {
     });
 
     it('should calculate streak based on frequency', () => {
-      // In 2023, June 12 was a Monday, June 13 Tuesday, June 14 Wednesday, June 15 Thursday
-      const mondayWednesdayFrequency = ['Mon', 'Wed'];
+      // Create frequency for "yesterday" and "three days ago"
+      const dayFormatter = new Intl.DateTimeFormat('en-US', {
+        timeZone,
+        weekday: 'short',
+      });
 
-      // Should count Monday (12th) and Wednesday (14th) as part of streak = 2
-      const result = calculateCurrentStreak(
-        trackers,
-        mondayWednesdayFrequency,
-        timeZone
-      );
+      const frequencyDays = [
+        dayFormatter.format(threeDaysAgo),
+        dayFormatter.format(yesterday),
+      ];
+
+      // Should count "three days ago" and "yesterday" as part of streak = 2
+      const result = calculateCurrentStreak(trackers, frequencyDays, timeZone);
 
       // Streak should be 2 because out of the last 4 days, only 2 were on the frequency days
       expect(result).toBe(2);
@@ -69,7 +82,7 @@ describe('streakUtils', () => {
       ];
 
       // Every day frequency
-      const dailyFrequency = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const dailyFrequency = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
       const result = calculateCurrentStreak(
         trackersWithGap,
@@ -101,7 +114,7 @@ describe('streakUtils', () => {
       const currentStats = { streak: 2, longestStreak: 3 };
 
       // Every day frequency to count all trackers
-      const dailyFrequency = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const dailyFrequency = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
       const result = updateStreakInfo(
         trackers,

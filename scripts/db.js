@@ -13,7 +13,7 @@ const DB_NAME = 'tracknstick-db';
 const MIGRATIONS_DIR = path.join(__dirname, '..', 'migrations');
 
 // Get command line arguments
-const [,, command, ...args] = process.argv;
+const [, , command, ...args] = process.argv;
 const isRemote = args.includes('--remote');
 const remoteFlag = isRemote ? '--remote' : '';
 
@@ -24,7 +24,7 @@ function executeWrangler(command, options = {}) {
     const result = execSync(`pnpm exec wrangler ${command}`, {
       stdio: 'inherit',
       cwd: path.join(__dirname, '..'),
-      ...options
+      ...options,
     });
     return result;
   } catch (error) {
@@ -36,37 +36,37 @@ function executeWrangler(command, options = {}) {
 // Setup: Apply single schema file
 async function setup() {
   console.log(`🏗️  Setting up database ${isRemote ? '(REMOTE)' : '(LOCAL)'}`);
-  
+
   const schemaFile = path.join(MIGRATIONS_DIR, 'schema.sql');
-  
+
   if (!fs.existsSync(schemaFile)) {
     console.log('❌ Schema file not found at migrations/schema.sql');
     return;
   }
-  
+
   console.log('📄 Applying schema.sql...');
   executeWrangler(`d1 execute ${DB_NAME} --file=${schemaFile} ${remoteFlag}`);
-  
+
   console.log('✅ Database setup complete!');
 }
 
 // Reset: Drop all tables and recreate from schema
 async function reset() {
   console.log(`🔄 Resetting database ${isRemote ? '(REMOTE)' : '(LOCAL)'}`);
-  
+
   // Drop all tables to start fresh
   const dropCommand = `d1 execute ${DB_NAME} --command "DROP TABLE IF EXISTS trackers; DROP TABLE IF EXISTS habits; DROP TABLE IF EXISTS users;" ${remoteFlag}`;
   executeWrangler(dropCommand);
-  
+
   console.log('🗑️  All tables dropped');
-  
+
   // Reapply schema
   const schemaFile = path.join(MIGRATIONS_DIR, 'schema.sql');
   if (fs.existsSync(schemaFile)) {
     console.log('📄 Applying schema.sql...');
     executeWrangler(`d1 execute ${DB_NAME} --file=${schemaFile} ${remoteFlag}`);
   }
-  
+
   console.log('✅ Database reset complete!');
 }
 
@@ -74,19 +74,19 @@ async function reset() {
 async function migrate() {
   console.log(`📊 Running migrations ${isRemote ? '(REMOTE)' : '(LOCAL)'}`);
   console.log('ℹ️  With single schema approach, migrate = setup');
-  
+
   await setup();
 }
 
 // Seed: Add sample/test data
 async function seed() {
   console.log(`🌱 Seeding database ${isRemote ? '(REMOTE)' : '(LOCAL)'}`);
-  
+
   const seedFile = path.join(MIGRATIONS_DIR, 'seed.sql');
-  
+
   if (!fs.existsSync(seedFile)) {
     console.log('⚠️  No seed file found. Creating sample seed...');
-    
+
     const sampleSeed = `-- Sample seed data
 INSERT OR IGNORE INTO users (clerk_user_id) VALUES ('user_test123');
 
@@ -96,26 +96,30 @@ VALUES
   ('user_test123', 'Read Books', '📚', 'daily', NULL, '2024-01-01', 0, 0),
   ('user_test123', 'Drink Water', '💧', 'daily', NULL, '2024-01-01', 0, 0);
 `;
-    
+
     fs.writeFileSync(seedFile, sampleSeed);
     console.log('📄 Created sample seed file');
   }
-  
+
   executeWrangler(`d1 execute ${DB_NAME} --file=${seedFile} ${remoteFlag}`);
   console.log('✅ Database seeded!');
 }
 
 // Query: Interactive query runner
 async function query() {
-  const sqlQuery = args.find(arg => !arg.startsWith('--'));
-  
+  const sqlQuery = args.find((arg) => !arg.startsWith('--'));
+
   if (!sqlQuery) {
     console.log('❓ Usage: pnpm db:query "SELECT * FROM users" [--remote]');
     return;
   }
-  
-  console.log(`🔍 Executing query ${isRemote ? '(REMOTE)' : '(LOCAL)'}: ${sqlQuery}`);
-  executeWrangler(`d1 execute ${DB_NAME} --command="${sqlQuery}" ${remoteFlag}`);
+
+  console.log(
+    `🔍 Executing query ${isRemote ? '(REMOTE)' : '(LOCAL)'}: ${sqlQuery}`
+  );
+  executeWrangler(
+    `d1 execute ${DB_NAME} --command="${sqlQuery}" ${remoteFlag}`
+  );
 }
 
 // Show help

@@ -2,19 +2,21 @@
 // Add this comment to suppress TypeScript errors during migration to Hono
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Context } from 'hono';
-import * as habitRepository from '../../repositories/habit.repository.js';
+import * as habitService from '../../services/habit.service.js';
 import * as habitController from '../habit.controller.js';
 
-// Mock the repositories
-vi.mock('../../repositories/habit.repository.js', () => ({
-  getHabitsByDate: vi.fn(),
+// Mock the services
+vi.mock('../../services/habit.service.js', () => ({
+  getAllHabits: vi.fn(),
+  getHabitsForDate: vi.fn(),
   createHabit: vi.fn(),
-  getHabitById: vi.fn(),
   updateHabit: vi.fn(),
   deleteHabit: vi.fn(),
-  getTrackers: vi.fn(),
+  restoreHabit: vi.fn(),
+  getTrackersForHabit: vi.fn(),
   manageTracker: vi.fn(),
   getHabitStats: vi.fn(),
+  getProgressOverview: vi.fn(),
 }));
 
 describe('Habit Controller', () => {
@@ -23,7 +25,13 @@ describe('Habit Controller', () => {
   let mockClerkUserId: string;
 
   beforeEach(() => {
-    mockDB = {};
+    mockDB = {
+      prepare: vi.fn().mockReturnValue({
+        bind: vi.fn().mockReturnThis(),
+        all: vi.fn().mockResolvedValue({ success: true, results: [] }),
+        run: vi.fn().mockResolvedValue({ success: true, meta: { changes: 1 } }),
+      }),
+    };
     mockClerkUserId = 'clerk_user_123';
 
     // Reset mock calls
@@ -34,6 +42,10 @@ describe('Habit Controller', () => {
       env: { DB: mockDB },
       get: vi.fn((key: string) => {
         if (key === 'userId') return mockClerkUserId;
+        if (key === 'auth') return { userId: mockClerkUserId };
+        if (key === 'validated_query') return mockContext.queryData || {};
+        if (key === 'validated_json') return mockContext.jsonData || {};
+        if (key === 'validated_param') return mockContext.paramData || {};
         return undefined;
       }),
       json: vi.fn(),
@@ -47,19 +59,38 @@ describe('Habit Controller', () => {
         { id: 2, name: 'Read', user_id: mockClerkUserId },
       ];
 
-      vi.mocked(habitRepository.getHabitsByDate).mockResolvedValue(mockHabits);
+      mockContext.queryData = { date: '2023-01-01', timeZone: 'UTC' };
+      vi.mocked(habitService.getHabitsForDate).mockResolvedValue(mockHabits);
 
       await habitController.getHabits(mockContext as Context);
 
-      expect(habitRepository.getHabitsByDate).toHaveBeenCalledWith(
-        mockDB,
+      expect(habitService.getHabitsForDate).toHaveBeenCalledWith(
         mockClerkUserId,
-        expect.any(String)
+        '2023-01-01',
+        'UTC',
+        mockDB
       );
 
-      expect(mockContext.json).toHaveBeenCalledWith({
-        habits: mockHabits,
-      });
+      expect(mockContext.json).toHaveBeenCalledWith([
+        expect.objectContaining({ name: 'Exercise' }),
+        expect.objectContaining({ name: 'Read' }),
+      ]);
+    });
+
+    it('should return all habits if no date provided', async () => {
+      const mockHabits = [
+        { id: 1, name: 'Exercise', user_id: mockClerkUserId },
+      ];
+
+      mockContext.queryData = {};
+      vi.mocked(habitService.getAllHabits).mockResolvedValue(mockHabits);
+
+      await habitController.getHabits(mockContext as Context);
+
+      expect(habitService.getAllHabits).toHaveBeenCalledWith(
+        mockClerkUserId,
+        mockDB
+      );
     });
   });
 
@@ -68,26 +99,23 @@ describe('Habit Controller', () => {
       const habitData = {
         name: 'Meditate',
         icon: '🧘',
-        frequency: { type: 'daily' },
+        frequency: ['daily'],
         startDate: '2023-01-01',
       };
 
-      mockContext.req = {
-        valid: vi.fn().mockReturnValue(habitData),
-      } as any;
-
-      vi.mocked(habitRepository.createHabit).mockResolvedValue({ habitId: 1 });
+      mockContext.jsonData = habitData;
+      vi.mocked(habitService.createHabit).mockResolvedValue({ habitId: 1 });
 
       await habitController.createHabit(mockContext as Context);
 
-      expect(habitRepository.createHabit).toHaveBeenCalledWith(
-        mockDB,
+      expect(habitService.createHabit).toHaveBeenCalledWith(
         mockClerkUserId,
-        habitData
+        habitData,
+        mockDB
       );
 
       expect(mockContext.json).toHaveBeenCalledWith(
-        { id: 1, message: 'Habit created successfully' },
+        { habitId: 1, message: 'Habit created successfully' },
         201
       );
     });
@@ -101,18 +129,16 @@ describe('Habit Controller', () => {
         icon: '🏋️',
       };
 
-      mockContext.req = {
-        valid: vi.fn().mockReturnValue(habitData),
-        param: vi.fn().mockReturnValue(habitId),
-      } as any;
+      mockContext.jsonData = habitData;
+      mockContext.paramData = { habitId };
 
       await habitController.updateHabit(mockContext as Context);
 
-      expect(habitRepository.updateHabit).toHaveBeenCalledWith(
-        mockDB,
+      expect(habitService.updateHabit).toHaveBeenCalledWith(
         mockClerkUserId,
         habitId,
-        habitData
+        habitData,
+        mockDB
       );
 
       expect(mockContext.json).toHaveBeenCalledWith({
@@ -125,16 +151,14 @@ describe('Habit Controller', () => {
     it('should delete a habit', async () => {
       const habitId = '1';
 
-      mockContext.req = {
-        param: vi.fn().mockReturnValue(habitId),
-      } as any;
+      mockContext.paramData = { habitId };
 
       await habitController.deleteHabit(mockContext as Context);
 
-      expect(habitRepository.deleteHabit).toHaveBeenCalledWith(
-        mockDB,
+      expect(habitService.deleteHabit).toHaveBeenCalledWith(
         mockClerkUserId,
-        habitId
+        habitId,
+        mockDB
       );
 
       expect(mockContext.json).toHaveBeenCalledWith({
@@ -147,16 +171,15 @@ describe('Habit Controller', () => {
     it('should add a tracker for a habit', async () => {
       const habitId = '1';
       const requestData = {
-        date: '2023-06-15',
+        timestamp: '2023-06-15T10:00:00Z',
+        timeZone: 'UTC',
         notes: 'Great session',
       };
 
-      mockContext.req = {
-        valid: vi.fn().mockReturnValue(requestData),
-        param: vi.fn().mockReturnValue(habitId),
-      } as any;
+      mockContext.jsonData = requestData;
+      mockContext.paramData = { habitId };
 
-      vi.mocked(habitRepository.manageTracker).mockResolvedValue({
+      vi.mocked(habitService.manageTracker).mockResolvedValue({
         status: 'added',
         trackerId: 1,
         message: 'Tracker added',
@@ -164,19 +187,22 @@ describe('Habit Controller', () => {
 
       await habitController.manageTracker(mockContext as Context);
 
-      expect(habitRepository.manageTracker).toHaveBeenCalledWith(
-        mockDB,
+      expect(habitService.manageTracker).toHaveBeenCalledWith(
         mockClerkUserId,
         habitId,
-        expect.any(String),
-        requestData.notes
+        requestData.timestamp,
+        requestData.timeZone,
+        requestData.notes,
+        mockDB
       );
 
-      expect(mockContext.json).toHaveBeenCalledWith({
-        status: 'added',
-        trackerId: 1,
-        message: 'Tracker added',
-      });
+      expect(mockContext.json).toHaveBeenCalledWith(
+        {
+          trackerId: 1,
+          message: 'Tracker added',
+        },
+        201
+      );
     });
   });
 });

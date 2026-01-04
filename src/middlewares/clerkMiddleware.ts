@@ -26,6 +26,9 @@ export const clerkMiddleware = () => async (c: Context, next: Next) => {
       secretKey: c.env.CLERK_SECRET_KEY,
     });
 
+    // Set the Clerk client in context
+    c.set('clerk', clerkClient);
+
     try {
       // Use Clerk's authenticateRequest method (recommended for HTTP requests)
       const requestState = await clerkClient.authenticateRequest(c.req.raw, {
