@@ -2,15 +2,26 @@ import { z } from 'zod';
 
 const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
 
+const dateValidation = z
+  .string()
+  .regex(dateRegex, 'Date must be in YYYY-MM-DD format')
+  .refine(
+    (dateParam) => {
+      const [year, month, day] = dateParam.split('-').map(Number);
+      const date = new Date(year, month - 1, day);
+      return (
+        date.getFullYear() === year &&
+        date.getMonth() === month - 1 &&
+        date.getDate() === day
+      );
+    },
+    { message: 'Invalid date: Date components do not match calendar validity' }
+  )
+  .optional();
+
 export const progressHistorySchema = z.object({
-  startDate: z
-    .string()
-    .regex(dateRegex, 'Date must be in YYYY-MM-DD format')
-    .optional(),
-  endDate: z
-    .string()
-    .regex(dateRegex, 'Date must be in YYYY-MM-DD format')
-    .optional(),
+  startDate: dateValidation,
+  endDate: dateValidation,
   timeZone: z
     .string()
     .refine(
