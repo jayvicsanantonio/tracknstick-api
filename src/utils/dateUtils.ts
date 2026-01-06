@@ -248,12 +248,19 @@ export function getTimeZoneOffsetString(timeZone: string): string {
  */
 export function getTodayDateFromOffset(offset: string): string {
   try {
-    const sign = offset[0] === '+' ? 1 : -1;
+    // Validate format strictly: +/- followed by HH:MM
+    const offsetRegex = /^[+-]\d{2}:\d{2}$/;
+    if (!offsetRegex.test(offset)) {
+      // Fallback for invalid format, return UTC date
+      return new Date().toISOString().split('T')[0];
+    }
+
+    const sign = offset.charAt(0) === '+' ? 1 : -1;
     const hours = parseInt(offset.substring(1, 3), 10);
     const minutes = parseInt(offset.substring(4, 6), 10);
 
+    // Explicit guard against NaN, though regex technically prevents this
     if (isNaN(hours) || isNaN(minutes)) {
-      // Fallback for invalid format, return UTC date
       return new Date().toISOString().split('T')[0];
     }
 
