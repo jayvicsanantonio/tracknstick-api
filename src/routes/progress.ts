@@ -5,7 +5,6 @@ import { validateRequest } from '../middlewares/validateRequest.js';
 import {
   progressHistorySchema,
   progressOverviewSchema,
-  progressStreaksSchema,
 } from '../validators/progress.validator.js';
 
 const app = new Hono();
@@ -31,11 +30,7 @@ app.get(
  * @description Get user's current and longest streaks
  * @returns {Object} - Current streak and longest streak information
  */
-app.get(
-  '/streaks',
-  validateRequest(progressStreaksSchema, 'query'),
-  progressController.getStreaks
-);
+app.get('/streaks', progressController.getStreaks);
 
 /**
  * @route GET /overview

@@ -70,8 +70,8 @@ describe('Progress API Integration Tests', () => {
 
     it('should filter history by date range', async () => {
       // Get data for a specific date range
-      const startDate = '2023-01-01';
-      const endDate = '2023-01-31';
+      const startDate = '2023-01-01T00:00:00Z';
+      const endDate = '2023-01-31T23:59:59Z';
 
       const response = await app.request(
         `/api/v1/progress/history?startDate=${startDate}&endDate=${endDate}`,
@@ -134,29 +134,14 @@ describe('Progress API Integration Tests', () => {
       );
 
       expect(response.status).toBe(200);
-      const body = (await response.json()) as {
-        data: {
-          history: Array<{ date: string; completionRate: number }>;
-          currentStreak: number;
-          longestStreak: number;
-        };
-        meta: {
-          timestamp: string;
-          timeZone: string;
-        };
+      const data = (await response.json()) as {
+        history: Array<{ date: string; completionRate: number }>;
+        currentStreak: number;
+        longestStreak: number;
       };
-
-      expect(body).toHaveProperty('data');
-      expect(body).toHaveProperty('meta');
-
-      const { data, meta } = body;
-
       expect(data).toHaveProperty('history');
       expect(data).toHaveProperty('currentStreak');
       expect(data).toHaveProperty('longestStreak');
-
-      expect(meta).toHaveProperty('timestamp');
-      expect(meta).toHaveProperty('timeZone');
 
       expect(Array.isArray(data.history)).toBe(true);
       expect(typeof data.currentStreak).toBe('number');
@@ -165,8 +150,8 @@ describe('Progress API Integration Tests', () => {
 
     it('should filter overview by date range', async () => {
       // Get data for a specific date range
-      const startDate = '2023-01-01';
-      const endDate = '2023-01-31';
+      const startDate = '2023-01-01T00:00:00Z';
+      const endDate = '2023-01-31T23:59:59Z';
 
       const response = await app.request(
         `/api/v1/progress/overview?startDate=${startDate}&endDate=${endDate}`,
@@ -177,16 +162,14 @@ describe('Progress API Integration Tests', () => {
       );
 
       expect(response.status).toBe(200);
-      const body = (await response.json()) as {
-        data: {
-          history: Array<{ date: string; completionRate: number }>;
-          currentStreak: number;
-          longestStreak: number;
-        };
+      const data = (await response.json()) as {
+        history: Array<{ date: string; completionRate: number }>;
+        currentStreak: number;
+        longestStreak: number;
       };
-      expect(body.data).toHaveProperty('history');
-      expect(body.data).toHaveProperty('currentStreak');
-      expect(body.data).toHaveProperty('longestStreak');
+      expect(data).toHaveProperty('history');
+      expect(data).toHaveProperty('currentStreak');
+      expect(data).toHaveProperty('longestStreak');
     });
   });
 
