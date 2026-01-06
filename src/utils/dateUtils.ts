@@ -240,3 +240,30 @@ export function getTimeZoneOffsetString(timeZone: string): string {
 
   return `${sign}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
 }
+
+/**
+ * Calculates the current date (YYYY-MM-DD) based on a timezone offset string.
+ * @param offset The timezone offset string (e.g., '+05:30', '-08:00').
+ * @returns The date string in YYYY-MM-DD format.
+ */
+export function getTodayDateFromOffset(offset: string): string {
+  try {
+    const sign = offset[0] === '+' ? 1 : -1;
+    const hours = parseInt(offset.substring(1, 3), 10);
+    const minutes = parseInt(offset.substring(4, 6), 10);
+
+    if (isNaN(hours) || isNaN(minutes)) {
+      // Fallback for invalid format, return UTC date
+      return new Date().toISOString().split('T')[0];
+    }
+
+    const offsetMs = sign * (hours * 60 + minutes) * 60 * 1000;
+    const now = new Date();
+    const localTime = new Date(now.getTime() + offsetMs);
+
+    return localTime.toISOString().split('T')[0];
+  } catch (e) {
+    // Fallback for any parsing errors
+    return new Date().toISOString().split('T')[0];
+  }
+}

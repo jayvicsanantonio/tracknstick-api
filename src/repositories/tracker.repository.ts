@@ -3,6 +3,7 @@
 import { D1Database } from '@cloudflare/workers-types';
 import { NotFoundError } from '../utils/errors.js';
 import { TrackerInsert, Tracker } from '../types/d1.js';
+import { getTodayDateFromOffset } from '../utils/dateUtils.js';
 
 interface TrackerRow {
   id: number;
@@ -280,7 +281,7 @@ export async function getUserProgressHistory(
 ): Promise<Array<{ date: string; completionRate: number }>> {
   // Always calculate a full year of history for accurate streak calculation
   // This ensures we have enough data regardless of requested date range
-  const today = referenceDate || new Date().toISOString().split('T')[0];
+  const today = referenceDate || getTodayDateFromOffset(timeZoneOffset);
   const fullHistoryStartDate = new Date(today);
   fullHistoryStartDate.setDate(fullHistoryStartDate.getDate() - 365); // Go back a full year
   const calculationStartDate = fullHistoryStartDate.toISOString().split('T')[0];
@@ -418,7 +419,7 @@ export async function getUserStreaks(
     );
 
     // Calculate current streak (consecutive 100% days up to today)
-    const today = referenceDate || new Date().toISOString().split('T')[0];
+    const today = referenceDate || getTodayDateFromOffset(timeZoneOffset);
 
     for (let i = 0; i < sortedHistory.length; i++) {
       const entry = sortedHistory[i];
