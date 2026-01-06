@@ -1,5 +1,9 @@
 import { D1Database } from '@cloudflare/workers-types';
 import * as trackerRepository from '../repositories/tracker.repository.js';
+import {
+  getTimeZoneOffsetString,
+  getDateInTimeZone,
+} from '../utils/dateUtils.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -16,15 +20,25 @@ export async function getUserProgressHistory(
   db: D1Database,
   userId: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  timeZone: string = 'UTC'
 ): Promise<Array<{ date: string; completionRate: number }>> {
   try {
-    logger.info(`Fetching progress history for user ${userId}`);
+    logger.info(
+      `Fetching progress history for user ${userId} in timezone ${timeZone}`
+    );
+    const timeZoneOffset = getTimeZoneOffsetString(timeZone);
+    // Calculate today's date in user's timezone to ensure correct history window
+    // This prevents "future" days (local vs UTC) from being excluded or empty future days included
+    const userToday = getDateInTimeZone(new Date().toISOString(), timeZone);
+
     return await trackerRepository.getUserProgressHistory(
       db,
       userId,
       startDate,
-      endDate
+      endDate,
+      timeZoneOffset,
+      userToday
     );
   } catch (error) {
     logger.error(
@@ -45,11 +59,21 @@ export async function getUserProgressHistory(
  */
 export async function getUserStreaks(
   db: D1Database,
-  userId: string
+  userId: string,
+  timeZone: string = 'UTC'
 ): Promise<{ currentStreak: number; longestStreak: number }> {
   try {
-    logger.info(`Fetching streak information for user ${userId}`);
-    return await trackerRepository.getUserStreaks(db, userId);
+    logger.info(
+      `Fetching streak information for user ${userId} in timezone ${timeZone}`
+    );
+    const timeZoneOffset = getTimeZoneOffsetString(timeZone);
+    const userToday = getDateInTimeZone(new Date().toISOString(), timeZone);
+    return await trackerRepository.getUserStreaks(
+      db,
+      userId,
+      timeZoneOffset,
+      userToday
+    );
   } catch (error) {
     logger.error(`Error fetching streaks for user ${userId}:`, error as Error);
     throw error;
@@ -70,7 +94,8 @@ export async function getUserProgressOverview(
   db: D1Database,
   userId: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  timeZone: string = 'UTC'
 ): Promise<{
   history: Array<{ date: string; completionRate: number }>;
   currentStreak: number;
@@ -81,8 +106,8 @@ export async function getUserProgressOverview(
 
     // Get both history and streaks in parallel for efficiency
     const [history, streaks] = await Promise.all([
-      getUserProgressHistory(db, userId, startDate, endDate),
-      getUserStreaks(db, userId),
+      getUserProgressHistory(db, userId, startDate, endDate, timeZone),
+      getUserStreaks(db, userId, timeZone),
     ]);
 
     return {

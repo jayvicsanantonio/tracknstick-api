@@ -3,6 +3,7 @@
 import { D1Database } from '@cloudflare/workers-types';
 import { NotFoundError } from '../utils/errors.js';
 import { TrackerInsert, Tracker } from '../types/d1.js';
+import { getTodayDateFromOffset } from '../utils/dateUtils.js';
 
 interface TrackerRow {
   id: number;
@@ -274,14 +275,16 @@ export async function getUserProgressHistory(
   db: D1Database,
   userId: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  timeZoneOffset: string = '+00:00',
+  referenceDate?: string // The "Today" date in user's timezone (YYYY-MM-DD)
 ): Promise<Array<{ date: string; completionRate: number }>> {
   // Always calculate a full year of history for accurate streak calculation
   // This ensures we have enough data regardless of requested date range
-  const fullHistoryStartDate = new Date();
+  const today = referenceDate || getTodayDateFromOffset(timeZoneOffset);
+  const fullHistoryStartDate = new Date(today);
   fullHistoryStartDate.setDate(fullHistoryStartDate.getDate() - 365); // Go back a full year
   const calculationStartDate = fullHistoryStartDate.toISOString().split('T')[0];
-  const today = new Date().toISOString().split('T')[0];
 
   // This query calculates the completion rate for each day using a more efficient date generation approach
   const sql = `
@@ -310,19 +313,20 @@ export async function getUserProgressHistory(
     ),
     completed_habits AS (
       -- For each date, count completed habits that were actually active on that date
+      -- Use the timezone offset to shift the timestamp before extracting the date
       SELECT 
-        DATE(t.timestamp) AS date,
+        DATE(t.timestamp, ?) AS date,
         COUNT(DISTINCT t.habit_id) AS completed_habits
       FROM trackers t
       JOIN habits h ON t.habit_id = h.id AND t.user_id = h.user_id
       WHERE t.user_id = ?
-        AND DATE(h.start_date) <= DATE(t.timestamp)
-        AND (h.end_date IS NULL OR DATE(h.end_date) > DATE(t.timestamp))
+        AND DATE(h.start_date) <= DATE(t.timestamp, ?)
+        AND (h.end_date IS NULL OR DATE(h.end_date) > DATE(t.timestamp, ?))
         AND (
-          h.frequency LIKE '%' || SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', DATE(t.timestamp)), 3) || '%'
-          OR h.frequency = SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', DATE(t.timestamp)), 3)
+          h.frequency LIKE '%' || SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', DATE(t.timestamp, ?)), 3) || '%'
+          OR h.frequency = SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', DATE(t.timestamp, ?)), 3)
         )
-      GROUP BY DATE(t.timestamp)
+      GROUP BY DATE(t.timestamp, ?)
     )
     -- Join to calculate completion rate
     SELECT 
@@ -340,7 +344,18 @@ export async function getUserProgressHistory(
   try {
     const result = await db
       .prepare(sql)
-      .bind(calculationStartDate, today, userId, userId)
+      .bind(
+        calculationStartDate,
+        today,
+        userId,
+        timeZoneOffset, // DATE(t.timestamp, ?)
+        userId,
+        timeZoneOffset, // DATE(t.timestamp, ?)
+        timeZoneOffset, // DATE(t.timestamp, ?)
+        timeZoneOffset, // DATE(t.timestamp, ?)
+        timeZoneOffset, // DATE(t.timestamp, ?)
+        timeZoneOffset // GROUP BY DATE(t.timestamp, ?)
+      )
       .all();
 
     if (!result.success) {
@@ -378,7 +393,9 @@ export async function getUserProgressHistory(
  */
 export async function getUserStreaks(
   db: D1Database,
-  userId: string
+  userId: string,
+  timeZoneOffset: string = '+00:00',
+  referenceDate?: string
 ): Promise<{ currentStreak: number; longestStreak: number }> {
   try {
     // Get the user's progress history with full year of data to ensure accurate streak calculation
@@ -386,7 +403,9 @@ export async function getUserStreaks(
       db,
       userId,
       undefined,
-      undefined
+      undefined,
+      timeZoneOffset,
+      referenceDate
     );
 
     // Calculate streaks based on 100% completion days
@@ -400,7 +419,7 @@ export async function getUserStreaks(
     );
 
     // Calculate current streak (consecutive 100% days up to today)
-    const today = new Date().toISOString().split('T')[0];
+    const today = referenceDate || getTodayDateFromOffset(timeZoneOffset);
 
     for (let i = 0; i < sortedHistory.length; i++) {
       const entry = sortedHistory[i];
