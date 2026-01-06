@@ -275,14 +275,15 @@ export async function getUserProgressHistory(
   userId: string,
   startDate?: string,
   endDate?: string,
-  timeZoneOffset: string = '+00:00'
+  timeZoneOffset: string = '+00:00',
+  referenceDate?: string // The "Today" date in user's timezone (YYYY-MM-DD)
 ): Promise<Array<{ date: string; completionRate: number }>> {
   // Always calculate a full year of history for accurate streak calculation
   // This ensures we have enough data regardless of requested date range
-  const fullHistoryStartDate = new Date();
+  const today = referenceDate || new Date().toISOString().split('T')[0];
+  const fullHistoryStartDate = new Date(today);
   fullHistoryStartDate.setDate(fullHistoryStartDate.getDate() - 365); // Go back a full year
   const calculationStartDate = fullHistoryStartDate.toISOString().split('T')[0];
-  const today = new Date().toISOString().split('T')[0];
 
   // This query calculates the completion rate for each day using a more efficient date generation approach
   const sql = `
@@ -392,7 +393,8 @@ export async function getUserProgressHistory(
 export async function getUserStreaks(
   db: D1Database,
   userId: string,
-  timeZoneOffset: string = '+00:00'
+  timeZoneOffset: string = '+00:00',
+  referenceDate?: string
 ): Promise<{ currentStreak: number; longestStreak: number }> {
   try {
     // Get the user's progress history with full year of data to ensure accurate streak calculation
@@ -401,7 +403,8 @@ export async function getUserStreaks(
       userId,
       undefined,
       undefined,
-      timeZoneOffset
+      timeZoneOffset,
+      referenceDate
     );
 
     // Calculate streaks based on 100% completion days
@@ -415,7 +418,7 @@ export async function getUserStreaks(
     );
 
     // Calculate current streak (consecutive 100% days up to today)
-    const today = new Date().toISOString().split('T')[0];
+    const today = referenceDate || new Date().toISOString().split('T')[0];
 
     for (let i = 0; i < sortedHistory.length; i++) {
       const entry = sortedHistory[i];

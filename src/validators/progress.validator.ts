@@ -15,3 +15,4 @@ export const progressHistorySchema = z.object({
 });
 
 export const progressOverviewSchema = progressHistorySchema;
+export const progressStreaksSchema = progressHistorySchema;

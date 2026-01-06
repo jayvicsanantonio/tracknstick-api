@@ -1,6 +1,9 @@
 import { D1Database } from '@cloudflare/workers-types';
 import * as trackerRepository from '../repositories/tracker.repository.js';
-import { getTimeZoneOffsetString } from '../utils/dateUtils.js';
+import {
+  getTimeZoneOffsetString,
+  getDateInTimeZone,
+} from '../utils/dateUtils.js';
 import logger from '../utils/logger.js';
 
 /**
@@ -25,12 +28,17 @@ export async function getUserProgressHistory(
       `Fetching progress history for user ${userId} in timezone ${timeZone}`
     );
     const timeZoneOffset = getTimeZoneOffsetString(timeZone);
+    // Calculate today's date in user's timezone to ensure correct history window
+    // This prevents "future" days (local vs UTC) from being excluded or empty future days included
+    const userToday = getDateInTimeZone(new Date().toISOString(), timeZone);
+
     return await trackerRepository.getUserProgressHistory(
       db,
       userId,
       startDate,
       endDate,
-      timeZoneOffset
+      timeZoneOffset,
+      userToday
     );
   } catch (error) {
     logger.error(
@@ -59,7 +67,13 @@ export async function getUserStreaks(
       `Fetching streak information for user ${userId} in timezone ${timeZone}`
     );
     const timeZoneOffset = getTimeZoneOffsetString(timeZone);
-    return await trackerRepository.getUserStreaks(db, userId, timeZoneOffset);
+    const userToday = getDateInTimeZone(new Date().toISOString(), timeZone);
+    return await trackerRepository.getUserStreaks(
+      db,
+      userId,
+      timeZoneOffset,
+      userToday
+    );
   } catch (error) {
     logger.error(`Error fetching streaks for user ${userId}:`, error as Error);
     throw error;
