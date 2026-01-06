@@ -134,14 +134,29 @@ describe('Progress API Integration Tests', () => {
       );
 
       expect(response.status).toBe(200);
-      const data = (await response.json()) as {
-        history: Array<{ date: string; completionRate: number }>;
-        currentStreak: number;
-        longestStreak: number;
+      const body = (await response.json()) as {
+        data: {
+          history: Array<{ date: string; completionRate: number }>;
+          currentStreak: number;
+          longestStreak: number;
+        };
+        meta: {
+          timestamp: string;
+          timeZone: string;
+        };
       };
+
+      expect(body).toHaveProperty('data');
+      expect(body).toHaveProperty('meta');
+
+      const { data, meta } = body;
+
       expect(data).toHaveProperty('history');
       expect(data).toHaveProperty('currentStreak');
       expect(data).toHaveProperty('longestStreak');
+
+      expect(meta).toHaveProperty('timestamp');
+      expect(meta).toHaveProperty('timeZone');
 
       expect(Array.isArray(data.history)).toBe(true);
       expect(typeof data.currentStreak).toBe('number');
@@ -162,14 +177,16 @@ describe('Progress API Integration Tests', () => {
       );
 
       expect(response.status).toBe(200);
-      const data = (await response.json()) as {
-        history: Array<{ date: string; completionRate: number }>;
-        currentStreak: number;
-        longestStreak: number;
+      const body = (await response.json()) as {
+        data: {
+          history: Array<{ date: string; completionRate: number }>;
+          currentStreak: number;
+          longestStreak: number;
+        };
       };
-      expect(data).toHaveProperty('history');
-      expect(data).toHaveProperty('currentStreak');
-      expect(data).toHaveProperty('longestStreak');
+      expect(body.data).toHaveProperty('history');
+      expect(body.data).toHaveProperty('currentStreak');
+      expect(body.data).toHaveProperty('longestStreak');
     });
   });
 

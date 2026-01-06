@@ -80,7 +80,15 @@ export async function getProgressOverview(c: Context): Promise<Response> {
       timeZone
     );
 
-    return c.json(overview);
+    const response = {
+      data: overview,
+      meta: {
+        timestamp: new Date().toISOString(),
+        timeZone: timeZone || 'UTC',
+      },
+    };
+
+    return c.json(response);
   } catch (error: any) {
     logger.error('Error fetching progress overview:', error);
     return handleError(c, error);
