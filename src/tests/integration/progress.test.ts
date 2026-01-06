@@ -70,8 +70,8 @@ describe('Progress API Integration Tests', () => {
 
     it('should filter history by date range', async () => {
       // Get data for a specific date range
-      const startDate = '2023-01-01T00:00:00Z';
-      const endDate = '2023-01-31T23:59:59Z';
+      const startDate = '2023-01-01';
+      const endDate = '2023-01-31';
 
       const response = await app.request(
         `/api/v1/progress/history?startDate=${startDate}&endDate=${endDate}`,
@@ -150,8 +150,8 @@ describe('Progress API Integration Tests', () => {
 
     it('should filter overview by date range', async () => {
       // Get data for a specific date range
-      const startDate = '2023-01-01T00:00:00Z';
-      const endDate = '2023-01-31T23:59:59Z';
+      const startDate = '2023-01-01';
+      const endDate = '2023-01-31';
 
       const response = await app.request(
         `/api/v1/progress/overview?startDate=${startDate}&endDate=${endDate}`,

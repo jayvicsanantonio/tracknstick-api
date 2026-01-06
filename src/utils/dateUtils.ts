@@ -177,3 +177,66 @@ export function getDateInTimeZone(timestamp: string, timeZone: string): string {
 
   return formatter.format(date); // Returns YYYY-MM-DD format directly
 }
+
+/**
+ * Returns the timezone offset string (e.g., '+05:30' or '-08:00') for a given timezone.
+ * This format is compatible with SQLite's DATE function modifiers.
+ * @param timeZone The IANA timezone name.
+ * @returns The offset string.
+ */
+export function getTimeZoneOffsetString(timeZone: string): string {
+  if (!isValidTimeZone(timeZone)) {
+    return '+00:00';
+  }
+
+  // Create a date to check the *current* offset for that timezone
+  // Note: This calculates the offset for "now". If we need historical offsets,
+  // we would need to pass a date, but for "Progress Overview" which is generally
+  // "how I'm doing lately", using the current offset is a reasonable approximation
+  // unless the user is crossing DST boundaries repeatedly in the view.
+  // Given SQLite complexity, a single offset per query is the standard approach.
+  const now = new Date();
+
+  // Get the offset in minutes
+  // We use the same technique as getLocaleStartEnd to find the difference
+  const utcStr = now.toISOString(); // "2023-01-01T12:00:00.000Z"
+
+  // Format in the target timezone to get the "wall clock" time components
+  const tzFormatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  const parts = tzFormatter.formatToParts(now);
+  const getPart = (type: string) =>
+    parts.find((p) => p.type === type)?.value || '0';
+
+  const year = parseInt(getPart('year'), 10);
+  const month = parseInt(getPart('month'), 10) - 1;
+  const day = parseInt(getPart('day'), 10);
+  const hour = parseInt(getPart('hour'), 10);
+  const minute = parseInt(getPart('minute'), 10);
+  const second = parseInt(getPart('second'), 10);
+
+  // Reconstruct the "wall clock" time as a UTC date
+  const tzTimeAsUtc = Date.UTC(year, month, day, hour, minute, second);
+
+  // Difference in milliseconds
+  const diffMs = tzTimeAsUtc - now.getTime();
+
+  // Convert to minutes
+  const offsetMinutes = Math.round(diffMs / 60000);
+
+  const sign = offsetMinutes >= 0 ? '+' : '-';
+  const absMinutes = Math.abs(offsetMinutes);
+  const hours = Math.floor(absMinutes / 60);
+  const mins = absMinutes % 60;
+
+  return `${sign}${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+}
