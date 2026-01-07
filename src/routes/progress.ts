@@ -5,6 +5,7 @@ import { validateRequest } from '../middlewares/validateRequest.js';
 import {
   progressHistorySchema,
   progressOverviewSchema,
+  progressStreaksSchema,
 } from '../validators/progress.validator.js';
 
 const app = new Hono();
@@ -17,6 +18,7 @@ app.use('*', clerkMiddleware());
  * @description Get user's progress history showing completion rates by day
  * @query startDate - Optional start date in YYYY-MM-DD format
  * @query endDate - Optional end date in YYYY-MM-DD format
+ * @query timeZone - Optional timezone for date calculations (e.g., 'America/Los_Angeles')
  * @returns {Object} - History of daily completion rates
  */
 app.get(
@@ -28,15 +30,21 @@ app.get(
 /**
  * @route GET /streaks
  * @description Get user's current and longest streaks
+ * @query timeZone - Optional timezone for streak calculations
  * @returns {Object} - Current streak and longest streak information
  */
-app.get('/streaks', progressController.getStreaks);
+app.get(
+  '/streaks',
+  validateRequest(progressStreaksSchema, 'query'),
+  progressController.getStreaks
+);
 
 /**
  * @route GET /overview
  * @description Get user's complete progress overview including history and streaks
  * @query startDate - Optional start date in YYYY-MM-DD format
  * @query endDate - Optional end date in YYYY-MM-DD format
+ * @query timeZone - Optional timezone for date calculations
  * @returns {Object} - Combined history and streak information
  */
 app.get(

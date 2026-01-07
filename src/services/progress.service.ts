@@ -10,21 +10,26 @@ import logger from '../utils/logger.js';
  * @param userId User's Clerk ID
  * @param startDate Optional start date to filter displayed results (YYYY-MM-DD)
  * @param endDate Optional end date to filter displayed results (YYYY-MM-DD)
+ * @param timeZone User's timezone (IANA format, e.g., 'America/Los_Angeles')
  * @returns Array of daily progress with date and completion rate
  */
 export async function getUserProgressHistory(
   db: D1Database,
   userId: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  timeZone: string = 'UTC'
 ): Promise<Array<{ date: string; completionRate: number }>> {
   try {
-    logger.info(`Fetching progress history for user ${userId}`);
+    logger.info(
+      `Fetching progress history for user ${userId} in timezone ${timeZone}`
+    );
     return await trackerRepository.getUserProgressHistory(
       db,
       userId,
       startDate,
-      endDate
+      endDate,
+      timeZone
     );
   } catch (error) {
     logger.error(
@@ -41,15 +46,19 @@ export async function getUserProgressHistory(
  * to ensure accuracy, regardless of any date filters for display.
  * @param db D1Database instance
  * @param userId User's Clerk ID
+ * @param timeZone User's timezone (IANA format)
  * @returns Object containing current streak and longest streak
  */
 export async function getUserStreaks(
   db: D1Database,
-  userId: string
+  userId: string,
+  timeZone: string = 'UTC'
 ): Promise<{ currentStreak: number; longestStreak: number }> {
   try {
-    logger.info(`Fetching streak information for user ${userId}`);
-    return await trackerRepository.getUserStreaks(db, userId);
+    logger.info(
+      `Fetching streak information for user ${userId} in timezone ${timeZone}`
+    );
+    return await trackerRepository.getUserStreaks(db, userId, timeZone);
   } catch (error) {
     logger.error(`Error fetching streaks for user ${userId}:`, error as Error);
     throw error;
@@ -64,25 +73,29 @@ export async function getUserStreaks(
  * @param userId User's Clerk ID
  * @param startDate Optional start date to filter displayed history (YYYY-MM-DD)
  * @param endDate Optional end date to filter displayed history (YYYY-MM-DD)
+ * @param timeZone User's timezone (IANA format)
  * @returns Object containing history, current streak, and longest streak
  */
 export async function getUserProgressOverview(
   db: D1Database,
   userId: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  timeZone: string = 'UTC'
 ): Promise<{
   history: Array<{ date: string; completionRate: number }>;
   currentStreak: number;
   longestStreak: number;
 }> {
   try {
-    logger.info(`Fetching progress overview for user ${userId}`);
+    logger.info(
+      `Fetching progress overview for user ${userId} in timezone ${timeZone}`
+    );
 
     // Get both history and streaks in parallel for efficiency
     const [history, streaks] = await Promise.all([
-      getUserProgressHistory(db, userId, startDate, endDate),
-      getUserStreaks(db, userId),
+      getUserProgressHistory(db, userId, startDate, endDate, timeZone),
+      getUserStreaks(db, userId, timeZone),
     ]);
 
     return {

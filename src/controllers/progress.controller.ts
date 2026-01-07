@@ -14,13 +14,14 @@ export async function getProgressHistory(c: Context): Promise<Response> {
       return c.json({ error: 'User not authenticated' }, 401);
     }
     const userId = auth.userId;
-    const { startDate, endDate } = c.get('validated_query') || {};
+    const { startDate, endDate, timeZone } = c.get('validated_query') || {};
 
     const history = await progressService.getUserProgressHistory(
       c.env.DB,
       userId,
       startDate,
-      endDate
+      endDate,
+      timeZone || 'UTC'
     );
 
     return c.json({ history });
@@ -42,8 +43,13 @@ export async function getStreaks(c: Context): Promise<Response> {
       return c.json({ error: 'User not authenticated' }, 401);
     }
     const userId = auth.userId;
+    const { timeZone } = c.get('validated_query') || {};
 
-    const streaks = await progressService.getUserStreaks(c.env.DB, userId);
+    const streaks = await progressService.getUserStreaks(
+      c.env.DB,
+      userId,
+      timeZone || 'UTC'
+    );
 
     return c.json(streaks);
   } catch (error: any) {
@@ -64,13 +70,14 @@ export async function getProgressOverview(c: Context): Promise<Response> {
       return c.json({ error: 'User not authenticated' }, 401);
     }
     const userId = auth.userId;
-    const { startDate, endDate } = c.get('validated_query') || {};
+    const { startDate, endDate, timeZone } = c.get('validated_query') || {};
 
     const overview = await progressService.getUserProgressOverview(
       c.env.DB,
       userId,
       startDate,
-      endDate
+      endDate,
+      timeZone || 'UTC'
     );
 
     return c.json(overview);
