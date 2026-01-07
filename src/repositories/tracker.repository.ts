@@ -268,97 +268,190 @@ export async function getAllTrackersForHabit(
  * @param userId User's Clerk ID
  * @param startDate Optional start date (ISO format) to filter returned results
  * @param endDate Optional end date (ISO format) to filter returned results
+ * @param timeZone User's timezone (IANA format, e.g., 'America/Los_Angeles')
  * @returns Array of daily completion records with date and completion percentage
  */
 export async function getUserProgressHistory(
   db: D1Database,
   userId: string,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
+  timeZone: string = 'UTC'
 ): Promise<Array<{ date: string; completionRate: number }>> {
-  // Always calculate a full year of history for accurate streak calculation
-  // This ensures we have enough data regardless of requested date range
-  const fullHistoryStartDate = new Date();
-  fullHistoryStartDate.setDate(fullHistoryStartDate.getDate() - 365); // Go back a full year
-  const calculationStartDate = fullHistoryStartDate.toISOString().split('T')[0];
-  const today = new Date().toISOString().split('T')[0];
-
-  // This query calculates the completion rate for each day using a more efficient date generation approach
-  const sql = `
-    WITH RECURSIVE dates(date) AS (
-      -- Generate dates using recursive CTE instead of many UNIONs
-      VALUES(?)
-      UNION ALL
-      SELECT date(date, '+1 day')
-      FROM dates
-      WHERE date < ?
-    ),
-    habit_dates AS (
-      -- For each date, count active habits for that day of week
-      SELECT 
-        d.date,
-        COUNT(h.id) AS total_habits
-      FROM dates d
-      JOIN habits h ON h.user_id = ?
-        AND DATE(h.start_date) <= d.date
-        AND (h.end_date IS NULL OR DATE(h.end_date) > d.date)
-        AND (
-          h.frequency LIKE '%' || SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', d.date), 3) || '%'
-          OR h.frequency = SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', d.date), 3)
-        )
-      GROUP BY d.date
-    ),
-    completed_habits AS (
-      -- For each date, count completed habits that were actually active on that date
-      SELECT 
-        DATE(t.timestamp) AS date,
-        COUNT(DISTINCT t.habit_id) AS completed_habits
-      FROM trackers t
-      JOIN habits h ON t.habit_id = h.id AND t.user_id = h.user_id
-      WHERE t.user_id = ?
-        AND DATE(h.start_date) <= DATE(t.timestamp)
-        AND (h.end_date IS NULL OR DATE(h.end_date) > DATE(t.timestamp))
-        AND (
-          h.frequency LIKE '%' || SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', DATE(t.timestamp)), 3) || '%'
-          OR h.frequency = SUBSTR('SunMonTueWedThuFriSat', 1 + 3*STRFTIME('%w', DATE(t.timestamp)), 3)
-        )
-      GROUP BY DATE(t.timestamp)
-    )
-    -- Join to calculate completion rate
-    SELECT 
-      hd.date,
-      CASE 
-        WHEN hd.total_habits = 0 THEN 0
-        ELSE ROUND((COALESCE(ch.completed_habits, 0) * 100.0) / hd.total_habits, 2)
-      END AS completion_rate
-    FROM habit_dates hd
-    LEFT JOIN completed_habits ch ON hd.date = ch.date
-    WHERE hd.total_habits > 0
-    ORDER BY hd.date DESC;
-  `;
-
   try {
-    const result = await db
-      .prepare(sql)
-      .bind(calculationStartDate, today, userId, userId)
-      .all();
-
-    if (!result.success) {
-      throw new Error('Failed to fetch user progress history');
+    // Validate timezone
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone }).format(new Date());
+    } catch {
+      console.warn(`Invalid timezone "${timeZone}", falling back to UTC`);
+      timeZone = 'UTC';
     }
 
-    // Map results to the expected format
-    let history = result.results.map((row) => ({
-      date: row.date,
-      completionRate: row.completion_rate,
-    }));
+    const now = new Date();
+
+    // Get today's date in user's timezone (YYYY-MM-DD format)
+    const todayInTZ = new Intl.DateTimeFormat('en-CA', { timeZone }).format(
+      now
+    );
+
+    // Calculate start date (365 days ago in user's timezone)
+    const startDateObj = new Date();
+    startDateObj.setDate(startDateObj.getDate() - 365);
+    const calculationStartDate = new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+    }).format(startDateObj);
+
+    // Generate list of all dates in range (in user's timezone)
+    const dates: string[] = [];
+    const currentDate = new Date(calculationStartDate + 'T12:00:00Z'); // Use noon to avoid DST issues
+    const endDateObj = new Date(todayInTZ + 'T12:00:00Z');
+
+    while (currentDate <= endDateObj) {
+      dates.push(
+        new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(
+          currentDate
+        )
+      );
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    // Fetch all habits for user (including deleted ones for historical accuracy)
+    const habitsResult = await db
+      .prepare(
+        `
+        SELECT id, frequency, start_date, end_date, deleted_at
+        FROM habits 
+        WHERE user_id = ?
+      `
+      )
+      .bind(userId)
+      .all();
+
+    if (!habitsResult.success) {
+      throw new Error('Failed to fetch habits for progress history');
+    }
+
+    const habits = habitsResult.results as Array<{
+      id: number;
+      frequency: string;
+      start_date: string;
+      end_date: string | null;
+      deleted_at: string | null;
+    }>;
+
+    if (habits.length === 0) {
+      return [];
+    }
+
+    // Fetch all trackers in the date range
+    // We need to query with UTC boundaries that cover the entire range in user's timezone
+    const rangeStart = getLocaleStartISO(calculationStartDate, timeZone);
+    const rangeEnd = getLocaleEndISO(todayInTZ, timeZone);
+
+    const trackersResult = await db
+      .prepare(
+        `
+        SELECT habit_id, timestamp 
+        FROM trackers 
+        WHERE user_id = ? 
+        AND timestamp >= ? 
+        AND timestamp <= ?
+        AND deleted_at IS NULL
+      `
+      )
+      .bind(userId, rangeStart, rangeEnd)
+      .all();
+
+    if (!trackersResult.success) {
+      throw new Error('Failed to fetch trackers for progress history');
+    }
+
+    const trackers = trackersResult.results as Array<{
+      habit_id: number;
+      timestamp: string;
+    }>;
+
+    // Build a map of tracker completions by date (in user's timezone)
+    const trackersByDate = new Map<string, Set<number>>();
+    for (const tracker of trackers) {
+      const trackerDate = getDateInTimezone(tracker.timestamp, timeZone);
+      if (!trackersByDate.has(trackerDate)) {
+        trackersByDate.set(trackerDate, new Set());
+      }
+      trackersByDate.get(trackerDate)!.add(tracker.habit_id);
+    }
+
+    // Calculate completion rate for each date
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const history: Array<{ date: string; completionRate: number }> = [];
+
+    for (const dateStr of dates) {
+      // Get day of week for this date
+      const date = new Date(dateStr + 'T12:00:00Z');
+      const dayOfWeek = dayNames[date.getUTCDay()];
+
+      // Count habits that should be active on this date
+      let totalHabits = 0;
+      const activeHabitIds: number[] = [];
+
+      for (const habit of habits) {
+        // Check if habit was active on this date
+        const habitStartDate = habit.start_date.split('T')[0];
+        const habitEndDate = habit.end_date
+          ? habit.end_date.split('T')[0]
+          : null;
+        const habitDeletedAt = habit.deleted_at
+          ? habit.deleted_at.split('T')[0]
+          : null;
+
+        // Habit must have started before or on this date
+        if (habitStartDate > dateStr) continue;
+
+        // Habit must not have ended before this date
+        if (habitEndDate && habitEndDate < dateStr) continue;
+
+        // If habit was deleted, it should still count for dates before deletion
+        // (for historical accuracy)
+        if (habitDeletedAt && habitDeletedAt <= dateStr) continue;
+
+        // Check if habit is scheduled for this day of week
+        const frequencyDays = habit.frequency.split(',');
+        if (!frequencyDays.includes(dayOfWeek)) continue;
+
+        totalHabits++;
+        activeHabitIds.push(habit.id);
+      }
+
+      // Skip days with no scheduled habits
+      if (totalHabits === 0) continue;
+
+      // Count completed habits for this date
+      const completedHabits = trackersByDate.get(dateStr);
+      let completedCount = 0;
+
+      if (completedHabits) {
+        for (const habitId of activeHabitIds) {
+          if (completedHabits.has(habitId)) {
+            completedCount++;
+          }
+        }
+      }
+
+      const completionRate = Math.round((completedCount / totalHabits) * 100);
+      history.push({ date: dateStr, completionRate });
+    }
+
+    // Sort by date descending (most recent first)
+    history.sort((a, b) => b.date.localeCompare(a.date));
 
     // If startDate and endDate are provided, filter the results to the requested range
     if (startDate || endDate) {
-      history = history.filter((entry) => {
-        const entryDate = entry.date;
-        const afterStart = !startDate || entryDate >= startDate;
-        const beforeEnd = !endDate || entryDate <= endDate;
+      const filterStart = startDate ? startDate.split('T')[0] : null;
+      const filterEnd = endDate ? endDate.split('T')[0] : null;
+
+      return history.filter((entry) => {
+        const afterStart = !filterStart || entry.date >= filterStart;
+        const beforeEnd = !filterEnd || entry.date <= filterEnd;
         return afterStart && beforeEnd;
       });
     }
@@ -371,22 +464,133 @@ export async function getUserProgressHistory(
 }
 
 /**
+ * Helper function to get UTC ISO string for start of day in timezone
+ */
+function getLocaleStartISO(dateStr: string, timeZone: string): string {
+  // Create date at start of day in the timezone
+  const date = new Date(dateStr + 'T00:00:00');
+
+  // Get offset for this specific date/time in the timezone
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  // Parse as if it were UTC first
+  const asUtc = new Date(`${dateStr}T00:00:00Z`);
+  const parts = formatter.formatToParts(asUtc);
+  const getPart = (type: string) =>
+    parts.find((p) => p.type === type)?.value || '';
+
+  const tzYear = parseInt(getPart('year'), 10);
+  const tzMonth = parseInt(getPart('month'), 10);
+  const tzDay = parseInt(getPart('day'), 10);
+  const tzHour = parseInt(getPart('hour'), 10);
+  const tzMinute = parseInt(getPart('minute'), 10);
+  const tzSecond = parseInt(getPart('second'), 10);
+
+  const tzAsUtc = Date.UTC(
+    tzYear,
+    tzMonth - 1,
+    tzDay,
+    tzHour,
+    tzMinute,
+    tzSecond
+  );
+  const offset = tzAsUtc - asUtc.getTime();
+
+  const localeStart = new Date(`${dateStr}T00:00:00Z`);
+  localeStart.setTime(localeStart.getTime() - offset);
+
+  return localeStart.toISOString();
+}
+
+/**
+ * Helper function to get UTC ISO string for end of day in timezone
+ */
+function getLocaleEndISO(dateStr: string, timeZone: string): string {
+  const asUtc = new Date(`${dateStr}T23:59:59Z`);
+
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  const parts = formatter.formatToParts(asUtc);
+  const getPart = (type: string) =>
+    parts.find((p) => p.type === type)?.value || '';
+
+  const tzYear = parseInt(getPart('year'), 10);
+  const tzMonth = parseInt(getPart('month'), 10);
+  const tzDay = parseInt(getPart('day'), 10);
+  const tzHour = parseInt(getPart('hour'), 10);
+  const tzMinute = parseInt(getPart('minute'), 10);
+  const tzSecond = parseInt(getPart('second'), 10);
+
+  const tzAsUtc = Date.UTC(
+    tzYear,
+    tzMonth - 1,
+    tzDay,
+    tzHour,
+    tzMinute,
+    tzSecond
+  );
+  const offset = tzAsUtc - asUtc.getTime();
+
+  const localeEnd = new Date(`${dateStr}T23:59:59.999Z`);
+  localeEnd.setTime(localeEnd.getTime() - offset);
+
+  return localeEnd.toISOString();
+}
+
+/**
+ * Helper function to get date string (YYYY-MM-DD) for a timestamp in a timezone
+ */
+function getDateInTimezone(timestamp: string, timeZone: string): string {
+  const date = new Date(timestamp);
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(date);
+}
+
+/**
  * Gets the user's current and longest streaks based on 100% completion days
  * @param db D1Database instance
  * @param userId User's Clerk ID
+ * @param timeZone User's timezone (IANA format)
  * @returns Object containing current streak and longest streak
  */
 export async function getUserStreaks(
   db: D1Database,
-  userId: string
+  userId: string,
+  timeZone: string = 'UTC'
 ): Promise<{ currentStreak: number; longestStreak: number }> {
   try {
+    // Validate timezone
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone }).format(new Date());
+    } catch {
+      console.warn(`Invalid timezone "${timeZone}", falling back to UTC`);
+      timeZone = 'UTC';
+    }
+
     // Get the user's progress history with full year of data to ensure accurate streak calculation
     const history = await getUserProgressHistory(
       db,
       userId,
       undefined,
-      undefined
+      undefined,
+      timeZone
     );
 
     // Calculate streaks based on 100% completion days
@@ -399,8 +603,9 @@ export async function getUserStreaks(
       (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
     );
 
-    // Calculate current streak (consecutive 100% days up to today)
-    const today = new Date().toISOString().split('T')[0];
+    // Calculate current streak (consecutive 100% days up to today in user's timezone)
+    const now = new Date();
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone }).format(now);
 
     for (let i = 0; i < sortedHistory.length; i++) {
       const entry = sortedHistory[i];
@@ -411,8 +616,8 @@ export async function getUserStreaks(
       }
 
       if (i > 0) {
-        const prevDate = new Date(sortedHistory[i - 1].date);
-        const currDate = new Date(entry.date);
+        const prevDate = new Date(sortedHistory[i - 1].date + 'T12:00:00Z');
+        const currDate = new Date(entry.date + 'T12:00:00Z');
         const dayDiff = Math.floor(
           (prevDate.getTime() - currDate.getTime()) / (24 * 60 * 60 * 1000)
         );
@@ -441,8 +646,12 @@ export async function getUserStreaks(
 
         // Check for date continuity
         if (i > 0) {
-          const prevDate = new Date(chronologicalHistory[i - 1].date);
-          const currDate = new Date(chronologicalHistory[i].date);
+          const prevDate = new Date(
+            chronologicalHistory[i - 1].date + 'T12:00:00Z'
+          );
+          const currDate = new Date(
+            chronologicalHistory[i].date + 'T12:00:00Z'
+          );
           const dayDiff = Math.floor(
             (currDate.getTime() - prevDate.getTime()) / (24 * 60 * 60 * 1000)
           );
