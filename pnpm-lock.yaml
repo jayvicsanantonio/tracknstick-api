@@ -13,7 +13,7 @@ importers:
         version: 2.33.3(react@19.1.0)
       '@hono/zod-validator':
         specifier: ^0.5.0
-        version: 0.5.0(hono@4.12.14)(zod@3.25.76)
+        version: 0.5.0(hono@4.12.18)(zod@3.25.76)
       '@pinecone-database/pinecone':
         specifier: 6.1.3
         version: 6.1.3
@@ -21,8 +21,8 @@ importers:
         specifier: 5.0.108
         version: 5.0.108(zod@3.25.76)
       hono:
-        specifier: ^4.12.14
-        version: 4.12.14
+        specifier: ^4.12.18
+        version: 4.12.18
       knex:
         specifier: ^3.1.0
         version: 3.1.0(sqlite3@5.1.7)
@@ -1171,6 +1171,7 @@ packages:
 
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
+    deprecated: Potential CWE-502 - Update to 1.3.1 or higher
 
   '@vercel/oidc@3.0.5':
     resolution: {integrity: sha512-fnYhv671l+eTTp48gB4zEsTW/YtRgRPnkI2nT7x6qw5rkI1Lq2hTmQIpHPgyThI0znLK+vX2n9XxKdXZ7BUbbw==}
@@ -1892,8 +1893,8 @@ packages:
     resolution: {integrity: sha512-0hJU9SCPvmMzIBdZFqNPXWa6dqh7WdH0cII9y+CyS8rG3nL48Bclra9HmKhVVUHyPWNH5Y7xDwAB7bfgSjkUMQ==}
     engines: {node: '>= 0.4'}
 
-  hono@4.12.14:
-    resolution: {integrity: sha512-am5zfg3yu6sqn5yjKBNqhnTX7Cv+m00ox+7jbaKkrLMRJ4rAdldd1xPd/JzbBWspqaQv6RSTrgFN95EsfhC+7w==}
+  hono@4.12.18:
+    resolution: {integrity: sha512-RWzP96k/yv0PQfyXnWjs6zot20TqfpfsNXhOnev8d1InAxubW93L11/oNUc3tQqn2G0bSdAOBpX+2uDFHV7kdQ==}
     engines: {node: '>=16.9.0'}
 
   html-rewriter-wasm@0.4.1:
@@ -3388,9 +3389,9 @@ snapshots:
   '@gar/promisify@1.1.3':
     optional: true
 
-  '@hono/zod-validator@0.5.0(hono@4.12.14)(zod@3.25.76)':
+  '@hono/zod-validator@0.5.0(hono@4.12.18)(zod@3.25.76)':
     dependencies:
-      hono: 4.12.14
+      hono: 4.12.18
       zod: 3.25.76
 
   '@humanwhocodes/config-array@0.13.0':
@@ -4768,7 +4769,7 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
-  hono@4.12.14: {}
+  hono@4.12.18: {}
 
   html-rewriter-wasm@0.4.1: {}
 
