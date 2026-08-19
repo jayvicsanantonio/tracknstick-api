@@ -40,7 +40,8 @@ export async function findTrackersByDateRange(
        WHERE user_id = ? 
        AND habit_id IN (${placeholders})
        AND timestamp >= ? 
-       AND timestamp <= ?`
+       AND timestamp <= ?
+       AND deleted_at IS NULL`
     )
     .bind(...params)
     .all();
@@ -65,7 +66,7 @@ export async function findTrackersByHabitAndDateRange(
   let sql = `
     SELECT id, habit_id, user_id, timestamp, notes, created_at, updated_at
     FROM trackers
-    WHERE habit_id = ? AND user_id = ?
+    WHERE habit_id = ? AND user_id = ? AND deleted_at IS NULL
   `;
   const params: (string | number)[] = [habitId, userId];
 
@@ -108,6 +109,7 @@ export async function findTrackersInDateRange(
     SELECT id
     FROM trackers
     WHERE habit_id = ? AND user_id = ? AND (timestamp BETWEEN ? AND ?)
+    AND deleted_at IS NULL
   `;
   const params = [habitId, userId, startDateISO, endDateISO];
 
@@ -218,7 +220,7 @@ export async function findAllByHabit(
   const sql = `
     SELECT id, habit_id, user_id, timestamp, notes, created_at, updated_at
     FROM trackers
-    WHERE habit_id = ? AND user_id = ?
+    WHERE habit_id = ? AND user_id = ? AND deleted_at IS NULL
     ORDER BY timestamp DESC
   `;
   const params = [habitId, userId];
@@ -248,7 +250,8 @@ export async function getAllTrackersForHabit(
       `SELECT * FROM trackers 
        WHERE user_id = ? 
        AND habit_id = ?
-          ORDER BY timestamp DESC`
+       AND deleted_at IS NULL
+       ORDER BY timestamp DESC`
     )
     .bind(userId, habitId)
     .all();
