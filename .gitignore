@@ -46,3 +46,6 @@ build/
 
 # Wrangler temp files
 .wrangler/
+
+# Captured test output (regenerated locally; never a source of truth)
+test_output.txt
