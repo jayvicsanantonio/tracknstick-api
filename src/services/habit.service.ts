@@ -21,7 +21,67 @@ interface TrackerRow {
   updated_at: string;
 }
 
-export const getAllHabits = async (userId: string, db: D1Database) => {
+/**
+ * One habit as the API presents it. Both list endpoints emit this shape, so
+ * they cannot drift in id type, icon fallback or which fields are present.
+ */
+interface HabitListItem {
+  id: string;
+  name: string;
+  icon?: string;
+  frequency: string[];
+  startDate: string;
+  endDate?: string;
+  streak: number;
+  totalCompletions: number;
+  longestStreak: number;
+  lastCompleted?: string;
+  completed: boolean;
+}
+
+// HabitRow.frequency is a comma-joined string; parsed in exactly one place.
+const toHabitListItem = (
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  row: any,
+  completed: boolean
+): HabitListItem => ({
+  id: row.id.toString(),
+  name: row.name,
+  icon: row.icon || undefined,
+  frequency: row.frequency ? row.frequency.split(',') : [],
+  startDate: row.start_date,
+  endDate: row.end_date || undefined,
+  streak: row.streak,
+  totalCompletions: row.total_completions,
+  longestStreak: row.longest_streak,
+  lastCompleted: row.last_completed || undefined,
+  completed,
+});
+
+/** Ids of habits with a tracker inside the given day, in the user's timezone. */
+const completedIdsForDay = async (
+  db: D1Database,
+  userId: string,
+  habitIds: number[],
+  day: Date,
+  timeZone: string
+): Promise<Set<number>> => {
+  const { localeStartISO, localeEndISO } = getLocaleStartEnd(day, timeZone);
+  const trackers = await trackerRepository.findTrackersByDateRange(
+    db,
+    userId,
+    habitIds,
+    localeStartISO,
+    localeEndISO
+  );
+  return new Set(trackers.map((t) => t.habit_id));
+};
+
+export const getAllHabits = async (
+  userId: string,
+  db: D1Database,
+  timeZone = 'UTC'
+) => {
   try {
     const habits = await habitRepository.getAllHabits(db, userId);
 
@@ -29,71 +89,17 @@ export const getAllHabits = async (userId: string, db: D1Database) => {
       return [];
     }
 
-    // Default to today in UTC for completion status when no date context provided
-    const today = new Date();
-    const timeZone = 'UTC';
-    const dayOfWeek = new Intl.DateTimeFormat('en-US', {
-      timeZone,
-      weekday: 'short',
-    }).format(today);
-
-    // Get habits that should be active today
-    const activeHabitsToday = habits.filter((habit) => {
-      const startDate = new Date(habit.start_date);
-      const endDate = habit.end_date ? new Date(habit.end_date) : null;
-      const frequency = habit.frequency.split(',');
-
-      // Check if habit is active today
-      const isActiveToday =
-        startDate <= today && (!endDate || endDate >= today);
-      const isScheduledToday = frequency.includes(dayOfWeek);
-
-      return isActiveToday && isScheduledToday;
-    });
-
-    // If no habits are active today, return all habits as not completed
-    if (activeHabitsToday.length === 0) {
-      return habits.map((habit) => ({
-        id: habit.id,
-        name: habit.name,
-        icon: habit.icon || '',
-        frequency: habit.frequency.split(','),
-        startDate: habit.start_date,
-        endDate: habit.end_date,
-        streak: habit.streak,
-        totalCompletions: habit.total_completions,
-        lastCompleted: habit.last_completed,
-        completed: false,
-      }));
-    }
-
-    // Get today's date range in UTC
-    const { getLocaleStartEnd } = await import('../utils/dateUtils.js');
-    const { localeStartISO, localeEndISO } = getLocaleStartEnd(today, timeZone);
-
-    const habitIds = habits.map((h) => h.id);
-    const trackers = await trackerRepository.findTrackersByDateRange(
+    const completedHabitIds = await completedIdsForDay(
       db,
       userId,
-      habitIds,
-      localeStartISO,
-      localeEndISO
+      habits.map((h) => h.id),
+      new Date(),
+      timeZone
     );
 
-    const completedHabitIds = new Set(trackers.map((t) => t.habit_id));
-
-    return habits.map((habit) => ({
-      id: habit.id,
-      name: habit.name,
-      icon: habit.icon || '',
-      frequency: habit.frequency.split(','),
-      startDate: habit.start_date,
-      endDate: habit.end_date,
-      streak: habit.streak,
-      totalCompletions: habit.total_completions,
-      lastCompleted: habit.last_completed,
-      completed: completedHabitIds.has(habit.id),
-    }));
+    return habits.map((habit) =>
+      toHabitListItem(habit, completedHabitIds.has(habit.id))
+    );
   } catch (error) {
     logger.error(
       `Error in getAllHabits service for user ${userId}:`,
@@ -128,39 +134,17 @@ export const getHabitsForDate = async (
       return [];
     }
 
-    const habitIds = habits.map((h) => h.id);
-    const { localeStartISO, localeEndISO } = getLocaleStartEnd(
+    const completedHabitIds = await completedIdsForDay(
+      db,
+      userId,
+      habits.map((h) => h.id),
       utcDate,
       timeZone
     );
 
-    const trackers = await trackerRepository.findTrackersByDateRange(
-      db,
-      userId,
-      habitIds,
-      localeStartISO,
-      localeEndISO
+    return habits.map((habit) =>
+      toHabitListItem(habit, completedHabitIds.has(habit.id))
     );
-
-    const completedHabitIds = new Set(trackers.map((t) => t.habit_id));
-
-    return habits.map((habit) => {
-      return {
-        id: habit.id.toString(),
-        name: habit.name,
-        icon: habit.icon || undefined,
-        frequency: Array.isArray(habit.frequency)
-          ? habit.frequency
-          : habit.frequency.split(','),
-        startDate: habit.start_date,
-        endDate: habit.end_date || undefined,
-        streak: habit.streak,
-        totalCompletions: habit.total_completions,
-        longestStreak: habit.longest_streak,
-        lastCompleted: habit.last_completed || undefined,
-        completed: completedHabitIds.has(habit.id),
-      };
-    });
   } catch (error) {
     console.error(
       `Error in getHabitsForDate service for user ${userId}:`,

@@ -26,7 +26,7 @@ export const getHabits = async (c: Context) => {
   try {
     let habits;
 
-    if (date && timeZone) {
+    if (date) {
       // Get habits for a specific date
       habits = await habitService.getHabitsForDate(
         userId,
@@ -35,8 +35,8 @@ export const getHabits = async (c: Context) => {
         c.env.DB
       );
     } else {
-      // Get all habits
-      habits = await habitService.getAllHabits(userId, c.env.DB);
+      // Get all habits, with today's completion in the caller's timezone
+      habits = await habitService.getAllHabits(userId, c.env.DB, timeZone);
     }
 
     return c.json(

@@ -86,9 +86,11 @@ describe('Habit Controller', () => {
 
       await habitController.getHabits(mockContext as Context);
 
+      // timeZone is forwarded so "today" is resolved in the caller's zone
       expect(habitService.getAllHabits).toHaveBeenCalledWith(
         mockClerkUserId,
-        mockDB
+        mockDB,
+        undefined
       );
     });
   });
