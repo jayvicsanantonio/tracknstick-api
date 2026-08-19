@@ -90,11 +90,11 @@ async function seed() {
     const sampleSeed = `-- Sample seed data
 INSERT OR IGNORE INTO users (clerk_user_id) VALUES ('user_test123');
 
-INSERT OR IGNORE INTO habits (user_id, name, icon, frequency_type, frequency_days, start_date, streak, best_streak) 
-VALUES 
-  ('user_test123', 'Morning Exercise', '🏃', 'daily', NULL, '2024-01-01', 0, 0),
-  ('user_test123', 'Read Books', '📚', 'daily', NULL, '2024-01-01', 0, 0),
-  ('user_test123', 'Drink Water', '💧', 'daily', NULL, '2024-01-01', 0, 0);
+INSERT OR IGNORE INTO habits (user_id, name, icon, frequency, start_date)
+VALUES
+  ('user_test123', 'Morning Exercise', '🏃', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', '2024-01-01'),
+  ('user_test123', 'Read Books', '📚', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', '2024-01-01'),
+  ('user_test123', 'Drink Water', '💧', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', '2024-01-01');
 `;
 
     fs.writeFileSync(seedFile, sampleSeed);
