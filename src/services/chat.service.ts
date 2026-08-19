@@ -18,23 +18,17 @@ Rules:
 5. Keep responses concise but helpful
 6. Use specific examples and actionable advice when possible`;
 
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
 /**
- * Retrieves relevant context from Pinecone based on the user's query.
- * Uses semantic search to find the most relevant Atomic Habits content.
+ * Retrieves relevant context from Pinecone for a query string.
+ * Takes the query directly: picking which message is the query belongs to the
+ * caller that already validated the conversation.
  */
 export async function retrieveContext(
   ai: Ai,
   pineconeApiKey: string,
-  messages: ChatMessage[]
+  query: string
 ): Promise<string> {
-  const lastUserMessage = messages.filter((m) => m.role === 'user').pop();
-
-  if (!lastUserMessage) {
+  if (!query) {
     return '';
   }
 
@@ -44,11 +38,11 @@ export async function retrieveContext(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { embedding } = await embed({
       model: workersai.textEmbeddingModel('@cf/baai/bge-base-en-v1.5' as any),
-      value: lastUserMessage.content,
+      value: query,
     });
 
     logger.info(
-      `Generated embedding for query: "${lastUserMessage.content.substring(0, 50)}..."`
+      `Generated embedding for query: "${query.substring(0, 50)}..."`
     );
 
     // Query Pinecone for relevant chunks
