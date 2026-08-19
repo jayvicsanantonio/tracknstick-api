@@ -235,28 +235,3 @@ export const restoreHabit = async (c: Context) => {
   }
 };
 
-/**
- * Get progress overview for a user for a given month.
- */
-export const getProgressOverview = async (c: Context) => {
-  const { userId } = c.get('auth');
-  const { month, timeZone } = c.get('validated_query');
-
-  try {
-    // Import progress service to get actual implementation
-    const progressService = await import('../services/progress.service.js');
-    const overview = await progressService.getUserProgressOverview(
-      c.env.DB,
-      userId,
-      undefined, // startDate
-      undefined // endDate
-    );
-    return c.json(overview);
-  } catch (error) {
-    console.error(
-      `Error in getProgressOverview controller for user ${userId}:`,
-      error
-    );
-    throw error;
-  }
-};

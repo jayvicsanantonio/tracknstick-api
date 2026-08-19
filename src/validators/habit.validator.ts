@@ -83,8 +83,3 @@ export const manageTrackerSchema = z.object({
 export const getHabitStatsSchema = z.object({
   timeZone: z.string().default('UTC'),
 });
-
-export const getProgressOverviewSchema = z.object({
-  month: z.string().regex(/^\d{4}-\d{2}$/),
-  timeZone: z.string().default('UTC'),
-});

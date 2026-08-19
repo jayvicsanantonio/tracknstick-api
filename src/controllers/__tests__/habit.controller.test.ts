@@ -16,7 +16,6 @@ vi.mock('../../services/habit.service.js', () => ({
   getTrackersForHabit: vi.fn(),
   manageTracker: vi.fn(),
   getHabitStats: vi.fn(),
-  getProgressOverview: vi.fn(),
 }));
 
 describe('Habit Controller', () => {

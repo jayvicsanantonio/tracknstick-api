@@ -21,13 +21,6 @@ app.get(
   habitController.getHabits
 );
 
-// GET /api/v1/habits/progress/overview (MUST be before :habitId routes)
-app.get(
-  '/progress/overview',
-  validateRequest(habitValidator.getProgressOverviewSchema, 'query'),
-  habitController.getProgressOverview
-);
-
 // POST /api/v1/habits
 app.post(
   '/',

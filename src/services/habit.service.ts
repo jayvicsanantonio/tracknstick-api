@@ -554,26 +554,3 @@ export const getHabitStats = async (
     throw error;
   }
 };
-
-export const getProgressOverview = async (
-  userId: string,
-  month: string,
-  timeZone: string,
-  db: D1Database
-) => {
-  try {
-    // This is a more complex query that would calculate statistics across all habits
-    // for now returning a placeholder response
-    return {
-      totalHabits: 0,
-      completionRate: 0,
-      habitStats: [],
-    };
-  } catch (error) {
-    console.error(
-      `Error in getProgressOverview service for user ${userId}:`,
-      error
-    );
-    throw error;
-  }
-};
