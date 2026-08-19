@@ -4,6 +4,18 @@
 import type { D1Database } from '@cloudflare/workers-types';
 import { Achievement, UserAchievement } from '../types/index.js';
 
+/** One consistent read of everything achievement rules measure. */
+export interface UserHabitStats {
+  totalHabits: number;
+  totalCompletions: number;
+  longestStreak: number;
+  currentStreaks: number[];
+  activeDays: number;
+  perfectDays: number;
+  notedCompletions: number;
+  maxHabitsInOneDay: number;
+}
+
 export class AchievementRepository {
   constructor(private db: D1Database) {}
 
@@ -152,93 +164,123 @@ export class AchievementRepository {
     }
   }
 
-  async getUserHabitStats(userId: string): Promise<{
-    totalHabits: number;
-    totalCompletions: number;
-    longestStreak: number;
-    currentStreaks: number[];
-    activeDays: number;
-    perfectDays: number;
-  }> {
-    // Get total habits created
-    const habitCountResult = await this.db
-      .prepare(
-        `SELECT COUNT(*) as count FROM habits WHERE user_id = ? AND deleted_at IS NULL`
-      )
-      .bind(userId)
-      .first();
-
-    // Get total completions
-    const completionsResult = await this.db
-      .prepare(
-        `SELECT COUNT(*) as count FROM trackers WHERE user_id = ? AND deleted_at IS NULL`
-      )
-      .bind(userId)
-      .first();
-
-    // Get longest streak across all habits
-    const longestStreakResult = await this.db
-      .prepare(
-        `SELECT MAX(longest_streak) as maxStreak FROM habits WHERE user_id = ? AND deleted_at IS NULL`
-      )
-      .bind(userId)
-      .first();
-
-    // Get current streaks
-    const currentStreaksResult = await this.db
-      .prepare(
-        `SELECT streak FROM habits WHERE user_id = ? AND deleted_at IS NULL AND streak > 0`
-      )
-      .bind(userId)
-      .all();
-
-    // Get active days (days with at least one completion)
-    const activeDaysResult = await this.db
-      .prepare(
-        `
-        SELECT COUNT(DISTINCT DATE(timestamp)) as count 
-        FROM trackers 
-        WHERE user_id = ? AND deleted_at IS NULL
-      `
-      )
-      .bind(userId)
-      .first();
-
-    // Get perfect days (days where user completed all active habits)
-    const perfectDaysQuery = await this.db
-      .prepare(
-        `
-        WITH daily_stats AS (
-          SELECT 
-            DATE(t.timestamp) as date,
-            COUNT(t.id) as completions,
-            COUNT(DISTINCT h.id) as active_habits
-          FROM trackers t
-          JOIN habits h ON t.habit_id = h.id
-          WHERE t.user_id = ? AND t.deleted_at IS NULL AND h.deleted_at IS NULL
-            AND DATE(t.timestamp) >= DATE(h.start_date)
-            AND (h.end_date IS NULL OR DATE(t.timestamp) <= DATE(h.end_date))
-          GROUP BY DATE(t.timestamp)
+  async getUserHabitStats(userId: string): Promise<UserHabitStats> {
+    // One batch instead of six sequential round trips. D1 runs a batch as an
+    // implicit transaction, so every figure below describes the same instant.
+    const [
+      habitCount,
+      completions,
+      longestStreak,
+      currentStreaks,
+      activeDays,
+      perfectDays,
+      notedCompletions,
+      maxHabitsInOneDay,
+    ] = await this.db.batch([
+      this.db
+        .prepare(
+          `SELECT COUNT(*) as count FROM habits WHERE user_id = ? AND deleted_at IS NULL`
         )
-        SELECT COUNT(*) as count FROM daily_stats WHERE completions = active_habits
-      `
-      )
-      .bind(userId)
-      .first();
+        .bind(userId),
+      this.db
+        .prepare(
+          `SELECT COUNT(*) as count FROM trackers WHERE user_id = ? AND deleted_at IS NULL`
+        )
+        .bind(userId),
+      this.db
+        .prepare(
+          `SELECT MAX(longest_streak) as maxStreak FROM habits WHERE user_id = ? AND deleted_at IS NULL`
+        )
+        .bind(userId),
+      this.db
+        .prepare(
+          `SELECT streak FROM habits WHERE user_id = ? AND deleted_at IS NULL AND streak > 0`
+        )
+        .bind(userId),
+      this.db
+        .prepare(
+          `SELECT COUNT(DISTINCT DATE(timestamp)) as count
+           FROM trackers
+           WHERE user_id = ? AND deleted_at IS NULL`
+        )
+        .bind(userId),
+      this.db
+        .prepare(
+          `WITH days AS (
+             SELECT DISTINCT DATE(t.timestamp) as date
+             FROM trackers t
+             WHERE t.user_id = ? AND t.deleted_at IS NULL
+           ),
+           dow AS (
+             SELECT date,
+               CASE CAST(strftime('%w', date) AS INTEGER)
+                 WHEN 0 THEN 'Sun' WHEN 1 THEN 'Mon' WHEN 2 THEN 'Tue'
+                 WHEN 3 THEN 'Wed' WHEN 4 THEN 'Thu' WHEN 5 THEN 'Fri'
+                 ELSE 'Sat'
+               END as day_name
+             FROM days
+           ),
+           expected AS (
+             SELECT d.date, COUNT(h.id) as total
+             FROM dow d
+             JOIN habits h ON h.user_id = ? AND h.deleted_at IS NULL
+               AND d.date >= DATE(h.start_date)
+               AND (h.end_date IS NULL OR d.date <= DATE(h.end_date))
+               AND h.frequency LIKE '%' || d.day_name || '%'
+             GROUP BY d.date
+           ),
+           done AS (
+             SELECT DATE(t.timestamp) as date, COUNT(DISTINCT t.habit_id) as completed
+             FROM trackers t
+             JOIN habits h ON t.habit_id = h.id AND h.deleted_at IS NULL
+             WHERE t.user_id = ? AND t.deleted_at IS NULL
+             GROUP BY DATE(t.timestamp)
+           )
+           SELECT COUNT(*) as count
+           FROM expected e
+           JOIN done dn ON dn.date = e.date
+           WHERE e.total > 0 AND dn.completed >= e.total`
+        )
+                .bind(userId, userId, userId),
+      this.db
+        .prepare(
+          `SELECT COUNT(*) as count FROM trackers
+           WHERE user_id = ? AND deleted_at IS NULL
+             AND notes IS NOT NULL AND TRIM(notes) != ''`
+        )
+        .bind(userId),
+      this.db
+        .prepare(
+          `SELECT COALESCE(MAX(per_day), 0) as count FROM (
+             SELECT COUNT(DISTINCT habit_id) as per_day
+             FROM trackers
+             WHERE user_id = ? AND deleted_at IS NULL
+             GROUP BY DATE(timestamp)
+           )`
+        )
+        .bind(userId),
+    ]);
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const first = (r: any) => (r.results?.[0] ?? {}) as Record<string, unknown>;
 
     return {
-      totalHabits: (habitCountResult?.count as number) || 0,
-      totalCompletions: (completionsResult?.count as number) || 0,
-      longestStreak: (longestStreakResult?.maxStreak as number) || 0,
-      currentStreaks: currentStreaksResult.results.map(
-        (row) => row.streak as number
-      ),
-      activeDays: (activeDaysResult?.count as number) || 0,
-      perfectDays: (perfectDaysQuery?.count as number) || 0,
+      totalHabits: (first(habitCount).count as number) || 0,
+      totalCompletions: (first(completions).count as number) || 0,
+      longestStreak: (first(longestStreak).maxStreak as number) || 0,
+      currentStreaks: (
+        (currentStreaks.results ?? []) as { streak: number }[]
+      ).map((row) => row.streak),
+      activeDays: (first(activeDays).count as number) || 0,
+      perfectDays: (first(perfectDays).count as number) || 0,
+      notedCompletions: (first(notedCompletions).count as number) || 0,
+      maxHabitsInOneDay: (first(maxHabitsInOneDay).count as number) || 0,
     };
   }
 
-  private getDefaultAchievements(): Omit<Achievement, 'id' | 'createdAt'>[] {
+  /** The seeded catalogue. Public so the metric registry can be checked
+   * against it without a database. */
+  getDefaultAchievements(): Omit<Achievement, 'id' | 'createdAt'>[] {
     return [
       // Getting Started Category
       {

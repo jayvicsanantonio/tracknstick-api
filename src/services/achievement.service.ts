@@ -2,7 +2,12 @@
 // Handles achievement processing, evaluation, and progress tracking
 
 import type { D1Database } from '@cloudflare/workers-types';
-import { AchievementRepository } from '../repositories/achievement.repository.js';
+import {
+  AchievementRepository,
+  type UserHabitStats,
+} from '../repositories/achievement.repository.js';
+import { getUserStreaks } from '../repositories/tracker.repository.js';
+import { measure, type UserStatsSnapshot } from './achievementMetrics.js';
 import {
   Achievement,
   UserAchievement,
@@ -22,20 +27,17 @@ export class AchievementService {
   async getAllAchievementsForUser(
     userId: string
   ): Promise<AchievementResponse[]> {
-    const [allAchievements, userAchievements, userStreaks] = await Promise.all([
+    const [allAchievements, userAchievements, snapshot] = await Promise.all([
       this.repository.getAllAchievements(),
       this.repository.getUserAchievements(userId),
-      import('../repositories/tracker.repository.js').then((m) =>
-        m.getUserStreaks(this.db, userId)
-      ),
+      this.buildSnapshot(userId),
     ]);
 
     const userAchievementMap = new Map(
       userAchievements.map((ua) => [ua.achievementId, ua])
     );
 
-    return Promise.all(
-      allAchievements.map(async (achievement) => {
+    return allAchievements.map((achievement) => {
         const userAchievement = userAchievementMap.get(achievement.id);
         const isEarned = !!userAchievement;
 
@@ -54,12 +56,11 @@ export class AchievementService {
             : undefined,
           isEarned,
           earnedAt: userAchievement?.earnedAt,
-          progress: isEarned
-            ? undefined
-            : await this.calculateProgress(userId, achievement, userStreaks),
-        };
-      })
-    );
+        progress: isEarned
+          ? undefined
+          : this.calculateProgress(achievement, snapshot),
+      };
+    });
   }
 
   async getUserAchievements(userId: string): Promise<UserAchievement[]> {
@@ -73,22 +74,16 @@ export class AchievementService {
       userAchievements.map((ua) => ua.achievementId)
     );
 
-    // Get user streaks for evaluation
-    const userStreaks = await import(
-      '../repositories/tracker.repository.js'
-    ).then((m) => m.getUserStreaks(this.db, userId));
+    // One snapshot for the whole pass: nothing in the evaluation path reads
+    // user_achievements, so awarding cannot change what the rules measure.
+    const snapshot = await this.buildSnapshot(userId);
 
     const newlyEarned: Achievement[] = [];
 
     for (const achievement of allAchievements) {
       if (earnedAchievementIds.has(achievement.id)) continue;
 
-      const hasEarned = await this.evaluateAchievement(
-        userId,
-        achievement,
-        userStreaks
-      );
-      if (hasEarned) {
+      if (this.evaluateAchievement(achievement, snapshot)) {
         await this.repository.earnAchievement(userId, achievement.id);
         newlyEarned.push(achievement);
       }
@@ -101,41 +96,30 @@ export class AchievementService {
     await this.repository.initializeAchievements();
   }
 
-  private async calculateProgress(
-    userId: string,
+  /**
+   * Builds the one consistent read of user state that every rule measures.
+   * Required rather than optional: an absent snapshot previously meant two
+   * consumers refetched under different conditions, so "zero" and "unknown"
+   * were indistinguishable.
+   */
+  private async buildSnapshot(userId: string): Promise<UserStatsSnapshot> {
+    const [stats, streaks] = await Promise.all([
+      this.repository.getUserHabitStats(userId),
+      getUserStreaks(this.db, userId),
+    ]);
+
+    return { ...stats, currentStreak: streaks.currentStreak };
+  }
+
+  private calculateProgress(
     achievement: Achievement,
-    userStreaks?: { currentStreak: number; longestStreak: number }
-  ): Promise<AchievementProgress> {
-    const stats = await this.repository.getUserHabitStats(userId);
-    let currentValue = 0;
+    snapshot: UserStatsSnapshot
+  ): AchievementProgress | undefined {
+    const currentValue = measure(achievement, snapshot);
 
-    if (!userStreaks) {
-      userStreaks = await import('../repositories/tracker.repository.js').then(
-        (m) => m.getUserStreaks(this.db, userId)
-      );
-    }
-
-    switch (achievement.type) {
-      case 'habit_creation':
-        currentValue = stats.totalHabits;
-        break;
-
-      case 'completion':
-        currentValue = stats.totalCompletions;
-        break;
-
-      case 'streak':
-        currentValue = userStreaks?.longestStreak || 0;
-        break;
-
-      case 'milestone':
-        currentValue = await this.calculateMilestoneProgress(
-          userId,
-          achievement,
-          stats
-        );
-        break;
-    }
+    // null means this achievement has no registered metric, so there is no
+    // honest progress to report -- better than a well-formed false zero.
+    if (currentValue === null) return undefined;
 
     const progressPercentage = Math.min(
       100,
@@ -151,134 +135,13 @@ export class AchievementService {
     };
   }
 
-  private async evaluateAchievement(
-    userId: string,
+  private evaluateAchievement(
     achievement: Achievement,
-    userStreaks?: { currentStreak: number; longestStreak: number }
-  ): Promise<boolean> {
-    const stats = await this.repository.getUserHabitStats(userId);
-
-    if (!userStreaks && achievement.type === 'streak') {
-      userStreaks = await import('../repositories/tracker.repository.js').then(
-        (m) => m.getUserStreaks(this.db, userId)
-      );
-    }
-
-    switch (achievement.type) {
-      case 'habit_creation':
-        return stats.totalHabits >= achievement.requirementValue;
-
-      case 'completion':
-        return stats.totalCompletions >= achievement.requirementValue;
-
-      case 'streak':
-        return (
-          (userStreaks?.longestStreak || 0) >= achievement.requirementValue
-        );
-
-      case 'milestone':
-        return await this.evaluateMilestone(userId, achievement, stats);
-    }
-
-    return false;
-  }
-
-  private async calculateMilestoneProgress(
-    userId: string,
-    achievement: Achievement,
-    stats: any
-  ): Promise<number> {
-    const requirementData = achievement.requirementData
-      ? JSON.parse(achievement.requirementData)
-      : {};
-
-    switch (achievement.requirementType) {
-      case 'days':
-        if (requirementData.type === 'perfect_days') {
-          return stats.perfectDays;
-        }
-        return stats.activeDays;
-
-      case 'count':
-        // For simple counts we can't easily calculate progress without specific queries
-        // But for now we can return 0 if complicated
-        return 0;
-
-      case 'percentage':
-        if (requirementData.type === 'completion_rate') {
-          // We could fetch history and calculate, but it's expensive.
-          return 0;
-        }
-        return 0;
-    }
-
-    return 0;
-  }
-
-  private async evaluateMilestone(
-    userId: string,
-    achievement: Achievement,
-    stats: any
-  ): Promise<boolean> {
-    const requirementData = achievement.requirementData
-      ? JSON.parse(achievement.requirementData)
-      : {};
-
-    switch (achievement.requirementType) {
-      case 'days':
-        if (requirementData.type === 'perfect_days') {
-          return stats.perfectDays >= achievement.requirementValue;
-        }
-        return stats.activeDays >= achievement.requirementValue;
-
-      case 'count':
-        // Handle complex milestone requirements
-        return await this.evaluateComplexMilestone(
-          userId,
-          achievement,
-          requirementData,
-          stats
-        );
-
-      case 'percentage':
-        // Handle percentage-based milestones
-        return await this.evaluatePercentageMilestone(
-          userId,
-          achievement,
-          requirementData
-        );
-    }
-
-    return false;
-  }
-
-  private async evaluateComplexMilestone(
-    userId: string,
-    achievement: Achievement,
-    requirementData: any,
-    stats: any
-  ): Promise<boolean> {
-    // Placeholder for complex milestone evaluation
-    // This would include logic for achievements like:
-    // - single_day_completions
-    // - notes_added
-    // - habit_restart
-    // - habit_variety
-    // - achievement_count
-    // etc.
-
-    return false; // For now, these achievements won't be automatically awarded
-  }
-
-  private async evaluatePercentageMilestone(
-    userId: string,
-    achievement: Achievement,
-    requirementData: any
-  ): Promise<boolean> {
-    // Placeholder for percentage-based milestone evaluation
-    // This would include logic for completion rates over time periods
-
-    return false; // For now, these achievements won't be automatically awarded
+    snapshot: UserStatsSnapshot
+  ): boolean {
+    const currentValue = measure(achievement, snapshot);
+    if (currentValue === null) return false;
+    return currentValue >= achievement.requirementValue;
   }
 }
 
