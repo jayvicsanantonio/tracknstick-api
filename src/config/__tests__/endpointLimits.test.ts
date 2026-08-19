@@ -2,7 +2,7 @@
 // A key that matches no route silently disables its own policy
 
 import { describe, it, expect } from 'vitest';
-import { getSecurityConfig } from '../security.js';
+import { getSecurityConfig, validateSecurityConfig } from '../security.js';
 
 // Mirrors the app.route() calls in src/index.ts
 const MOUNTED_PREFIXES = [
@@ -62,4 +62,18 @@ describe('production endpoint policy actually applies', () => {
     const entry = endpointLimits[key as string];
     expect(entry.skipIf?.('/health')).toBe(true);
   });
+});
+
+describe('shipped configs satisfy their own validator', () => {
+  // validateSecurityConfig has no runtime caller: getSecurityConfig never
+  // invokes it. Asserting it here is where the guard can actually act --
+  // a bad limit fails CI instead of shipping and validating nothing.
+  it.each(['development', 'production', 'test'])(
+    '%s config is valid',
+    (env) => {
+      const result = validateSecurityConfig(getSecurityConfig(env));
+      expect(result.errors).toEqual([]);
+      expect(result.valid).toBe(true);
+    }
+  );
 });
