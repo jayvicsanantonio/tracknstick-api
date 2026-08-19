@@ -3,16 +3,9 @@
 
 import type { Context } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import {
-  BaseError,
-  NotFoundError,
-  ValidationError,
-  UnauthorizedError,
-  ForbiddenError,
-  RateLimitError,
-} from '../utils/errors.js';
-import { StatusCodes } from '../utils/statusCodes.js';
-import { getSecurityConfig, type ErrorConfig } from '../config/security.js';
+import { BaseError } from '../utils/errors.js';
+import { StatusCodes, toStatusCode } from '../utils/statusCodes.js';
+import { getSecurityConfig } from '../config/security.js';
 import logger from '../utils/logger.js';
 
 interface ErrorResponse {
@@ -132,6 +125,21 @@ function extractErrorContext(c: Context, error: Error): Record<string, any> {
 }
 
 /**
+ * Production-safe message per error code. The status code and the code
+ * itself come from the error instance, so this table holds the only datum
+ * the handler actually owns.
+ */
+const PUBLIC_MESSAGE: Record<string, string> = {
+  not_found: 'Resource not found',
+  validation_error: 'Invalid request data',
+  unauthorized: 'Authentication required',
+  forbidden: 'Access denied',
+  too_many_requests: 'Too many requests',
+  conflict: 'Resource already exists',
+  database_error: 'Internal server error',
+};
+
+/**
  * Enhanced error handler with environment awareness
  */
 export const errorHandlerEnhanced = (err: Error, c: Context) => {
@@ -143,7 +151,6 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
   errorContext.requestId = requestId;
 
   // Log error with appropriate level
-  const logLevel = errorConfig.logLevel;
   const logData: Record<string, any> = {
     ...errorContext,
     ...(errorConfig.showStackTrace && err.stack ? { stack: err.stack } : {}),
@@ -151,10 +158,10 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
 
   if (err instanceof BaseError && err.statusCode < 500) {
     // Client errors (4xx) - log as warning
-    logger.warn('Client error occurred', logData as any);
+    logger.warn('Client error occurred', logData);
   } else {
     // Server errors (5xx) - log as error
-    logger.error('Server error occurred', logData as any);
+    logger.error('Server error occurred', err, logData);
   }
 
   // Handle Hono's HTTPException
@@ -183,108 +190,15 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
     return c.json(response);
   }
 
-  // Handle NotFoundError
-  if (err instanceof NotFoundError) {
-    const response: ErrorResponse = {
-      error: {
-        message: formatErrorMessage(
-          err,
-          errorConfig.showErrorDetails,
-          'Resource not found'
-        ),
-        code: 'not_found',
-        requestId,
-        timestamp: new Date().toISOString(),
-      },
-    };
-
-    c.status(StatusCodes.NOT_FOUND);
-    return c.json(response);
-  }
-
-  // Handle ValidationError
-  if (err instanceof ValidationError) {
-    const response: ErrorResponse = {
-      error: {
-        message: formatErrorMessage(
-          err,
-          errorConfig.showErrorDetails,
-          'Invalid request data'
-        ),
-        code: 'validation_error',
-        requestId,
-        timestamp: new Date().toISOString(),
-      },
-    };
-
-    if (errorConfig.showErrorDetails && err.details) {
-      response.error.details = sanitizeErrorDetails(
-        err.details,
-        errorConfig.showErrorDetails
-      );
-    }
-
-    c.status(StatusCodes.BAD_REQUEST);
-    return c.json(response);
-  }
-
-  // Handle UnauthorizedError
-  if (err instanceof UnauthorizedError) {
-    const response: ErrorResponse = {
-      error: {
-        message: 'Authentication required',
-        code: 'unauthorized',
-        requestId,
-        timestamp: new Date().toISOString(),
-      },
-    };
-
-    c.status(StatusCodes.UNAUTHORIZED);
-    return c.json(response);
-  }
-
-  // Handle ForbiddenError
-  if (err instanceof ForbiddenError) {
-    const response: ErrorResponse = {
-      error: {
-        message: formatErrorMessage(
-          err,
-          errorConfig.showErrorDetails,
-          'Access denied'
-        ),
-        code: 'forbidden',
-        requestId,
-        timestamp: new Date().toISOString(),
-      },
-    };
-
-    c.status(StatusCodes.FORBIDDEN);
-    return c.json(response);
-  }
-
-  // Handle RateLimitError
-  if (err instanceof RateLimitError) {
-    const response: ErrorResponse = {
-      error: {
-        message: 'Too many requests',
-        code: 'too_many_requests',
-        requestId,
-        timestamp: new Date().toISOString(),
-      },
-    };
-
-    c.status(StatusCodes.TOO_MANY_REQUESTS);
-    return c.json(response);
-  }
-
-  // Handle other BaseError instances
+  // Handle every BaseError uniformly: the instance already carries the
+  // status code and the wire code, so the handler does not restate them.
   if (err instanceof BaseError) {
     const response: ErrorResponse = {
       error: {
         message: formatErrorMessage(
           err,
           errorConfig.showErrorDetails,
-          'Request failed'
+          PUBLIC_MESSAGE[err.code] ?? 'Request failed'
         ),
         code: err.code || 'internal_server_error',
         requestId,
@@ -299,16 +213,16 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
       );
     }
 
-    c.status((err.statusCode as any) || 500);
+    c.status(toStatusCode(err.statusCode) as Parameters<typeof c.status>[0]);
     return c.json(response);
   }
 
   // Handle database errors specifically
   if (err.name === 'SqliteError' || err.message?.includes('SQLITE_')) {
-    logger.error('Database error occurred', {
+    logger.error('Database error occurred', err, {
       ...logData,
       category: 'database',
-    } as any);
+    });
 
     const response: ErrorResponse = {
       error: {
@@ -326,10 +240,10 @@ export const errorHandlerEnhanced = (err: Error, c: Context) => {
   }
 
   // Handle unknown errors
-  logger.error('Unknown error occurred', {
+  logger.error('Unknown error occurred', err, {
     ...logData,
     category: 'unknown',
-  } as any);
+  });
 
   const response: ErrorResponse = {
     error: {
