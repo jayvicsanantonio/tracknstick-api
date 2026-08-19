@@ -3,7 +3,11 @@ import { HabitData, TrackerResult } from '../controllers/habit.controller.js';
 import * as habitRepository from '../repositories/habit.repository.js';
 import * as trackerRepository from '../repositories/tracker.repository.js';
 import { NotFoundError } from '../utils/errors.js';
-import { getLocaleStartEnd } from '../utils/dateUtils.js';
+import {
+  getLocaleStartEnd,
+  isValidTimeZone,
+  safeDateParse,
+} from '../utils/dateUtils.js';
 import {
   calculateDailyStreak,
   calculateNonDailyStreak,
@@ -264,17 +268,7 @@ export const manageTracker = async (
     throw new Error('Database instance is required');
   }
 
-  // Import date utilities
-  const { safeDateParse, isValidTimeZone } = await import(
-    '../utils/dateUtils.js'
-  );
-
   try {
-    console.log(
-      `[SERVICE] Starting manageTracker: habit=${habitId}, timestamp=${timestamp}, timezone=${timeZone}`
-    );
-
-    // Validate inputs
     if (!isValidTimeZone(timeZone)) {
       throw new Error(`Invalid timezone: ${timeZone}`);
     }
@@ -283,163 +277,63 @@ export const manageTracker = async (
       throw new Error(`Invalid timestamp format: ${timestamp}`);
     }
 
-    // Get habit data to determine frequency and streak info
+    // Verifies the habit exists and belongs to this user
     const habit = await habitRepository.getHabitById(db, userId, habitId);
-    console.log(
-      `[SERVICE] Found habit: id=${habit.id}, name=${habit.name}, frequency=${habit.frequency}`
-    );
 
-    // Import date utilities to get date range in user's timezone
-    const { getLocaleStartEnd } = await import('../utils/dateUtils.js');
-    const parsedTimestamp = new Date(timestamp);
     const { localeStartISO, localeEndISO } = getLocaleStartEnd(
-      parsedTimestamp,
+      new Date(timestamp),
       timeZone
     );
-    console.log(
-      `[SERVICE] Day boundaries in user timezone: start=${localeStartISO}, end=${localeEndISO}`
+
+    const existing = await habitRepository.findTrackerForDay(
+      db,
+      userId,
+      habitId,
+      {
+        startISO: localeStartISO,
+        endISO: localeEndISO,
+        exactTimestamp: timestamp,
+      }
     );
 
-    // Check for existing tracker on the same DATE using UTC range comparison
-    // This properly handles user timezones by querying trackers within the day boundaries
-    const existingDayTrackerQuery = `
-      SELECT id, timestamp FROM trackers 
-      WHERE habit_id = ? AND user_id = ? 
-      AND timestamp >= ? AND timestamp <= ?
-      ORDER BY timestamp DESC
-      LIMIT 1
-    `;
-    console.log(
-      `[SERVICE] Checking for existing day tracker with UTC range query`
-    );
-    console.log(
-      `[SERVICE] Query params: habitId=${habitId}, userId=${userId}, start=${localeStartISO}, end=${localeEndISO}`
-    );
+    let result: TrackerResult;
 
-    const existingDayTracker = await db
-      .prepare(existingDayTrackerQuery)
-      .bind(habitId, userId, localeStartISO, localeEndISO)
-      .first<{ id: number; timestamp: string }>();
-
-    console.log(
-      `[SERVICE] Existing day tracker result: ${JSON.stringify(existingDayTracker)}`
-    );
-
-    if (existingDayTracker) {
-      console.log(
-        `[SERVICE] Found existing tracker ${existingDayTracker.id}, deleting it`
-      );
-
-      // Tracker exists for this date - delete it to toggle off
-      const deleteResult = await db
-        .prepare('DELETE FROM trackers WHERE id = ?')
-        .bind(existingDayTracker.id)
-        .run();
-
-      console.log(`[SERVICE] Delete result: ${JSON.stringify(deleteResult)}`);
-
-      await updateHabitStreakInfo(
+    if (existing) {
+      await habitRepository.deleteTrackerById(db, existing.id);
+      result = {
+        status: 'removed',
+        message: 'Habit marked as not completed',
+      };
+    } else {
+      const trackerId = await habitRepository.createTracker(
         db,
         userId,
         habitId,
-        habit.frequency,
-        timeZone
+        timestamp,
+        notes
       );
-
-      const response = {
-        status: 'removed' as const,
-        message: 'Habit marked as not completed',
+      result = {
+        status: 'added',
+        trackerId: trackerId.toString(),
+        message: 'Habit marked as completed',
       };
-      console.log(`[SERVICE] Returning: ${JSON.stringify(response)}`);
-      return response;
     }
 
-    // Check for exact timestamp match to avoid UNIQUE constraint violation
-    const exactTimestampQuery = `
-      SELECT id FROM trackers 
-      WHERE habit_id = ? AND user_id = ? 
-      AND timestamp = ?
-    `;
-    console.log(
-      `[SERVICE] Checking for exact timestamp match: ${exactTimestampQuery}`
-    );
-    console.log(
-      `[SERVICE] Query params: habitId=${habitId}, userId=${userId}, timestamp=${timestamp}`
+    await updateHabitStreakInfo(
+      db,
+      userId,
+      habitId,
+      habit.frequency,
+      timeZone
     );
 
-    const exactTimestampTracker = await db
-      .prepare(exactTimestampQuery)
-      .bind(habitId, userId, timestamp)
-      .first<{ id: number }>();
+    logger.info('Tracker toggled', { userId, habitId, status: result.status });
 
-    console.log(
-      `[SERVICE] Exact timestamp tracker result: ${JSON.stringify(exactTimestampTracker)}`
-    );
-
-    if (exactTimestampTracker) {
-      console.log(
-        `[SERVICE] Found exact timestamp tracker ${exactTimestampTracker.id}, deleting it`
-      );
-
-      // Exact timestamp already exists - delete it (toggle off)
-      const deleteResult = await db
-        .prepare('DELETE FROM trackers WHERE id = ?')
-        .bind(exactTimestampTracker.id)
-        .run();
-
-      console.log(`[SERVICE] Delete result: ${JSON.stringify(deleteResult)}`);
-
-      await updateHabitStreakInfo(
-        db,
-        userId,
-        habitId,
-        habit.frequency,
-        timeZone
-      );
-
-      const response = {
-        status: 'removed' as const,
-        message: 'Habit marked as not completed',
-      };
-      console.log(`[SERVICE] Returning: ${JSON.stringify(response)}`);
-      return response;
-    }
-
-    // No existing tracker - create new one
-    console.log(`[SERVICE] No existing tracker found, creating new one`);
-    console.log(
-      `[SERVICE] Insert params: habitId=${habitId}, userId=${userId}, timestamp=${timestamp}, notes=${notes || null}`
-    );
-
-    const insertResult = await db
-      .prepare(
-        'INSERT INTO trackers (habit_id, user_id, timestamp, notes) VALUES (?, ?, ?, ?)'
-      )
-      .bind(habitId, userId, timestamp, notes || null)
-      .run();
-
-    console.log(`[SERVICE] Insert result: ${JSON.stringify(insertResult)}`);
-
-    if (!insertResult.success) {
-      console.log(`[SERVICE] Insert failed: ${insertResult.error}`);
-      throw new Error('Failed to add tracker');
-    }
-
-    // If we added or removed a tracker, recalculate streak
-    await updateHabitStreakInfo(db, userId, habitId, habit.frequency, timeZone);
-
-    // Return success result for new tracker
-    const response = {
-      status: 'added' as const,
-      message: 'Habit marked as completed',
-      trackerId: insertResult.meta.last_row_id?.toString(),
-    };
-    console.log(`[SERVICE] Returning: ${JSON.stringify(response)}`);
-    return response;
+    return result;
   } catch (error) {
-    console.error(
+    logger.error(
       `Error in manageTracker service for user ${userId}, habit ${habitId}:`,
-      error
+      error as Error
     );
     throw error;
   }

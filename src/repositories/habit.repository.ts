@@ -483,61 +483,69 @@ export async function getTrackers(
 }
 
 // Add or remove a tracker for a habit
-export async function manageTracker(
+/**
+ * Finds this habit's tracker for a given day, if one exists.
+ *
+ * The exactTimestamp arm exists because manageTrackerSchema accepts both
+ * "...T23:59:59Z" and "...T23:59:59.999Z", the raw string is stored as sent,
+ * and the range bounds always carry .000Z/.999Z. SQLite compares these as
+ * strings, so '...T23:59:59Z' sorts *after* '...T23:59:59.999Z' and the last
+ * second of a day would otherwise escape the range.
+ */
+export async function findTrackerForDay(
+  db: D1Database,
+  userId: string,
+  habitId: number | string,
+  range: { startISO: string; endISO: string; exactTimestamp: string }
+): Promise<{ id: number } | null> {
+  const result = await db
+    .prepare(
+      `SELECT id FROM trackers
+       WHERE habit_id = ? AND user_id = ?
+       AND deleted_at IS NULL
+       AND ((timestamp >= ? AND timestamp <= ?) OR timestamp = ?)
+       ORDER BY timestamp DESC
+       LIMIT 1`
+    )
+    .bind(
+      habitId,
+      userId,
+      range.startISO,
+      range.endISO,
+      range.exactTimestamp
+    )
+    .first<{ id: number }>();
+
+  return result ?? null;
+}
+
+export async function deleteTrackerById(
+  db: D1Database,
+  trackerId: number
+): Promise<void> {
+  await db.prepare('DELETE FROM trackers WHERE id = ?').bind(trackerId).run();
+}
+
+export async function createTracker(
   db: D1Database,
   userId: string,
   habitId: number | string,
   timestamp: string,
   notes?: string
-): Promise<{
-  status: 'added' | 'removed';
-  trackerId?: number;
-  message: string;
-}> {
-  // Check if habit exists and belongs to user
-  await getHabitById(db, userId, habitId);
-
-  // Check if tracker already exists for this exact timestamp
-  const existingTracker = await db
-    .prepare(
-      'SELECT id FROM trackers WHERE habit_id = ? AND user_id = ? AND timestamp = ? AND deleted_at IS NULL'
-    )
-    .bind(habitId, userId, timestamp)
-    .first<{ id: number }>();
-
-  // If tracker exists, remove it
-  if (existingTracker) {
-    await db
-      .prepare('DELETE FROM trackers WHERE id = ?')
-      .bind(existingTracker.id)
-      .run();
-
-    return {
-      status: 'removed',
-      message: 'Habit marked as not completed',
-    };
-  }
-
-  // Add a new tracker
+): Promise<number> {
   const result = await db
     .prepare(
-      `
-      INSERT INTO trackers (habit_id, user_id, timestamp, notes) 
-      VALUES (?, ?, ?, ?)
-    `
+      `INSERT INTO trackers (habit_id, user_id, timestamp, notes)
+       VALUES (?, ?, ?, ?)`
     )
     .bind(habitId, userId, timestamp, notes || null)
     .run();
 
   if (!result.success) {
-    throw new Error('Failed to add tracker');
+    throw new Error('Failed to create tracker');
   }
 
-  return {
-    status: 'added',
-    trackerId: result.meta.last_row_id as number,
-    message: 'Habit marked as completed',
-  };
+  return result.meta.last_row_id as number;
 }
 
 // Get habit stats
