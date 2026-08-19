@@ -1,39 +1,31 @@
 /**
- * Calculates the start and end UTC timestamps for a given UTC date in a specific timezone.
- * Returns the UTC times that correspond to midnight (00:00:00) and end of day (23:59:59.999)
- * in the specified timezone.
+ * Calculates the UTC instants bounding a calendar day in a timezone.
  *
- * @param utcDate - The date object (assumed UTC or correctly parsed).
- * @param timeZone - The IANA timezone name (e.g., 'America/Los_Angeles').
+ * Takes the date *key* directly (YYYY-MM-DD as it reads in that timezone)
+ * rather than an instant. That matters: deriving the key from an arbitrary
+ * instant such as noon UTC shifts the day for zones past UTC+12, where noon
+ * UTC already falls on the following local date.
+ *
+ * @param dateKey - Calendar date in the target timezone, YYYY-MM-DD.
+ * @param timeZone - The IANA timezone name.
  * @returns Object containing start and end ISO strings representing UTC times.
  * @throws If the timeZone is invalid.
  */
-export function getLocaleStartEnd(
-  utcDate: Date,
+export function getLocaleStartEndForDateKey(
+  dateKey: string,
   timeZone: string
 ): { localeStartISO: string; localeEndISO: string } {
-  // Validate timezone
   if (!isValidTimeZone(timeZone)) {
     throw new Error(
-      `Invalid timeZone provided to getLocaleStartEnd: ${timeZone}`
+      `Invalid timeZone provided to getLocaleStartEndForDateKey: ${timeZone}`
     );
   }
 
-  // Get the date string (YYYY-MM-DD) in the target timezone
-  const formatter = new Intl.DateTimeFormat('en-CA', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  });
-  const dateStr = formatter.format(utcDate); // e.g., "2026-01-03"
-
-  // Helper to calculate UTC offset for a specific date/time in the timezone
+  // Offset between the timezone and UTC at a given wall-clock moment.
+  // Computed per boundary because it can differ across a DST transition.
   const getTimezoneOffsetMs = (dateTimeStr: string): number => {
-    // Parse as if it were UTC
     const asUtc = new Date(`${dateTimeStr}Z`);
 
-    // Get the same instant formatted in the target timezone
     const tzFormatter = new Intl.DateTimeFormat('en-US', {
       timeZone,
       year: 'numeric',
@@ -49,44 +41,64 @@ export function getLocaleStartEnd(
     const getPart = (type: string) =>
       parts.find((p) => p.type === type)?.value || '';
 
-    const tzYear = parseInt(getPart('year'), 10);
-    const tzMonth = parseInt(getPart('month'), 10);
-    const tzDay = parseInt(getPart('day'), 10);
-    const tzHour = parseInt(getPart('hour'), 10);
-    const tzMinute = parseInt(getPart('minute'), 10);
-    const tzSecond = parseInt(getPart('second'), 10);
-
-    // Create a date from the timezone components (as if they were UTC)
     const tzAsUtc = Date.UTC(
-      tzYear,
-      tzMonth - 1,
-      tzDay,
-      tzHour,
-      tzMinute,
-      tzSecond
+      parseInt(getPart('year'), 10),
+      parseInt(getPart('month'), 10) - 1,
+      parseInt(getPart('day'), 10),
+      parseInt(getPart('hour'), 10),
+      parseInt(getPart('minute'), 10),
+      parseInt(getPart('second'), 10)
     );
 
-    // The difference is the offset
     return tzAsUtc - asUtc.getTime();
   };
 
-  // Calculate offset for start of day in target timezone
-  const startOffset = getTimezoneOffsetMs(`${dateStr}T00:00:00`);
+  // Note the asymmetry, which is deliberate and must be preserved: the offset
+  // is probed at 23:59:59 while the instant is built from 23:59:59.999.
+  const localeStart = new Date(`${dateKey}T00:00:00Z`);
+  localeStart.setTime(
+    localeStart.getTime() - getTimezoneOffsetMs(`${dateKey}T00:00:00`)
+  );
 
-  // Start of day in target timezone = midnight in TZ converted to UTC
-  // If TZ is UTC-8, midnight in TZ is 08:00 UTC (add 8 hours)
-  const localeStart = new Date(`${dateStr}T00:00:00Z`);
-  localeStart.setTime(localeStart.getTime() - startOffset);
-
-  // End of day in target timezone = 23:59:59.999 in TZ converted to UTC
-  const endOffset = getTimezoneOffsetMs(`${dateStr}T23:59:59`);
-  const localeEnd = new Date(`${dateStr}T23:59:59.999Z`);
-  localeEnd.setTime(localeEnd.getTime() - endOffset);
+  const localeEnd = new Date(`${dateKey}T23:59:59.999Z`);
+  localeEnd.setTime(
+    localeEnd.getTime() - getTimezoneOffsetMs(`${dateKey}T23:59:59`)
+  );
 
   return {
     localeStartISO: localeStart.toISOString(),
     localeEndISO: localeEnd.toISOString(),
   };
+}
+
+/**
+ * Formats an instant as its calendar date key (YYYY-MM-DD) in a timezone.
+ */
+export function toLocalDateKey(date: Date, timeZone: string): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(date);
+}
+
+/**
+ * Calculates the start and end UTC timestamps for a given UTC date in a specific timezone.
+ * Returns the UTC times that correspond to midnight (00:00:00) and end of day (23:59:59.999)
+ * in the specified timezone.
+ *
+ * @param utcDate - The date object (assumed UTC or correctly parsed).
+ * @param timeZone - The IANA timezone name (e.g., 'America/Los_Angeles').
+ * @returns Object containing start and end ISO strings representing UTC times.
+ * @throws If the timeZone is invalid.
+ */
+export function getLocaleStartEnd(
+  utcDate: Date,
+  timeZone: string
+): { localeStartISO: string; localeEndISO: string } {
+  if (!isValidTimeZone(timeZone)) {
+    throw new Error(
+      `Invalid timeZone provided to getLocaleStartEnd: ${timeZone}`
+    );
+  }
+
+  return getLocaleStartEndForDateKey(toLocalDateKey(utcDate, timeZone), timeZone);
 }
 
 /**

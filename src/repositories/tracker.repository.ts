@@ -3,6 +3,7 @@
 import { D1Database } from '@cloudflare/workers-types';
 import { NotFoundError } from '../utils/errors.js';
 import { computeStreaks } from '../utils/streakUtils.js';
+import { getLocaleStartEndForDateKey, isValidTimeZone } from '../utils/dateUtils.js';
 import { TrackerInsert, Tracker } from '../types/d1.js';
 
 interface TrackerRow {
@@ -283,10 +284,7 @@ export async function getUserProgressHistory(
   timeZone: string = 'UTC'
 ): Promise<Array<{ date: string; completionRate: number }>> {
   try {
-    // Validate timezone
-    try {
-      Intl.DateTimeFormat(undefined, { timeZone }).format(new Date());
-    } catch {
+    if (!isValidTimeZone(timeZone)) {
       console.warn(`Invalid timezone "${timeZone}", falling back to UTC`);
       timeZone = 'UTC';
     }
@@ -349,8 +347,14 @@ export async function getUserProgressHistory(
 
     // Fetch all trackers in the date range
     // We need to query with UTC boundaries that cover the entire range in user's timezone
-    const rangeStart = getLocaleStartISO(calculationStartDate, timeZone);
-    const rangeEnd = getLocaleEndISO(todayInTZ, timeZone);
+    const rangeStart = getLocaleStartEndForDateKey(
+      calculationStartDate,
+      timeZone
+    ).localeStartISO;
+    const rangeEnd = getLocaleStartEndForDateKey(
+      todayInTZ,
+      timeZone
+    ).localeEndISO;
 
     const trackersResult = await db
       .prepare(
@@ -378,7 +382,7 @@ export async function getUserProgressHistory(
     // Build a map of tracker completions by date (in user's timezone)
     const trackersByDate = new Map<string, Set<number>>();
     for (const tracker of trackers) {
-      const trackerDate = getDateInTimezone(tracker.timestamp, timeZone);
+      const trackerDate = trackerDateKey(new Date(tracker.timestamp));
       if (!trackersByDate.has(trackerDate)) {
         trackersByDate.set(trackerDate, new Set());
       }
@@ -468,106 +472,6 @@ export async function getUserProgressHistory(
 }
 
 /**
- * Helper function to get UTC ISO string for start of day in timezone
- */
-function getLocaleStartISO(dateStr: string, timeZone: string): string {
-  // Create date at start of day in the timezone
-  const date = new Date(dateStr + 'T00:00:00');
-
-  // Get offset for this specific date/time in the timezone
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-
-  // Parse as if it were UTC first
-  const asUtc = new Date(`${dateStr}T00:00:00Z`);
-  const parts = formatter.formatToParts(asUtc);
-  const getPart = (type: string) =>
-    parts.find((p) => p.type === type)?.value || '';
-
-  const tzYear = parseInt(getPart('year'), 10);
-  const tzMonth = parseInt(getPart('month'), 10);
-  const tzDay = parseInt(getPart('day'), 10);
-  const tzHour = parseInt(getPart('hour'), 10);
-  const tzMinute = parseInt(getPart('minute'), 10);
-  const tzSecond = parseInt(getPart('second'), 10);
-
-  const tzAsUtc = Date.UTC(
-    tzYear,
-    tzMonth - 1,
-    tzDay,
-    tzHour,
-    tzMinute,
-    tzSecond
-  );
-  const offset = tzAsUtc - asUtc.getTime();
-
-  const localeStart = new Date(`${dateStr}T00:00:00Z`);
-  localeStart.setTime(localeStart.getTime() - offset);
-
-  return localeStart.toISOString();
-}
-
-/**
- * Helper function to get UTC ISO string for end of day in timezone
- */
-function getLocaleEndISO(dateStr: string, timeZone: string): string {
-  const asUtc = new Date(`${dateStr}T23:59:59Z`);
-
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(asUtc);
-  const getPart = (type: string) =>
-    parts.find((p) => p.type === type)?.value || '';
-
-  const tzYear = parseInt(getPart('year'), 10);
-  const tzMonth = parseInt(getPart('month'), 10);
-  const tzDay = parseInt(getPart('day'), 10);
-  const tzHour = parseInt(getPart('hour'), 10);
-  const tzMinute = parseInt(getPart('minute'), 10);
-  const tzSecond = parseInt(getPart('second'), 10);
-
-  const tzAsUtc = Date.UTC(
-    tzYear,
-    tzMonth - 1,
-    tzDay,
-    tzHour,
-    tzMinute,
-    tzSecond
-  );
-  const offset = tzAsUtc - asUtc.getTime();
-
-  const localeEnd = new Date(`${dateStr}T23:59:59.999Z`);
-  localeEnd.setTime(localeEnd.getTime() - offset);
-
-  return localeEnd.toISOString();
-}
-
-/**
- * Helper function to get date string (YYYY-MM-DD) for a timestamp in a timezone
- */
-function getDateInTimezone(timestamp: string, timeZone: string): string {
-  const date = new Date(timestamp);
-  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(date);
-}
-
-/**
  * Gets the user's current and longest streaks based on 100% completion days
  * @param db D1Database instance
  * @param userId User's Clerk ID
@@ -580,10 +484,7 @@ export async function getUserStreaks(
   timeZone: string = 'UTC'
 ): Promise<{ currentStreak: number; longestStreak: number }> {
   try {
-    // Validate timezone
-    try {
-      Intl.DateTimeFormat(undefined, { timeZone }).format(new Date());
-    } catch {
+    if (!isValidTimeZone(timeZone)) {
       console.warn(`Invalid timezone "${timeZone}", falling back to UTC`);
       timeZone = 'UTC';
     }
