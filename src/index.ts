@@ -14,6 +14,7 @@ import { achievementRoutes } from './routes/achievements.js';
 import { chatRoutes } from './routes/chat.js';
 import { healthRoutes } from './routes/health.js';
 import { errorHandlerEnhanced } from './middlewares/errorHandlerEnhanced.js';
+import { securityHeaders } from './middlewares/securityHeaders.js';
 
 const app = new Hono<{
   Bindings: {
@@ -43,38 +44,7 @@ app.use(
 );
 
 // 5. Security headers - Set security headers based on environment (with failure handling)
-app.use(
-  '*',
-  withFailureHandling('security_headers', async (c, next) => {
-    const config = getSecurityConfig(c.env.ENVIRONMENT);
-
-    // Apply environment-specific security headers
-    if (config.headers.enableHsts) {
-      c.header(
-        'Strict-Transport-Security',
-        'max-age=31536000; includeSubDomains'
-      );
-    }
-
-    if (config.headers.enableContentTypeOptions) {
-      c.header('X-Content-Type-Options', 'nosniff');
-    }
-
-    if (config.headers.enableFrameOptions) {
-      c.header('X-Frame-Options', 'DENY');
-    }
-
-    if (config.headers.enableXssProtection) {
-      c.header('X-XSS-Protection', '1; mode=block');
-    }
-
-    // Add security policy headers
-    c.header('Referrer-Policy', 'strict-origin-when-cross-origin');
-    c.header('Permissions-Policy', 'geolocation=(), microphone=(), camera=()');
-
-    await next();
-  })
-);
+app.use('*', withFailureHandling('security_headers', securityHeaders()));
 
 // Log application startup
 app.use('*', async (c, next) => {
