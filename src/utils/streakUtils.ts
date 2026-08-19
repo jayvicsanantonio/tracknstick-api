@@ -330,3 +330,63 @@ export function getMostRecentCompletionDate(
 
   return sortedTrackers[0].timestamp;
 }
+
+/**
+ * One scheduled day of habit history.
+ * The producer (getUserProgressHistory) emits an entry only for days on which
+ * at least one habit was scheduled, so consecutive array positions are
+ * consecutive *scheduled* days -- which is what a streak counts.
+ */
+export interface DayCompletion {
+  date: string; // YYYY-MM-DD in the user's timezone
+  completionRate: number; // 0-100
+}
+
+/**
+ * Folds a descending (newest first) run of scheduled days into streaks.
+ *
+ * Adjacency in the array is streak adjacency: a Mon/Wed/Fri habit is not
+ * penalised for Tuesday, because Tuesday was never a scheduled day and so is
+ * absent from the history entirely.
+ *
+ * @param descendingHistory scheduled days, newest first
+ * @param todayKey today's date key in the user's timezone
+ */
+export function computeStreaks(
+  descendingHistory: readonly DayCompletion[],
+  todayKey: string
+): { currentStreak: number; longestStreak: number } {
+  let currentStreak = 0;
+  let longestStreak = 0;
+  let run = 0;
+
+  // Longest: one pass, counting runs of fully-completed days and folding each
+  // run into the maximum before resetting.
+  for (const entry of descendingHistory) {
+    if (entry.completionRate === 100) {
+      run += 1;
+      if (run > longestStreak) longestStreak = run;
+    } else {
+      run = 0;
+    }
+  }
+
+  // Current: leading fully-completed days, anchored at the most recent
+  // scheduled day. A day still in progress does not extend the streak, but it
+  // does not break it either -- we simply start from the previous entry.
+  let index = 0;
+  if (
+    descendingHistory.length > 0 &&
+    descendingHistory[0].date === todayKey &&
+    descendingHistory[0].completionRate !== 100
+  ) {
+    index = 1;
+  }
+
+  for (; index < descendingHistory.length; index += 1) {
+    if (descendingHistory[index].completionRate !== 100) break;
+    currentStreak += 1;
+  }
+
+  return { currentStreak, longestStreak };
+}

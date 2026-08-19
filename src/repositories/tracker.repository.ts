@@ -2,6 +2,7 @@
 // Add this comment to suppress TypeScript errors during migration to Hono
 import { D1Database } from '@cloudflare/workers-types';
 import { NotFoundError } from '../utils/errors.js';
+import { computeStreaks } from '../utils/streakUtils.js';
 import { TrackerInsert, Tracker } from '../types/d1.js';
 
 interface TrackerRow {
@@ -596,84 +597,14 @@ export async function getUserStreaks(
       timeZone
     );
 
-    // Calculate streaks based on 100% completion days
-    let currentStreak = 0;
-    let longestStreak = 0;
-    let tempStreak = 0;
-
-    // Sort by date descending to calculate current streak first
-    const sortedHistory = [...history].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    // history is already ordered newest-first by getUserProgressHistory and
+    // contains one entry per *scheduled* day, so the fold can work by array
+    // position without re-parsing or re-sorting dates.
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone }).format(
+      new Date()
     );
 
-    // Calculate current streak (consecutive 100% days up to today in user's timezone)
-    const now = new Date();
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone }).format(now);
-
-    for (let i = 0; i < sortedHistory.length; i++) {
-      const entry = sortedHistory[i];
-
-      // Break if we encounter a gap in dates
-      if (i === 0 && entry.date !== today) {
-        break;
-      }
-
-      if (i > 0) {
-        const prevDate = new Date(sortedHistory[i - 1].date + 'T12:00:00Z');
-        const currDate = new Date(entry.date + 'T12:00:00Z');
-        const dayDiff = Math.floor(
-          (prevDate.getTime() - currDate.getTime()) / (24 * 60 * 60 * 1000)
-        );
-
-        if (dayDiff !== 1) {
-          break;
-        }
-      }
-
-      if (entry.completionRate === 100) {
-        currentStreak++;
-      } else {
-        break;
-      }
-    }
-
-    // Calculate longest streak
-    // Sort by date ascending for longest streak calculation
-    const chronologicalHistory = [...history].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    for (let i = 0; i < chronologicalHistory.length; i++) {
-      if (chronologicalHistory[i].completionRate === 100) {
-        tempStreak++;
-
-        // Check for date continuity
-        if (i > 0) {
-          const prevDate = new Date(
-            chronologicalHistory[i - 1].date + 'T12:00:00Z'
-          );
-          const currDate = new Date(
-            chronologicalHistory[i].date + 'T12:00:00Z'
-          );
-          const dayDiff = Math.floor(
-            (currDate.getTime() - prevDate.getTime()) / (24 * 60 * 60 * 1000)
-          );
-
-          // If dates aren't consecutive, reset the temporary streak
-          if (dayDiff !== 1) {
-            tempStreak = 1; // Reset to 1 (counting current day)
-          }
-        }
-      } else {
-        longestStreak = Math.max(longestStreak, tempStreak);
-        tempStreak = 0;
-      }
-    }
-
-    // Check final streak
-    longestStreak = Math.max(longestStreak, tempStreak);
-
-    return { currentStreak, longestStreak };
+    return computeStreaks(history, today);
   } catch (error) {
     console.error('Error calculating user streaks:', error);
     throw error;
