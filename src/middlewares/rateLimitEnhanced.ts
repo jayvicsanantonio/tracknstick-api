@@ -130,13 +130,9 @@ export class RateLimitMiddleware {
    * Get identifier for rate limiting (user ID preferred, then IP)
    */
   private getIdentifier(c: Context): string {
-    // Prefer user ID if authenticated
-    const userId = c.get('userId');
-    if (userId) {
-      return `user:${userId}`;
-    }
-
-    // Fall back to IP address
+    // Always IP-based. This middleware is registered globally in index.ts,
+    // before the route sub-apps mount clerkMiddleware, so no authenticated
+    // identity exists yet at this point in the chain.
     const ip =
       c.req.header('CF-Connecting-IP') ||
       c.req.header('X-Forwarded-For') ||

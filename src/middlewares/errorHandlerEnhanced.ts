@@ -114,7 +114,7 @@ function extractErrorContext(c: Context, error: Error): Record<string, any> {
     path: c.req.path,
     method: c.req.method,
     userId: auth?.userId,
-    requestId: auth?.metadata?.requestId,
+    requestId: auth?.requestId,
     userAgent: c.req.header('User-Agent'),
     ipAddress:
       c.req.header('CF-Connecting-IP') || c.req.header('X-Forwarded-For'),

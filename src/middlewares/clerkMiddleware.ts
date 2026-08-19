@@ -60,34 +60,17 @@ export const clerkMiddleware = () => async (c: Context, next: Next) => {
       // The basic JWT claims (userId, sessionId) plus security metadata provide
       // sufficient context for this habit tracking API without additional API calls
 
-      // Extract verified user claims and session information
+      // Extract the verified user id and a correlation id
       const authContext: AuthContext = {
         userId: auth.userId,
-        sessionId: auth.sessionId || '',
-        claims: {
-          iss: auth.sessionClaims?.iss || '',
-          aud: (auth.sessionClaims?.aud as string | string[]) || '',
-          exp: auth.sessionClaims?.exp || 0,
-          iat: auth.sessionClaims?.iat || 0,
-          nbf: auth.sessionClaims?.nbf || 0,
-        },
-        metadata: {
-          ipAddress:
-            c.req.header('CF-Connecting-IP') ||
-            c.req.header('X-Forwarded-For') ||
-            'unknown',
-          userAgent: c.req.header('User-Agent') || 'unknown',
-          requestId: generateRequestId(),
-        },
+        requestId: generateRequestId(),
       };
 
       // Set authenticated context in request
       c.set('auth', authContext);
-      c.set('userId', auth.userId);
 
       logger.debug('Authentication successful', {
         userId: auth.userId,
-        sessionId: auth.sessionId,
         path: c.req.path,
         method: c.req.method,
       });

@@ -1,20 +1,9 @@
-// Enhanced authentication context interface
+// Authentication context set by clerkMiddleware.
+// Only the fields something reads live here: every consumer uses userId,
+// and the error/security handlers use requestId for correlation.
 export interface AuthContext {
   userId: string;
-  sessionId: string;
-  claims: {
-    iss: string;
-    aud: string | string[];
-    exp: number;
-    iat: number;
-    nbf: number;
-    [key: string]: any;
-  };
-  metadata?: {
-    ipAddress?: string;
-    userAgent?: string;
-    requestId?: string;
-  };
+  requestId: string;
 }
 
 // Authentication context designed for performance with minimal data fetching
@@ -24,7 +13,6 @@ export interface AuthContext {
 declare module 'hono' {
   interface ContextVariableMap {
     auth: AuthContext;
-    userId: string; // Keep for backward compatibility
     validated_json: any;
     validated_query: any;
     validated_param: any;

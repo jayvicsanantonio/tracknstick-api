@@ -62,7 +62,7 @@ class SecurityEventLogger {
         context.req.header('X-Forwarded-For') ||
         'unknown',
       userAgent: context.req.header('User-Agent') || 'unknown',
-      requestId: auth?.metadata?.requestId,
+      requestId: auth?.requestId,
       userId: auth?.userId,
     };
 
