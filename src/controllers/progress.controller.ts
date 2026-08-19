@@ -1,6 +1,5 @@
 import { Context } from 'hono';
 import * as progressService from '../services/progress.service.js';
-import logger from '../utils/logger.js';
 
 /**
  * Get user's progress history showing completion rates by day
@@ -8,27 +7,18 @@ import logger from '../utils/logger.js';
  * not what data is used for streak calculations
  */
 export async function getProgressHistory(c: Context): Promise<Response> {
-  try {
-    const auth = c.get('auth');
-    if (!auth || !auth.userId) {
-      return c.json({ error: 'User not authenticated' }, 401);
-    }
-    const userId = auth.userId;
-    const { startDate, endDate, timeZone } = c.get('validated_query') || {};
+  const { userId } = c.get('auth');
+  const { startDate, endDate, timeZone } = c.get('validated_query');
 
-    const history = await progressService.getUserProgressHistory(
-      c.env.DB,
-      userId,
-      startDate,
-      endDate,
-      timeZone || 'UTC'
-    );
+  const history = await progressService.getUserProgressHistory(
+    c.env.DB,
+    userId,
+    startDate,
+    endDate,
+    timeZone
+  );
 
-    return c.json({ history });
-  } catch (error: any) {
-    logger.error('Error fetching progress history:', error);
-    return handleError(c, error);
-  }
+  return c.json({ history });
 }
 
 /**
@@ -37,25 +27,16 @@ export async function getProgressHistory(c: Context): Promise<Response> {
  * regardless of any date filters
  */
 export async function getStreaks(c: Context): Promise<Response> {
-  try {
-    const auth = c.get('auth');
-    if (!auth || !auth.userId) {
-      return c.json({ error: 'User not authenticated' }, 401);
-    }
-    const userId = auth.userId;
-    const { timeZone } = c.get('validated_query') || {};
+  const { userId } = c.get('auth');
+  const { timeZone } = c.get('validated_query');
 
-    const streaks = await progressService.getUserStreaks(
-      c.env.DB,
-      userId,
-      timeZone || 'UTC'
-    );
+  const streaks = await progressService.getUserStreaks(
+    c.env.DB,
+    userId,
+    timeZone
+  );
 
-    return c.json(streaks);
-  } catch (error: any) {
-    logger.error('Error fetching streaks:', error);
-    return handleError(c, error);
-  }
+  return c.json(streaks);
 }
 
 /**
@@ -64,35 +45,16 @@ export async function getStreaks(c: Context): Promise<Response> {
  * streak calculations always use a full year of data for accuracy
  */
 export async function getProgressOverview(c: Context): Promise<Response> {
-  try {
-    const auth = c.get('auth');
-    if (!auth || !auth.userId) {
-      return c.json({ error: 'User not authenticated' }, 401);
-    }
-    const userId = auth.userId;
-    const { startDate, endDate, timeZone } = c.get('validated_query') || {};
+  const { userId } = c.get('auth');
+  const { startDate, endDate, timeZone } = c.get('validated_query');
 
-    const overview = await progressService.getUserProgressOverview(
-      c.env.DB,
-      userId,
-      startDate,
-      endDate,
-      timeZone || 'UTC'
-    );
+  const overview = await progressService.getUserProgressOverview(
+    c.env.DB,
+    userId,
+    startDate,
+    endDate,
+    timeZone
+  );
 
-    return c.json(overview);
-  } catch (error: any) {
-    logger.error('Error fetching progress overview:', error);
-    return handleError(c, error);
-  }
-}
-
-/**
- * Helper function to handle errors
- */
-function handleError(c: Context, error: any): Response {
-  const message = error.message || 'An unexpected error occurred';
-  const status = error.status || 500;
-
-  return c.json({ error: message }, status);
+  return c.json(overview);
 }
