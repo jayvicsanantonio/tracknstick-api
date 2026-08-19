@@ -132,8 +132,8 @@ describe('Security Configuration', () => {
         devConfig.rateLimit.globalLimit
       );
       expect(
-        prodConfig.rateLimit.endpointLimits['/api/auth'].limit
-      ).toBeLessThan(devConfig.rateLimit.endpointLimits['/api/auth'].limit);
+        prodConfig.rateLimit.endpointLimits['/api/v1/habits'].limit
+      ).toBeLessThan(devConfig.rateLimit.endpointLimits['/api/v1/habits'].limit);
     });
   });
 

@@ -102,8 +102,7 @@ const developmentConfig: SecurityConfig = {
     globalLimit: 1000,
     windowMs: 15 * 60 * 1000, // 15 minutes
     endpointLimits: {
-      '/api/auth': { limit: 100, windowMs: 15 * 60 * 1000 },
-      '/api/habits': { limit: 200, windowMs: 15 * 60 * 1000 },
+      '/api/v1/habits': { limit: 200, windowMs: 15 * 60 * 1000 },
     },
     skipSuccessfulRequests: false,
     skipFailedRequests: false,
@@ -135,13 +134,12 @@ const productionConfig: SecurityConfig = {
     globalLimit: 100,
     windowMs: 15 * 60 * 1000, // 15 minutes
     endpointLimits: {
-      '/api/auth': { limit: 10, windowMs: 15 * 60 * 1000 },
-      '/api/habits': { limit: 50, windowMs: 15 * 60 * 1000 },
-      '/api/progress': { limit: 30, windowMs: 15 * 60 * 1000 },
-      '/api/health': {
+      '/api/v1/habits': { limit: 50, windowMs: 15 * 60 * 1000 },
+      '/api/v1/progress': { limit: 30, windowMs: 15 * 60 * 1000 },
+      '/health': {
         limit: 1000,
         windowMs: 15 * 60 * 1000,
-        skipIf: (path: string) => path === '/api/health',
+        skipIf: (path: string) => path.startsWith('/health'),
       },
     },
     skipSuccessfulRequests: false,
