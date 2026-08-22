@@ -31,8 +31,7 @@ export interface Achievement {
     | 'completion'
     | 'special_achievement'
     | 'perfect_completion'
-    | 'activity_tracking'
-    | 'milestone';
+    | 'activity_tracking';
   category: 'getting_started' | 'consistency' | 'dedication' | 'milestones';
   requirementType: 'count' | 'streak' | 'days' | 'percentage';
   requirementValue: number;
