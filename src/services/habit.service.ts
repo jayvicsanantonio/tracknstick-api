@@ -8,10 +8,6 @@ import {
   isValidTimeZone,
   safeDateParse,
 } from '../utils/dateUtils.js';
-import {
-  calculateDailyStreak,
-  calculateNonDailyStreak,
-} from '../utils/streakUtils.js';
 import logger from '../utils/logger.js';
 
 // Interface definitions
@@ -422,7 +418,10 @@ export const getHabitStats = async (
       streak: stats.streak,
       longestStreak: stats.longestStreak,
       totalCompletions: stats.totalCompletions,
-      lastCompleted: stats.lastCompleted || undefined,
+      // null, not undefined: JSON drops an undefined value, so the field
+      // vanished from the response while the client's type -- and the web
+      // client's "Never" fallback -- both describe it as nullable.
+      lastCompleted: stats.lastCompleted ?? null,
     };
   } catch (error) {
     console.error(
