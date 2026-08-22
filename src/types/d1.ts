@@ -7,14 +7,6 @@
  * produce them.
  */
 
-// Users table
-export interface User {
-  id: number;
-  clerk_user_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
 // Trackers table
 export interface Tracker {
   id: number;
@@ -27,5 +19,4 @@ export interface Tracker {
 }
 
 // Helper type for insert operations (omitting auto-generated fields)
-export type UserInsert = Omit<User, 'id' | 'created_at' | 'updated_at'>;
 export type TrackerInsert = Omit<Tracker, 'id' | 'created_at' | 'updated_at'>;

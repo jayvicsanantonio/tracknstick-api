@@ -54,9 +54,17 @@ async function setup() {
 async function reset() {
   console.log(`🔄 Resetting database ${isRemote ? '(REMOTE)' : '(LOCAL)'}`);
 
-  // Drop all tables to start fresh
-  const dropCommand = `d1 execute ${DB_NAME} --command "DROP TABLE IF EXISTS trackers; DROP TABLE IF EXISTS habits; DROP TABLE IF EXISTS users;" ${remoteFlag}`;
-  executeWrangler(dropCommand);
+  // Drop all tables to start fresh, from the same file that lists them.
+  // The previous inline command named only three of the five tables and then
+  // reported "All tables dropped".
+  const resetFile = path.join(MIGRATIONS_DIR, 'reset.sql');
+  if (!fs.existsSync(resetFile)) {
+    console.error(`❌ Missing ${resetFile}`);
+    process.exit(1);
+  }
+
+  console.log('📄 Applying reset.sql...');
+  executeWrangler(`d1 execute ${DB_NAME} --file=${resetFile} ${remoteFlag}`);
 
   console.log('🗑️  All tables dropped');
 
