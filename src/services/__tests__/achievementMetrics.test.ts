@@ -19,7 +19,6 @@ const SNAPSHOT: UserStatsSnapshot = {
   totalHabits: 3,
   totalCompletions: 42,
   longestStreak: 9,
-  currentStreaks: [4],
   currentStreak: 4,
   activeDays: 31,
   perfectDays: 8,

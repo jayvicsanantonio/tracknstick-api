@@ -2,6 +2,12 @@ import { D1Database } from '@cloudflare/workers-types';
 import { NotFoundError } from '../utils/errors.js';
 import { computeStreaks } from '../utils/streakUtils.js';
 import {
+  summariseCompletion,
+  type CompletionSummary,
+  type HabitSchedule,
+  type TrackerStamp,
+} from '../utils/completionRates.js';
+import {
   getLocaleStartEndForDateKey,
   isValidTimeZone,
   toLocalDateKey,
@@ -268,15 +274,112 @@ export async function getAllTrackersForHabit(
 }
 
 /**
- * Gets the user's progress history showing completion rate for each day
- * This uses a fixed calculation window of the past 365 days to ensure comprehensive tracking
- * Optional date parameters can restrict what's returned to the client but don't affect calculation
- * @param db D1Database instance
- * @param userId User's Clerk ID
- * @param startDate Optional start date (ISO format) to filter returned results
- * @param endDate Optional end date (ISO format) to filter returned results
+ * The longest span of history any caller may ask for. Bounds the day loop
+ * when a habit carries an implausible start_date.
+ */
+const MAX_WINDOW_DAYS = 1830;
+
+/** How far back the progress history and its streaks are calculated. */
+const HISTORY_WINDOW_DAYS = 365;
+
+const shiftDateKey = (dateKey: string, days: number): string => {
+  const shifted = new Date(`${dateKey}T12:00:00Z`);
+  shifted.setUTCDate(shifted.getUTCDate() + days);
+  return shifted.toISOString().slice(0, 10);
+};
+
+/**
+ * Scores every scheduled day in a window against the habits due on it.
+ *
+ * One read of habits and one of trackers, scored by the shared
+ * summariseCompletion. Progress history, streaks and the day-counting
+ * achievements all go through here, so they cannot disagree about which
+ * calendar day a completion belongs to.
+ *
+ * @param windowDays how far back to score; omit to cover the user's whole
+ *   history, bounded by MAX_WINDOW_DAYS
+ */
+export async function getCompletionSummary(
+  db: D1Database,
+  userId: string,
+  timeZone: string = 'UTC',
+  windowDays?: number
+): Promise<CompletionSummary & { today: string }> {
+  if (!isValidTimeZone(timeZone)) {
+    console.warn(`Invalid timezone "${timeZone}", falling back to UTC`);
+    timeZone = 'UTC';
+  }
+
+  const today = toLocalDateKey(new Date(), timeZone);
+  const earliestAllowed = shiftDateKey(today, -MAX_WINDOW_DAYS);
+
+  // Deleted habits are included: the days they were live still happened, and
+  // dropping them would retroactively raise past completion rates.
+  const habitsResult = await db
+    .prepare(
+      `SELECT id, frequency, start_date, end_date, deleted_at
+       FROM habits
+       WHERE user_id = ?`
+    )
+    .bind(userId)
+    .all();
+
+  if (!habitsResult.success) {
+    throw new Error('Failed to fetch habits for progress history');
+  }
+
+  const habits = habitsResult.results as unknown as HabitSchedule[];
+
+  if (habits.length === 0) {
+    return { days: [], habitsByDay: new Map(), today };
+  }
+
+  const windowStart =
+    windowDays === undefined
+      ? habits
+          .map((habit) => habit.start_date.slice(0, 10))
+          .reduce((earliest, key) => (key < earliest ? key : earliest), today)
+      : shiftDateKey(today, -windowDays);
+
+  const from = windowStart < earliestAllowed ? earliestAllowed : windowStart;
+
+  const rangeStart = getLocaleStartEndForDateKey(from, timeZone).localeStartISO;
+  const rangeEnd = getLocaleStartEndForDateKey(today, timeZone).localeEndISO;
+
+  const trackersResult = await db
+    .prepare(
+      `SELECT habit_id, timestamp
+       FROM trackers
+       WHERE user_id = ?
+       AND timestamp >= ?
+       AND timestamp <= ?
+       AND deleted_at IS NULL`
+    )
+    .bind(userId, rangeStart, rangeEnd)
+    .all();
+
+  if (!trackersResult.success) {
+    throw new Error('Failed to fetch trackers for progress history');
+  }
+
+  const trackers = trackersResult.results as unknown as TrackerStamp[];
+
+  return {
+    ...summariseCompletion(habits, trackers, timeZone, from, today),
+    today,
+  };
+}
+
+/**
+ * Gets the user's progress history showing completion rate for each day.
+ *
+ * Scores a fixed window of the past year regardless of the requested range,
+ * so a narrow range cannot change the numbers inside it. The date arguments
+ * only restrict which of those days are returned.
+ *
+ * @param startDate Optional start date key (YYYY-MM-DD) to filter results
+ * @param endDate Optional end date key (YYYY-MM-DD) to filter results
  * @param timeZone User's timezone (IANA format, e.g., 'America/Los_Angeles')
- * @returns Array of daily completion records with date and completion percentage
  */
 export async function getUserProgressHistory(
   db: D1Database,
@@ -286,187 +389,23 @@ export async function getUserProgressHistory(
   timeZone: string = 'UTC'
 ): Promise<Array<{ date: string; completionRate: number }>> {
   try {
-    if (!isValidTimeZone(timeZone)) {
-      console.warn(`Invalid timezone "${timeZone}", falling back to UTC`);
-      timeZone = 'UTC';
-    }
-
-    const now = new Date();
-
-    // Get today's date in user's timezone (YYYY-MM-DD format)
-    const todayInTZ = new Intl.DateTimeFormat('en-CA', { timeZone }).format(
-      now
+    const { days } = await getCompletionSummary(
+      db,
+      userId,
+      timeZone,
+      HISTORY_WINDOW_DAYS
     );
 
-    // Calculate start date (365 days ago in user's timezone)
-    const startDateObj = new Date();
-    startDateObj.setDate(startDateObj.getDate() - 365);
-    const calculationStartDate = new Intl.DateTimeFormat('en-CA', {
-      timeZone,
-    }).format(startDateObj);
+    const filterStart = startDate?.split('T')[0];
+    const filterEnd = endDate?.split('T')[0];
 
-    // Generate list of all dates in range (in user's timezone)
-    const dates: string[] = [];
-    const currentDate = new Date(calculationStartDate + 'T12:00:00Z'); // Use noon to avoid DST issues
-    const endDateObj = new Date(todayInTZ + 'T12:00:00Z');
-
-    while (currentDate <= endDateObj) {
-      dates.push(
-        new Intl.DateTimeFormat('en-CA', { timeZone: 'UTC' }).format(
-          currentDate
-        )
-      );
-      currentDate.setDate(currentDate.getDate() + 1);
-    }
-
-    // Fetch all habits for user (including deleted ones for historical accuracy)
-    const habitsResult = await db
-      .prepare(
-        `
-        SELECT id, frequency, start_date, end_date, deleted_at
-        FROM habits 
-        WHERE user_id = ?
-      `
+    return days
+      .filter(
+        ({ date }) =>
+          (!filterStart || date >= filterStart) &&
+          (!filterEnd || date <= filterEnd)
       )
-      .bind(userId)
-      .all();
-
-    if (!habitsResult.success) {
-      throw new Error('Failed to fetch habits for progress history');
-    }
-
-    const habits = habitsResult.results as Array<{
-      id: number;
-      frequency: string;
-      start_date: string;
-      end_date: string | null;
-      deleted_at: string | null;
-    }>;
-
-    if (habits.length === 0) {
-      return [];
-    }
-
-    // Fetch all trackers in the date range
-    // We need to query with UTC boundaries that cover the entire range in user's timezone
-    const rangeStart = getLocaleStartEndForDateKey(
-      calculationStartDate,
-      timeZone
-    ).localeStartISO;
-    const rangeEnd = getLocaleStartEndForDateKey(
-      todayInTZ,
-      timeZone
-    ).localeEndISO;
-
-    const trackersResult = await db
-      .prepare(
-        `
-        SELECT habit_id, timestamp 
-        FROM trackers 
-        WHERE user_id = ? 
-        AND timestamp >= ? 
-        AND timestamp <= ?
-        AND deleted_at IS NULL
-      `
-      )
-      .bind(userId, rangeStart, rangeEnd)
-      .all();
-
-    if (!trackersResult.success) {
-      throw new Error('Failed to fetch trackers for progress history');
-    }
-
-    const trackers = trackersResult.results as Array<{
-      habit_id: number;
-      timestamp: string;
-    }>;
-
-    // Build a map of tracker completions by date (in user's timezone)
-    const trackersByDate = new Map<string, Set<number>>();
-    for (const tracker of trackers) {
-      const trackerDate = toLocalDateKey(new Date(tracker.timestamp), timeZone);
-      if (!trackersByDate.has(trackerDate)) {
-        trackersByDate.set(trackerDate, new Set());
-      }
-      trackersByDate.get(trackerDate)!.add(tracker.habit_id);
-    }
-
-    // Calculate completion rate for each date
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const history: Array<{ date: string; completionRate: number }> = [];
-
-    for (const dateStr of dates) {
-      // Get day of week for this date
-      const date = new Date(dateStr + 'T12:00:00Z');
-      const dayOfWeek = dayNames[date.getUTCDay()];
-
-      // Count habits that should be active on this date
-      let totalHabits = 0;
-      const activeHabitIds: number[] = [];
-
-      for (const habit of habits) {
-        // Check if habit was active on this date
-        const habitStartDate = habit.start_date.split('T')[0];
-        const habitEndDate = habit.end_date
-          ? habit.end_date.split('T')[0]
-          : null;
-        const habitDeletedAt = habit.deleted_at
-          ? habit.deleted_at.split('T')[0]
-          : null;
-
-        // Habit must have started before or on this date
-        if (habitStartDate > dateStr) continue;
-
-        // Habit must not have ended before this date
-        if (habitEndDate && habitEndDate < dateStr) continue;
-
-        // If habit was deleted, it should still count for dates before deletion
-        // (for historical accuracy)
-        if (habitDeletedAt && habitDeletedAt <= dateStr) continue;
-
-        // Check if habit is scheduled for this day of week
-        const frequencyDays = habit.frequency.split(',');
-        if (!frequencyDays.includes(dayOfWeek)) continue;
-
-        totalHabits++;
-        activeHabitIds.push(habit.id);
-      }
-
-      // Skip days with no scheduled habits
-      if (totalHabits === 0) continue;
-
-      // Count completed habits for this date
-      const completedHabits = trackersByDate.get(dateStr);
-      let completedCount = 0;
-
-      if (completedHabits) {
-        for (const habitId of activeHabitIds) {
-          if (completedHabits.has(habitId)) {
-            completedCount++;
-          }
-        }
-      }
-
-      const completionRate = Math.round((completedCount / totalHabits) * 100);
-      history.push({ date: dateStr, completionRate });
-    }
-
-    // Sort by date descending (most recent first)
-    history.sort((a, b) => b.date.localeCompare(a.date));
-
-    // If startDate and endDate are provided, filter the results to the requested range
-    if (startDate || endDate) {
-      const filterStart = startDate ? startDate.split('T')[0] : null;
-      const filterEnd = endDate ? endDate.split('T')[0] : null;
-
-      return history.filter((entry) => {
-        const afterStart = !filterStart || entry.date >= filterStart;
-        const beforeEnd = !filterEnd || entry.date <= filterEnd;
-        return afterStart && beforeEnd;
-      });
-    }
-
-    return history;
+      .map(({ date, completionRate }) => ({ date, completionRate }));
   } catch (error) {
     console.error('Error fetching user progress history:', error);
     throw error;
@@ -486,28 +425,16 @@ export async function getUserStreaks(
   timeZone: string = 'UTC'
 ): Promise<{ currentStreak: number; longestStreak: number }> {
   try {
-    if (!isValidTimeZone(timeZone)) {
-      console.warn(`Invalid timezone "${timeZone}", falling back to UTC`);
-      timeZone = 'UTC';
-    }
-
-    // Get the user's progress history with full year of data to ensure accurate streak calculation
-    const history = await getUserProgressHistory(
+    const { days, today } = await getCompletionSummary(
       db,
       userId,
-      undefined,
-      undefined,
-      timeZone
+      timeZone,
+      HISTORY_WINDOW_DAYS
     );
 
-    // history is already ordered newest-first by getUserProgressHistory and
-    // contains one entry per *scheduled* day, so the fold can work by array
-    // position without re-parsing or re-sorting dates.
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone }).format(
-      new Date()
-    );
-
-    return computeStreaks(history, today);
+    // days is newest-first and holds one entry per *scheduled* day, so
+    // adjacency in the array is streak adjacency.
+    return computeStreaks(days, today);
   } catch (error) {
     console.error('Error calculating user streaks:', error);
     throw error;

@@ -2,11 +2,10 @@
 // Handles achievement processing, evaluation, and progress tracking
 
 import type { D1Database } from '@cloudflare/workers-types';
-import {
-  AchievementRepository,
-  type UserHabitStats,
-} from '../repositories/achievement.repository.js';
-import { getUserStreaks } from '../repositories/tracker.repository.js';
+import { AchievementRepository } from '../repositories/achievement.repository.js';
+import { getCompletionSummary } from '../repositories/tracker.repository.js';
+import { peakHabitsInADay } from '../utils/completionRates.js';
+import { computeStreaks } from '../utils/streakUtils.js';
 import { measure, type UserStatsSnapshot } from './achievementMetrics.js';
 import {
   Achievement,
@@ -25,12 +24,13 @@ export class AchievementService {
   }
 
   async getAllAchievementsForUser(
-    userId: string
+    userId: string,
+    timeZone = 'UTC'
   ): Promise<AchievementResponse[]> {
     const [allAchievements, userAchievements, snapshot] = await Promise.all([
       this.repository.getAllAchievements(),
       this.repository.getUserAchievements(userId),
-      this.buildSnapshot(userId),
+      this.buildSnapshot(userId, timeZone),
     ]);
 
     const userAchievementMap = new Map(
@@ -38,24 +38,24 @@ export class AchievementService {
     );
 
     return allAchievements.map((achievement) => {
-        const userAchievement = userAchievementMap.get(achievement.id);
-        const isEarned = !!userAchievement;
+      const userAchievement = userAchievementMap.get(achievement.id);
+      const isEarned = !!userAchievement;
 
-        return {
-          id: achievement.id.toString(),
-          key: achievement.key,
-          name: achievement.name,
-          description: achievement.description,
-          icon: achievement.icon,
-          type: achievement.type,
-          category: achievement.category,
-          requirementType: achievement.requirementType,
-          requirementValue: achievement.requirementValue,
-          requirementData: achievement.requirementData
-            ? JSON.parse(achievement.requirementData)
-            : undefined,
-          isEarned,
-          earnedAt: userAchievement?.earnedAt,
+      return {
+        id: achievement.id.toString(),
+        key: achievement.key,
+        name: achievement.name,
+        description: achievement.description,
+        icon: achievement.icon,
+        type: achievement.type,
+        category: achievement.category,
+        requirementType: achievement.requirementType,
+        requirementValue: achievement.requirementValue,
+        requirementData: achievement.requirementData
+          ? JSON.parse(achievement.requirementData)
+          : undefined,
+        isEarned,
+        earnedAt: userAchievement?.earnedAt,
         progress: isEarned
           ? undefined
           : this.calculateProgress(achievement, snapshot),
@@ -67,7 +67,10 @@ export class AchievementService {
     return await this.repository.getUserAchievements(userId);
   }
 
-  async checkAndAwardAchievements(userId: string): Promise<Achievement[]> {
+  async checkAndAwardAchievements(
+    userId: string,
+    timeZone = 'UTC'
+  ): Promise<Achievement[]> {
     const allAchievements = await this.repository.getAllAchievements();
     const userAchievements = await this.repository.getUserAchievements(userId);
     const earnedAchievementIds = new Set(
@@ -76,7 +79,7 @@ export class AchievementService {
 
     // One snapshot for the whole pass: nothing in the evaluation path reads
     // user_achievements, so awarding cannot change what the rules measure.
-    const snapshot = await this.buildSnapshot(userId);
+    const snapshot = await this.buildSnapshot(userId, timeZone);
 
     const newlyEarned: Achievement[] = [];
 
@@ -98,17 +101,39 @@ export class AchievementService {
 
   /**
    * Builds the one consistent read of user state that every rule measures.
-   * Required rather than optional: an absent snapshot previously meant two
-   * consumers refetched under different conditions, so "zero" and "unknown"
-   * were indistinguishable.
+   *
+   * The per-day figures come from getCompletionSummary -- the same scorer
+   * behind /progress/history and /progress/streaks -- rather than from
+   * SQLite DATE(), which buckets by UTC. A Los Angeles user finishing at
+   * 6pm previously had that completion counted on the following day, so
+   * their perfect-day and active-day badges disagreed with the calendar
+   * they were looking at.
+   *
+   * Unlike the history endpoint this covers the user's whole record, not
+   * the trailing year, because the badges count lifetime totals.
    */
-  private async buildSnapshot(userId: string): Promise<UserStatsSnapshot> {
-    const [stats, streaks] = await Promise.all([
+  private async buildSnapshot(
+    userId: string,
+    timeZone: string
+  ): Promise<UserStatsSnapshot> {
+    const [stats, summary] = await Promise.all([
       this.repository.getUserHabitStats(userId),
-      getUserStreaks(this.db, userId),
+      getCompletionSummary(this.db, userId, timeZone),
     ]);
 
-    return { ...stats, currentStreak: streaks.currentStreak };
+    const streaks = computeStreaks(summary.days, summary.today);
+
+    return {
+      totalHabits: stats.totalHabits,
+      totalCompletions: stats.totalCompletions,
+      notedCompletions: stats.notedCompletions,
+      activeDays: summary.habitsByDay.size,
+      perfectDays: summary.days.filter((day) => day.completionRate === 100)
+        .length,
+      maxHabitsInOneDay: peakHabitsInADay(summary.habitsByDay),
+      currentStreak: streaks.currentStreak,
+      longestStreak: streaks.longestStreak,
+    };
   }
 
   private calculateProgress(
@@ -153,10 +178,11 @@ export const createAchievementService = (db: D1Database) => {
 // Convenience functions for controllers
 export const getAllAchievementsForUser = async (
   userId: string,
-  db: D1Database
+  db: D1Database,
+  timeZone = 'UTC'
 ): Promise<AchievementResponse[]> => {
   const service = createAchievementService(db);
-  return service.getAllAchievementsForUser(userId);
+  return service.getAllAchievementsForUser(userId, timeZone);
 };
 
 export const getUserAchievements = async (
@@ -169,10 +195,11 @@ export const getUserAchievements = async (
 
 export const checkAndAwardAchievements = async (
   userId: string,
-  db: D1Database
+  db: D1Database,
+  timeZone = 'UTC'
 ): Promise<Achievement[]> => {
   const service = createAchievementService(db);
-  return service.checkAndAwardAchievements(userId);
+  return service.checkAndAwardAchievements(userId, timeZone);
 };
 
 export const initializeAchievements = async (db: D1Database): Promise<void> => {

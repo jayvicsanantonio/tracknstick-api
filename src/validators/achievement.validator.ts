@@ -3,17 +3,13 @@
 
 import { z } from 'zod';
 
-// No specific validation needed for GET /achievements (uses auth only)
-export const getAllAchievementsSchema = z.object({});
-
-// No specific validation needed for GET /achievements/earned (uses auth only)
-export const getUserEarnedAchievementsSchema = z.object({});
-
-// No specific validation needed for POST /achievements/check (uses auth only)
-export const checkAchievementsSchema = z.object({});
-
-// No specific validation needed for GET /achievements/stats (uses auth only)
-export const getAchievementStatsSchema = z.object({});
-
-// Schema for initializing achievements (admin endpoint)
-export const initializeAchievementsSchema = z.object({});
+/**
+ * The zone the day-counting rules are measured in.
+ *
+ * Active days, perfect days and streaks are all counts of the user's own
+ * calendar days, so they are only correct if the request says which calendar
+ * that is. Optional, defaulting to UTC, so an older client keeps working.
+ */
+export const achievementQuerySchema = z.object({
+  timeZone: z.string().default('UTC'),
+});

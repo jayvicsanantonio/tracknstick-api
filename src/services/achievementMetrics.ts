@@ -1,11 +1,30 @@
 // Maps each achievement to the value that measures it
 // Keyed by achievement key, which is UNIQUE in the schema and needs no re-seed
 
-import type { UserHabitStats } from '../repositories/achievement.repository.js';
-
-/** Everything an achievement rule can measure, read once per request. */
-export interface UserStatsSnapshot extends UserHabitStats {
+/**
+ * Everything an achievement rule can measure, read once per request.
+ *
+ * The per-day figures come from the same completion summary the progress
+ * history and streak endpoints use, so a badge and the Progress page can
+ * never quote different numbers for the same user.
+ */
+export interface UserStatsSnapshot {
+  /** Habits currently on the books. */
+  totalHabits: number;
+  /** Every completion ever recorded. */
+  totalCompletions: number;
+  /** Completions carrying a note. */
+  notedCompletions: number;
+  /** Days on which at least one habit was completed. */
+  activeDays: number;
+  /** Days on which every scheduled habit was completed. */
+  perfectDays: number;
+  /** The most habits completed on any single day. */
+  maxHabitsInOneDay: number;
+  /** Consecutive fully completed days ending now. */
   currentStreak: number;
+  /** The longest run of fully completed days ever achieved. */
+  longestStreak: number;
 }
 
 type Metric = (s: UserStatsSnapshot) => number;
@@ -38,7 +57,8 @@ export const METRICS: Record<string, Metric> = {
   completions_500: (s) => s.totalCompletions,
   completions_1000: (s) => s.totalCompletions,
 
-  // Streaks measure the best run ever achieved
+  // Streaks measure the best run of fully completed days ever achieved --
+  // the same figure the Progress page labels "Longest Streak".
   streak_3: (s) => s.longestStreak,
   streak_7: (s) => s.longestStreak,
   streak_14: (s) => s.longestStreak,

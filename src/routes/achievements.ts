@@ -5,6 +5,8 @@ import { Hono } from 'hono';
 import { clerkMiddleware } from '../middlewares/clerkMiddleware.js';
 import { withClerkFailureHandling } from '../middlewares/middlewareFailureHandler.js';
 import * as achievementController from '../controllers/achievement.controller.js';
+import { validateRequest } from '../middlewares/validateRequest.js';
+import { achievementQuerySchema } from '../validators/achievement.validator.js';
 
 // Create a sub-application for achievements
 const app = new Hono();
@@ -14,17 +16,39 @@ const app = new Hono();
 // cannot fall through an exemption by accident.
 const requireAuth = withClerkFailureHandling(clerkMiddleware());
 
+// Day-counting rules need the caller's calendar; see achievementQuerySchema.
+const withTimeZone = validateRequest(achievementQuerySchema, 'query');
+
 // GET /api/v1/achievements - Get all achievements with progress for user
-app.get('/', requireAuth, achievementController.getAllAchievements);
+app.get(
+  '/',
+  requireAuth,
+  withTimeZone,
+  achievementController.getAllAchievements
+);
 
 // GET /api/v1/achievements/earned - Get only earned achievements for user
-app.get('/earned', requireAuth, achievementController.getUserEarnedAchievements);
+app.get(
+  '/earned',
+  requireAuth,
+  achievementController.getUserEarnedAchievements
+);
 
 // GET /api/v1/achievements/stats - Get achievement statistics for user
-app.get('/stats', requireAuth, achievementController.getAchievementStats);
+app.get(
+  '/stats',
+  requireAuth,
+  withTimeZone,
+  achievementController.getAchievementStats
+);
 
 // POST /api/v1/achievements/check - Check and award new achievements
-app.post('/check', requireAuth, achievementController.checkAchievements);
+app.post(
+  '/check',
+  requireAuth,
+  withTimeZone,
+  achievementController.checkAchievements
+);
 
 // POST /api/v1/achievements/initialize - seeds the achievement catalogue.
 // INTENTIONALLY UNAUTHENTICATED, preserving existing behaviour. It takes no

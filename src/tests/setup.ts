@@ -40,6 +40,11 @@ export function createMockD1Database(
     prepare: vi.fn((sql: string) => {
       const result = resultFor(sql ?? '');
       return {
+        // batch() receives the prepared statement, not its SQL, so the
+        // resolved result has to travel on the statement itself. Without
+        // this every statement in a batch fell back to the catch-all
+        // result, which made a batch of differing queries untestable.
+        __result: result,
         bind: vi.fn().mockReturnThis(),
         first: vi
           .fn()

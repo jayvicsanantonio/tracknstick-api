@@ -9,11 +9,13 @@ import * as achievementService from '../services/achievement.service.js';
  */
 export const getAllAchievements = async (c: Context) => {
   const { userId } = c.get('auth');
+  const { timeZone } = c.get('validated_query');
 
   try {
     const achievements = await achievementService.getAllAchievementsForUser(
       userId,
-      c.env.DB
+      c.env.DB,
+      timeZone
     );
     return c.json({ achievements });
   } catch (error) {
@@ -64,11 +66,13 @@ export const getUserEarnedAchievements = async (c: Context) => {
  */
 export const checkAchievements = async (c: Context) => {
   const { userId } = c.get('auth');
+  const { timeZone } = c.get('validated_query');
 
   try {
     const newlyEarned = await achievementService.checkAndAwardAchievements(
       userId,
-      c.env.DB
+      c.env.DB,
+      timeZone
     );
 
     const response = newlyEarned.map((achievement) => ({
@@ -113,10 +117,11 @@ export const initializeAchievements = async (c: Context) => {
  */
 export const getAchievementStats = async (c: Context) => {
   const { userId } = c.get('auth');
+  const { timeZone } = c.get('validated_query');
 
   try {
     const [allAchievements, userAchievements] = await Promise.all([
-      achievementService.getAllAchievementsForUser(userId, c.env.DB),
+      achievementService.getAllAchievementsForUser(userId, c.env.DB, timeZone),
       achievementService.getUserAchievements(userId, c.env.DB),
     ]);
 
