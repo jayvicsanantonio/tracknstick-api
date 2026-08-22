@@ -17,6 +17,7 @@
     "lint": "eslint . --ext .js,.ts",
     "lint:fix": "eslint . --ext .js,.ts --fix",
     "test": "vitest run",
+    "pretest": "pnpm run build",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "db:setup": "node scripts/db.js setup",
