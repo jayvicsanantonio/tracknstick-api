@@ -136,6 +136,16 @@ export class AchievementRepository {
     return !!result;
   }
 
+  /**
+   * Seeds or refreshes the catalogue, in place.
+   *
+   * Upsert on the unique `key` rather than INSERT OR REPLACE. SQLite
+   * implements REPLACE as a delete followed by an insert, so every row got a
+   * new id -- and user_achievements.achievement_id references achievements(id)
+   * ON DELETE CASCADE. Re-seeding therefore erased every badge every user had
+   * ever earned. DO UPDATE keeps the row, and with it the id the junction
+   * table points at.
+   */
   async initializeAchievements(): Promise<void> {
     const achievements = this.getDefaultAchievements();
 
@@ -143,9 +153,19 @@ export class AchievementRepository {
       await this.db
         .prepare(
           `
-          INSERT OR REPLACE INTO achievements 
+          INSERT INTO achievements
           (key, name, description, icon, type, category, requirement_type, requirement_value, requirement_data, is_active)
           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(key) DO UPDATE SET
+            name = excluded.name,
+            description = excluded.description,
+            icon = excluded.icon,
+            type = excluded.type,
+            category = excluded.category,
+            requirement_type = excluded.requirement_type,
+            requirement_value = excluded.requirement_value,
+            requirement_data = excluded.requirement_data,
+            is_active = excluded.is_active
         `
         )
         .bind(

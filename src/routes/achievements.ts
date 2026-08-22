@@ -51,9 +51,12 @@ app.post(
 );
 
 // POST /api/v1/achievements/initialize - seeds the achievement catalogue.
-// INTENTIONALLY UNAUTHENTICATED, preserving existing behaviour. It takes no
-// user id and writes only the catalogue. Revisit if it is not needed by a
-// bootstrap step.
-app.post('/initialize', achievementController.initializeAchievements);
+// Authenticated: it takes no user id, but it is still a write to shared
+// state, and nothing in either client calls it without a session.
+app.post(
+  '/initialize',
+  requireAuth,
+  achievementController.initializeAchievements
+);
 
 export { app as achievementRoutes };
