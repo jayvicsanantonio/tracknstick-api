@@ -1,0 +1,16 @@
+# Build-script approvals.
+#
+# pnpm 10.x moved these out of package.json's "pnpm" field, which newer
+# versions ignore with:
+#   [WARN] The "pnpm" field in package.json is no longer read by pnpm.
+#
+# pnpm generated this file listing exactly these packages and asking for a
+# true/false each. All five genuinely need to build: workerd is the Workers
+# runtime wrangler executes, esbuild and sqlite3 compile native binaries, and
+# sharp ships platform binaries.
+allowBuilds:
+  '@clerk/shared': true
+  esbuild: true
+  sharp: true
+  sqlite3: true
+  workerd: true
