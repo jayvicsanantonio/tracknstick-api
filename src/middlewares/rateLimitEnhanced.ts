@@ -1,5 +1,9 @@
 // Production-grade rate limiting middleware with environment-aware configuration
-// Implements sliding window rate limiting with endpoint-specific controls
+// Implements fixed-window rate limiting with endpoint-specific controls
+//
+// NOTE: the store is an in-memory Map on a module-scope singleton. Each
+// Cloudflare isolate holds its own, and isolates are evicted freely, so
+// limits are per-isolate and best-effort rather than global.
 
 import { Context, MiddlewareHandler, Next } from 'hono';
 import { RateLimitError } from '../utils/errors.js';
@@ -28,7 +32,7 @@ interface RateLimitStore {
  *
  * Features:
  * - Environment-aware configuration
- * - Sliding window implementation
+ * - Fixed window implementation (per isolate; see the note above)
  * - Per-endpoint rate limiting
  * - IP-based and user-based limiting
  * - RFC 6585 compliant headers
@@ -36,8 +40,6 @@ interface RateLimitStore {
  */
 export class RateLimitMiddleware {
   private store: RateLimitStore;
-  private _config: RateLimitConfig | null = null;
-  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
     this.store = new Map<string, RateLimitEntry>();
@@ -45,26 +47,14 @@ export class RateLimitMiddleware {
   }
 
   /**
-   * Get merged configuration for the current environment
+   * Get merged configuration for the current environment.
+   *
+   * Resolved per request: c.env is per-invocation state, and this class is a
+   * module-scope singleton, so caching the first request's config pinned the
+   * wrong limits for the isolate's whole life.
    */
   private getConfig(c: Context): RateLimitConfig {
-    if (!this._config) {
-      this._config = getSecurityConfig(c.env.ENVIRONMENT).rateLimit;
-    }
-    return this._config;
-  }
-
-  /**
-   * Initialize periodic cleanup of expired entries (lazy initialization for Workers)
-   */
-  private initializeCleanup(): void {
-    if (this.cleanupInterval) {
-      return; // Already initialized
-    }
-
-    // In Cloudflare Workers, we'll do cleanup on-demand rather than using setInterval
-    // setInterval is not allowed in global scope and would consume resources unnecessarily
-    // this.cleanupInterval = setInterval(() => { this.cleanup(); }, 120000);
+    return getSecurityConfig(c.env.ENVIRONMENT).rateLimit;
   }
 
   /**
@@ -84,7 +74,7 @@ export class RateLimitMiddleware {
     if (cleanedCount > 0) {
       logger.debug('Rate limit cleanup completed', {
         cleanedEntries: cleanedCount,
-        remainingEntries: this.store.entries.length,
+        remainingEntries: Array.from(this.store.entries()).length,
       });
     }
   }
@@ -140,13 +130,9 @@ export class RateLimitMiddleware {
    * Get identifier for rate limiting (user ID preferred, then IP)
    */
   private getIdentifier(c: Context): string {
-    // Prefer user ID if authenticated
-    const userId = c.get('userId');
-    if (userId) {
-      return `user:${userId}`;
-    }
-
-    // Fall back to IP address
+    // Always IP-based. This middleware is registered globally in index.ts,
+    // before the route sub-apps mount clerkMiddleware, so no authenticated
+    // identity exists yet at this point in the chain.
     const ip =
       c.req.header('CF-Connecting-IP') ||
       c.req.header('X-Forwarded-For') ||
@@ -213,7 +199,7 @@ export class RateLimitMiddleware {
         this.store.set(key, entry);
       }
 
-      // Reset window if expired (sliding window)
+      // Reset the window once it has expired (fixed window)
       if (now > entry.resetAt) {
         entry.count = 0;
         entry.resetAt = now + windowMs;
@@ -288,13 +274,9 @@ export class RateLimitMiddleware {
   }
 
   /**
-   * Destroy the middleware and cleanup resources
+   * Reset the middleware (used by tests)
    */
   destroy(): void {
-    if (this.cleanupInterval) {
-      clearInterval(this.cleanupInterval);
-      this.cleanupInterval = null;
-    }
     this.clear();
   }
 }

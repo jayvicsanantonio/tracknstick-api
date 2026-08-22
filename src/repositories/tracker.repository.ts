@@ -2,6 +2,8 @@
 // Add this comment to suppress TypeScript errors during migration to Hono
 import { D1Database } from '@cloudflare/workers-types';
 import { NotFoundError } from '../utils/errors.js';
+import { computeStreaks } from '../utils/streakUtils.js';
+import { getLocaleStartEndForDateKey, isValidTimeZone } from '../utils/dateUtils.js';
 import { TrackerInsert, Tracker } from '../types/d1.js';
 
 interface TrackerRow {
@@ -40,7 +42,8 @@ export async function findTrackersByDateRange(
        WHERE user_id = ? 
        AND habit_id IN (${placeholders})
        AND timestamp >= ? 
-       AND timestamp <= ?`
+       AND timestamp <= ?
+       AND deleted_at IS NULL`
     )
     .bind(...params)
     .all();
@@ -65,7 +68,7 @@ export async function findTrackersByHabitAndDateRange(
   let sql = `
     SELECT id, habit_id, user_id, timestamp, notes, created_at, updated_at
     FROM trackers
-    WHERE habit_id = ? AND user_id = ?
+    WHERE habit_id = ? AND user_id = ? AND deleted_at IS NULL
   `;
   const params: (string | number)[] = [habitId, userId];
 
@@ -108,6 +111,7 @@ export async function findTrackersInDateRange(
     SELECT id
     FROM trackers
     WHERE habit_id = ? AND user_id = ? AND (timestamp BETWEEN ? AND ?)
+    AND deleted_at IS NULL
   `;
   const params = [habitId, userId, startDateISO, endDateISO];
 
@@ -218,7 +222,7 @@ export async function findAllByHabit(
   const sql = `
     SELECT id, habit_id, user_id, timestamp, notes, created_at, updated_at
     FROM trackers
-    WHERE habit_id = ? AND user_id = ?
+    WHERE habit_id = ? AND user_id = ? AND deleted_at IS NULL
     ORDER BY timestamp DESC
   `;
   const params = [habitId, userId];
@@ -248,7 +252,8 @@ export async function getAllTrackersForHabit(
       `SELECT * FROM trackers 
        WHERE user_id = ? 
        AND habit_id = ?
-          ORDER BY timestamp DESC`
+       AND deleted_at IS NULL
+       ORDER BY timestamp DESC`
     )
     .bind(userId, habitId)
     .all();
@@ -279,10 +284,7 @@ export async function getUserProgressHistory(
   timeZone: string = 'UTC'
 ): Promise<Array<{ date: string; completionRate: number }>> {
   try {
-    // Validate timezone
-    try {
-      Intl.DateTimeFormat(undefined, { timeZone }).format(new Date());
-    } catch {
+    if (!isValidTimeZone(timeZone)) {
       console.warn(`Invalid timezone "${timeZone}", falling back to UTC`);
       timeZone = 'UTC';
     }
@@ -345,8 +347,14 @@ export async function getUserProgressHistory(
 
     // Fetch all trackers in the date range
     // We need to query with UTC boundaries that cover the entire range in user's timezone
-    const rangeStart = getLocaleStartISO(calculationStartDate, timeZone);
-    const rangeEnd = getLocaleEndISO(todayInTZ, timeZone);
+    const rangeStart = getLocaleStartEndForDateKey(
+      calculationStartDate,
+      timeZone
+    ).localeStartISO;
+    const rangeEnd = getLocaleStartEndForDateKey(
+      todayInTZ,
+      timeZone
+    ).localeEndISO;
 
     const trackersResult = await db
       .prepare(
@@ -374,7 +382,7 @@ export async function getUserProgressHistory(
     // Build a map of tracker completions by date (in user's timezone)
     const trackersByDate = new Map<string, Set<number>>();
     for (const tracker of trackers) {
-      const trackerDate = getDateInTimezone(tracker.timestamp, timeZone);
+      const trackerDate = trackerDateKey(new Date(tracker.timestamp));
       if (!trackersByDate.has(trackerDate)) {
         trackersByDate.set(trackerDate, new Set());
       }
@@ -464,106 +472,6 @@ export async function getUserProgressHistory(
 }
 
 /**
- * Helper function to get UTC ISO string for start of day in timezone
- */
-function getLocaleStartISO(dateStr: string, timeZone: string): string {
-  // Create date at start of day in the timezone
-  const date = new Date(dateStr + 'T00:00:00');
-
-  // Get offset for this specific date/time in the timezone
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-
-  // Parse as if it were UTC first
-  const asUtc = new Date(`${dateStr}T00:00:00Z`);
-  const parts = formatter.formatToParts(asUtc);
-  const getPart = (type: string) =>
-    parts.find((p) => p.type === type)?.value || '';
-
-  const tzYear = parseInt(getPart('year'), 10);
-  const tzMonth = parseInt(getPart('month'), 10);
-  const tzDay = parseInt(getPart('day'), 10);
-  const tzHour = parseInt(getPart('hour'), 10);
-  const tzMinute = parseInt(getPart('minute'), 10);
-  const tzSecond = parseInt(getPart('second'), 10);
-
-  const tzAsUtc = Date.UTC(
-    tzYear,
-    tzMonth - 1,
-    tzDay,
-    tzHour,
-    tzMinute,
-    tzSecond
-  );
-  const offset = tzAsUtc - asUtc.getTime();
-
-  const localeStart = new Date(`${dateStr}T00:00:00Z`);
-  localeStart.setTime(localeStart.getTime() - offset);
-
-  return localeStart.toISOString();
-}
-
-/**
- * Helper function to get UTC ISO string for end of day in timezone
- */
-function getLocaleEndISO(dateStr: string, timeZone: string): string {
-  const asUtc = new Date(`${dateStr}T23:59:59Z`);
-
-  const formatter = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
-
-  const parts = formatter.formatToParts(asUtc);
-  const getPart = (type: string) =>
-    parts.find((p) => p.type === type)?.value || '';
-
-  const tzYear = parseInt(getPart('year'), 10);
-  const tzMonth = parseInt(getPart('month'), 10);
-  const tzDay = parseInt(getPart('day'), 10);
-  const tzHour = parseInt(getPart('hour'), 10);
-  const tzMinute = parseInt(getPart('minute'), 10);
-  const tzSecond = parseInt(getPart('second'), 10);
-
-  const tzAsUtc = Date.UTC(
-    tzYear,
-    tzMonth - 1,
-    tzDay,
-    tzHour,
-    tzMinute,
-    tzSecond
-  );
-  const offset = tzAsUtc - asUtc.getTime();
-
-  const localeEnd = new Date(`${dateStr}T23:59:59.999Z`);
-  localeEnd.setTime(localeEnd.getTime() - offset);
-
-  return localeEnd.toISOString();
-}
-
-/**
- * Helper function to get date string (YYYY-MM-DD) for a timestamp in a timezone
- */
-function getDateInTimezone(timestamp: string, timeZone: string): string {
-  const date = new Date(timestamp);
-  return new Intl.DateTimeFormat('en-CA', { timeZone }).format(date);
-}
-
-/**
  * Gets the user's current and longest streaks based on 100% completion days
  * @param db D1Database instance
  * @param userId User's Clerk ID
@@ -576,10 +484,7 @@ export async function getUserStreaks(
   timeZone: string = 'UTC'
 ): Promise<{ currentStreak: number; longestStreak: number }> {
   try {
-    // Validate timezone
-    try {
-      Intl.DateTimeFormat(undefined, { timeZone }).format(new Date());
-    } catch {
+    if (!isValidTimeZone(timeZone)) {
       console.warn(`Invalid timezone "${timeZone}", falling back to UTC`);
       timeZone = 'UTC';
     }
@@ -593,84 +498,14 @@ export async function getUserStreaks(
       timeZone
     );
 
-    // Calculate streaks based on 100% completion days
-    let currentStreak = 0;
-    let longestStreak = 0;
-    let tempStreak = 0;
-
-    // Sort by date descending to calculate current streak first
-    const sortedHistory = [...history].sort(
-      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+    // history is already ordered newest-first by getUserProgressHistory and
+    // contains one entry per *scheduled* day, so the fold can work by array
+    // position without re-parsing or re-sorting dates.
+    const today = new Intl.DateTimeFormat('en-CA', { timeZone }).format(
+      new Date()
     );
 
-    // Calculate current streak (consecutive 100% days up to today in user's timezone)
-    const now = new Date();
-    const today = new Intl.DateTimeFormat('en-CA', { timeZone }).format(now);
-
-    for (let i = 0; i < sortedHistory.length; i++) {
-      const entry = sortedHistory[i];
-
-      // Break if we encounter a gap in dates
-      if (i === 0 && entry.date !== today) {
-        break;
-      }
-
-      if (i > 0) {
-        const prevDate = new Date(sortedHistory[i - 1].date + 'T12:00:00Z');
-        const currDate = new Date(entry.date + 'T12:00:00Z');
-        const dayDiff = Math.floor(
-          (prevDate.getTime() - currDate.getTime()) / (24 * 60 * 60 * 1000)
-        );
-
-        if (dayDiff !== 1) {
-          break;
-        }
-      }
-
-      if (entry.completionRate === 100) {
-        currentStreak++;
-      } else {
-        break;
-      }
-    }
-
-    // Calculate longest streak
-    // Sort by date ascending for longest streak calculation
-    const chronologicalHistory = [...history].sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
-    );
-
-    for (let i = 0; i < chronologicalHistory.length; i++) {
-      if (chronologicalHistory[i].completionRate === 100) {
-        tempStreak++;
-
-        // Check for date continuity
-        if (i > 0) {
-          const prevDate = new Date(
-            chronologicalHistory[i - 1].date + 'T12:00:00Z'
-          );
-          const currDate = new Date(
-            chronologicalHistory[i].date + 'T12:00:00Z'
-          );
-          const dayDiff = Math.floor(
-            (currDate.getTime() - prevDate.getTime()) / (24 * 60 * 60 * 1000)
-          );
-
-          // If dates aren't consecutive, reset the temporary streak
-          if (dayDiff !== 1) {
-            tempStreak = 1; // Reset to 1 (counting current day)
-          }
-        }
-      } else {
-        longestStreak = Math.max(longestStreak, tempStreak);
-        tempStreak = 0;
-      }
-    }
-
-    // Check final streak
-    longestStreak = Math.max(longestStreak, tempStreak);
-
-    return { currentStreak, longestStreak };
+    return computeStreaks(history, today);
   } catch (error) {
     console.error('Error calculating user streaks:', error);
     throw error;

@@ -23,7 +23,6 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
-          version: 8
           run_install: false
 
       - name: Setup Node.js
@@ -37,6 +36,11 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+      # Deploy is the last gate before production, so the suite runs here too
+      # rather than only on pull requests.
+      - name: Test
+        run: pnpm test
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3

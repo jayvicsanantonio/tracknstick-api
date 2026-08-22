@@ -8,12 +8,48 @@ type Bindings = {
   CLERK_SECRET_KEY: string;
 };
 
+type ComponentStatus =
+  | { status: 'ok'; responseTime: string }
+  | { status: 'error'; responseTime: string; message: string };
+
 /**
  * Health check routes for monitoring the API
+ * These routes are intentionally unauthenticated.
  */
 const app = new Hono<{ Bindings: Bindings }>();
 
-// Simple health check that doesn't require authentication
+/**
+ * Single owner for "is the database reachable". Both /db and /details
+ * derive their status from this rather than each deciding separately.
+ */
+async function checkDatabase(db: D1Database): Promise<ComponentStatus> {
+  const startTime = Date.now();
+
+  try {
+    const result = await db.prepare('SELECT 1 as db_check').bind().first();
+    const responseTime = `${Date.now() - startTime}ms`;
+
+    if (!result) {
+      logger.error('Database health check failed: no result returned');
+      return {
+        status: 'error',
+        responseTime,
+        message: 'Database check returned no result',
+      };
+    }
+
+    return { status: 'ok', responseTime };
+  } catch (error) {
+    logger.error('Database health check failed', error as Error);
+    return {
+      status: 'error',
+      responseTime: `${Date.now() - startTime}ms`,
+      message: 'Database connection failed',
+    };
+  }
+}
+
+// Liveness check - does not touch the database
 app.get('/', async (c) => {
   logger.info('Health check requested');
   return c.json({
@@ -23,89 +59,47 @@ app.get('/', async (c) => {
   });
 });
 
-// Database health check - requires authentication
+// Database readiness check
+// Response shape and status codes are unchanged from before the
+// checkDatabase extraction, so existing monitors keep working.
 app.get('/db', async (c) => {
-  const db = c.env.DB;
-  const startTime = Date.now();
+  const database = await checkDatabase(c.env.DB);
 
-  try {
-    // Simple query to check database connectivity
-    const result = await db.prepare('SELECT 1 as db_check').bind().first();
-
-    const duration = Date.now() - startTime;
-
-    if (!result) {
-      logger.error('Database health check failed: No result returned');
-      return c.json(
-        {
-          status: 'error',
-          message: 'Database check failed',
-          timestamp: new Date().toISOString(),
-        },
-        500
-      );
-    }
-
-    logger.info('Database health check successful', {
-      duration: `${duration}ms`,
-    });
-
-    return c.json({
-      status: 'ok',
-      message: 'Database connection successful',
-      timestamp: new Date().toISOString(),
-      responseTime: `${duration}ms`,
-    });
-  } catch (error) {
-    const duration = Date.now() - startTime;
-    logger.error('Database health check failed', error as Error);
-
+  if (database.status === 'error') {
     return c.json(
       {
         status: 'error',
-        message: 'Database connection failed',
+        message: 'Database check failed',
         timestamp: new Date().toISOString(),
-        responseTime: `${duration}ms`,
+        responseTime: database.responseTime,
       },
       500
     );
   }
-});
-
-// Detailed health check that includes version info
-app.get('/details', async (c) => {
-  const startTime = Date.now();
-  const packageInfo = {
-    name: 'tracknstick-api',
-    version: '2.0.0', // This should be dynamically loaded from package.json in a production app
-  };
-
-  // Check database connection
-  let dbStatus = 'unknown';
-  try {
-    await c.env.DB.prepare('SELECT 1').first();
-    dbStatus = 'connected';
-  } catch (error) {
-    dbStatus = 'error';
-    logger.error(
-      'Database check failed during detailed health check',
-      error as Error
-    );
-  }
-
-  const duration = Date.now() - startTime;
 
   return c.json({
     status: 'ok',
+    message: 'Database connection successful',
     timestamp: new Date().toISOString(),
-    environment: c.env.ENVIRONMENT,
-    version: packageInfo.version,
-    uptime: process.uptime(),
-    database: {
-      status: dbStatus,
-    },
-    responseTime: `${duration}ms`,
+    responseTime: database.responseTime,
   });
+});
+
+// Detailed check including component status
+app.get('/details', async (c) => {
+  const database = await checkDatabase(c.env.DB);
+
+  return c.json(
+    {
+      // Derived from the components, not asserted independently of them
+      status: database.status,
+      timestamp: new Date().toISOString(),
+      environment: c.env.ENVIRONMENT,
+      responseTime: database.responseTime,
+      components: { database },
+    },
+    database.status === 'ok' ? 200 : 503
+  );
 });
 
 export { app as healthRoutes };

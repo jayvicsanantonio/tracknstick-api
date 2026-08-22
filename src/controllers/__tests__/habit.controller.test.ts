@@ -16,7 +16,6 @@ vi.mock('../../services/habit.service.js', () => ({
   getTrackersForHabit: vi.fn(),
   manageTracker: vi.fn(),
   getHabitStats: vi.fn(),
-  getProgressOverview: vi.fn(),
 }));
 
 describe('Habit Controller', () => {
@@ -87,9 +86,11 @@ describe('Habit Controller', () => {
 
       await habitController.getHabits(mockContext as Context);
 
+      // timeZone is forwarded so "today" is resolved in the caller's zone
       expect(habitService.getAllHabits).toHaveBeenCalledWith(
         mockClerkUserId,
-        mockDB
+        mockDB,
+        undefined
       );
     });
   });

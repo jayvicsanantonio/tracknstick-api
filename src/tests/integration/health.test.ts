@@ -105,9 +105,7 @@ describe('Health API Integration', () => {
       const data = await res.json();
       expect(data).toHaveProperty('status', 'ok');
       expect(data).toHaveProperty('environment', 'test');
-      expect(data).toHaveProperty('version');
-      expect(data).toHaveProperty('uptime');
-      expect(data).toHaveProperty('database.status', 'connected');
+      expect(data).toHaveProperty('components.database.status', 'ok');
       expect(data).toHaveProperty('responseTime');
     });
   });

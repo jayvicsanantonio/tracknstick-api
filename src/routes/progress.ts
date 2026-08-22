@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { clerkMiddleware } from '../middlewares/clerkMiddleware.js';
+import { withClerkFailureHandling } from '../middlewares/middlewareFailureHandler.js';
 import * as progressController from '../controllers/progress.controller.js';
 import { validateRequest } from '../middlewares/validateRequest.js';
 import {
@@ -10,14 +11,15 @@ import {
 
 const app = new Hono();
 
-// Apply Clerk auth middleware to all routes
-app.use('*', clerkMiddleware());
+// Apply Clerk auth middleware to all routes, with the same failure
+// handling the habits and chat routes use.
+app.use('*', withClerkFailureHandling(clerkMiddleware()));
 
 /**
  * @route GET /history
  * @description Get user's progress history showing completion rates by day
- * @query startDate - Optional start date in YYYY-MM-DD format
- * @query endDate - Optional end date in YYYY-MM-DD format
+ * @query startDate - Optional start date, YYYY-MM-DD or ISO 8601 (normalised to the former)
+ * @query endDate - Optional end date, YYYY-MM-DD or ISO 8601 (normalised to the former)
  * @query timeZone - Optional timezone for date calculations (e.g., 'America/Los_Angeles')
  * @returns {Object} - History of daily completion rates
  */
@@ -42,8 +44,8 @@ app.get(
 /**
  * @route GET /overview
  * @description Get user's complete progress overview including history and streaks
- * @query startDate - Optional start date in YYYY-MM-DD format
- * @query endDate - Optional end date in YYYY-MM-DD format
+ * @query startDate - Optional start date, YYYY-MM-DD or ISO 8601 (normalised to the former)
+ * @query endDate - Optional end date, YYYY-MM-DD or ISO 8601 (normalised to the former)
  * @query timeZone - Optional timezone for date calculations
  * @returns {Object} - Combined history and streak information
  */

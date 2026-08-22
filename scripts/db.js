@@ -54,9 +54,17 @@ async function setup() {
 async function reset() {
   console.log(`🔄 Resetting database ${isRemote ? '(REMOTE)' : '(LOCAL)'}`);
 
-  // Drop all tables to start fresh
-  const dropCommand = `d1 execute ${DB_NAME} --command "DROP TABLE IF EXISTS trackers; DROP TABLE IF EXISTS habits; DROP TABLE IF EXISTS users;" ${remoteFlag}`;
-  executeWrangler(dropCommand);
+  // Drop all tables to start fresh, from the same file that lists them.
+  // The previous inline command named only three of the five tables and then
+  // reported "All tables dropped".
+  const resetFile = path.join(MIGRATIONS_DIR, 'reset.sql');
+  if (!fs.existsSync(resetFile)) {
+    console.error(`❌ Missing ${resetFile}`);
+    process.exit(1);
+  }
+
+  console.log('📄 Applying reset.sql...');
+  executeWrangler(`d1 execute ${DB_NAME} --file=${resetFile} ${remoteFlag}`);
 
   console.log('🗑️  All tables dropped');
 
@@ -90,11 +98,11 @@ async function seed() {
     const sampleSeed = `-- Sample seed data
 INSERT OR IGNORE INTO users (clerk_user_id) VALUES ('user_test123');
 
-INSERT OR IGNORE INTO habits (user_id, name, icon, frequency_type, frequency_days, start_date, streak, best_streak) 
-VALUES 
-  ('user_test123', 'Morning Exercise', '🏃', 'daily', NULL, '2024-01-01', 0, 0),
-  ('user_test123', 'Read Books', '📚', 'daily', NULL, '2024-01-01', 0, 0),
-  ('user_test123', 'Drink Water', '💧', 'daily', NULL, '2024-01-01', 0, 0);
+INSERT OR IGNORE INTO habits (user_id, name, icon, frequency, start_date)
+VALUES
+  ('user_test123', 'Morning Exercise', '🏃', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', '2024-01-01'),
+  ('user_test123', 'Read Books', '📚', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', '2024-01-01'),
+  ('user_test123', 'Drink Water', '💧', 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', '2024-01-01');
 `;
 
     fs.writeFileSync(seedFile, sampleSeed);

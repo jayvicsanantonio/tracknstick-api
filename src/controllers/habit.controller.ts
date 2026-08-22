@@ -10,11 +10,11 @@ export interface HabitData {
   endDate?: string | null;
 }
 
-export interface TrackerResult {
-  status: 'added' | 'removed';
-  message: string;
-  trackerId?: string;
-}
+// A discriminated union: 'added' always carries the new tracker id, and
+// 'removed' never does, so the pair cannot disagree.
+export type TrackerResult =
+  | { status: 'added'; message: string; trackerId: string }
+  | { status: 'removed'; message: string };
 
 /**
  * Get habits for a specific date or all habits if no date provided.
@@ -26,7 +26,7 @@ export const getHabits = async (c: Context) => {
   try {
     let habits;
 
-    if (date && timeZone) {
+    if (date) {
       // Get habits for a specific date
       habits = await habitService.getHabitsForDate(
         userId,
@@ -35,8 +35,8 @@ export const getHabits = async (c: Context) => {
         c.env.DB
       );
     } else {
-      // Get all habits
-      habits = await habitService.getAllHabits(userId, c.env.DB);
+      // Get all habits, with today's completion in the caller's timezone
+      habits = await habitService.getAllHabits(userId, c.env.DB, timeZone);
     }
 
     return c.json(
@@ -161,10 +161,6 @@ export const manageTracker = async (c: Context) => {
   const { timestamp, timeZone, notes } = c.get('validated_json');
 
   try {
-    console.log(
-      `[CONTROLLER] Starting manageTracker: user=${userId}, habit=${habitId}, timestamp=${timestamp}, timeZone=${timeZone}`
-    );
-
     const result = await habitService.manageTracker(
       userId,
       habitId,
@@ -174,19 +170,14 @@ export const manageTracker = async (c: Context) => {
       c.env.DB
     );
 
-    console.log(`[CONTROLLER] Service result: ${JSON.stringify(result)}`);
+    if (result.status === 'added') {
+      return c.json(
+        { message: result.message, trackerId: result.trackerId },
+        201
+      );
+    }
 
-    const statusCode = result.status === 'added' ? 201 : 200;
-    const response = {
-      message: result.message,
-      ...(result.trackerId && { trackerId: result.trackerId }),
-    };
-
-    console.log(
-      `[CONTROLLER] Returning response: status=${statusCode}, body=${JSON.stringify(response)}`
-    );
-
-    return c.json(response, statusCode);
+    return c.json({ message: result.message }, 200);
   } catch (error) {
     console.error(
       `Error in manageTracker controller for user ${userId}, habit ${habitId}:`,
@@ -235,28 +226,3 @@ export const restoreHabit = async (c: Context) => {
   }
 };
 
-/**
- * Get progress overview for a user for a given month.
- */
-export const getProgressOverview = async (c: Context) => {
-  const { userId } = c.get('auth');
-  const { month, timeZone } = c.get('validated_query');
-
-  try {
-    // Import progress service to get actual implementation
-    const progressService = await import('../services/progress.service.js');
-    const overview = await progressService.getUserProgressOverview(
-      c.env.DB,
-      userId,
-      undefined, // startDate
-      undefined // endDate
-    );
-    return c.json(overview);
-  } catch (error) {
-    console.error(
-      `Error in getProgressOverview controller for user ${userId}:`,
-      error
-    );
-    throw error;
-  }
-};

@@ -3,23 +3,58 @@ import { Hono } from 'hono';
 import { D1Database } from '@cloudflare/workers-types';
 
 /**
- * Creates a mock D1 database for testing
+ * A canned answer for queries whose SQL matches `match`.
+ * Without this, one result had to serve every query in a request, so a test
+ * could not express "the habits query returns X and the trackers query
+ * returns Y" -- which is why divergent behaviour between the two went
+ * unnoticed.
  */
-export function createMockD1Database(mockResults: any): D1Database {
-  // Create a more robust mock DB
+export interface QueryResponder {
+  match: string | RegExp;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  result: any;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const matches = (sql: string, match: string | RegExp) =>
+  typeof match === 'string' ? sql.includes(match) : match.test(sql);
+
+/**
+ * Creates a mock D1 database for testing.
+ *
+ * @param mockResults result for any query no responder matches
+ * @param responders per-query results, first match wins
+ */
+export function createMockD1Database(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  mockResults: any,
+  responders: QueryResponder[] = []
+): D1Database {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const resultFor = (sql: string): any => {
+    const responder = responders.find((r) => matches(sql, r.match));
+    return responder ? responder.result : mockResults;
+  };
+
   const mockD1 = {
-    prepare: vi.fn().mockReturnValue({
-      bind: vi.fn().mockReturnThis(),
-      first: vi
-        .fn()
-        .mockImplementation(async () => mockResults.results[0] || null),
-      run: vi.fn().mockResolvedValue(mockResults),
-      all: vi.fn().mockResolvedValue(mockResults),
+    prepare: vi.fn((sql: string) => {
+      const result = resultFor(sql ?? '');
+      return {
+        bind: vi.fn().mockReturnThis(),
+        first: vi
+          .fn()
+          .mockImplementation(async () => result.results?.[0] ?? null),
+        run: vi.fn().mockResolvedValue(result),
+        all: vi.fn().mockResolvedValue(result),
+      };
     }),
-    batch: vi.fn().mockImplementation(async (statements) => {
-      return statements.map(() => mockResults);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    batch: vi.fn().mockImplementation(async (statements: any[]) => {
+      // Each prepared statement carries the result its SQL resolved to
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return statements.map((s: any) => s?.__result ?? mockResults);
     }),
-    // exec is intentionally omitted to test for missing methods or to be added as needed
+    // exec is intentionally omitted to test for missing methods
   } as unknown as D1Database;
 
   return mockD1;
@@ -28,14 +63,14 @@ export function createMockD1Database(mockResults: any): D1Database {
 /**
  * Creates a test environment with a mock Cloudflare Workers context
  */
-export function createTestEnv() {
+export function createTestEnv(responders: QueryResponder[] = []) {
   const mockResults = {
     results: [],
     success: true,
     meta: { changes: 1, last_row_id: 1 },
   };
 
-  const mockDb = createMockD1Database(mockResults);
+  const mockDb = createMockD1Database(mockResults, responders);
 
   // Mock Cloudflare environment bindings
   const env = {

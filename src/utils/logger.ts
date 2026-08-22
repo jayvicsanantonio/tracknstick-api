@@ -5,13 +5,35 @@
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
+const LEVEL_RANK: Record<LogLevel, number> = {
+  debug: 10,
+  info: 20,
+  warn: 30,
+  error: 40,
+};
+
 export class Logger {
   private context: string;
   private defaultMetadata: Record<string, any>;
+  /**
+   * Immutable on purpose. A Workers isolate serves concurrent requests off
+   * one module scope, so a mutable level on the shared root logger would
+   * leak across in-flight requests.
+   */
+  private readonly minLevel: LogLevel;
 
-  constructor(context: string, defaultMetadata: Record<string, any> = {}) {
+  constructor(
+    context: string,
+    defaultMetadata: Record<string, any> = {},
+    minLevel: LogLevel = 'info'
+  ) {
     this.context = context;
     this.defaultMetadata = defaultMetadata;
+    this.minLevel = minLevel;
+  }
+
+  private shouldLog(level: LogLevel): boolean {
+    return LEVEL_RANK[level] >= LEVEL_RANK[this.minLevel];
   }
 
   /**
@@ -36,7 +58,7 @@ export class Logger {
    * Log a debug message
    */
   debug(message: string, metadata: Record<string, any> = {}): void {
-    if (process.env.NODE_ENV === 'production') return;
+    if (!this.shouldLog('debug')) return;
     console.debug(this.formatMessage(message, 'debug', metadata));
   }
 
@@ -44,6 +66,7 @@ export class Logger {
    * Log an info message
    */
   info(message: string, metadata: Record<string, any> = {}): void {
+    if (!this.shouldLog('info')) return;
     console.info(this.formatMessage(message, 'info', metadata));
   }
 
@@ -51,6 +74,7 @@ export class Logger {
    * Log a warning message
    */
   warn(message: string, metadata: Record<string, any> = {}): void {
+    if (!this.shouldLog('warn')) return;
     console.warn(this.formatMessage(message, 'warn', metadata));
   }
 
@@ -62,6 +86,7 @@ export class Logger {
     error?: Error,
     metadata: Record<string, any> = {}
   ): void {
+    if (!this.shouldLog('error')) return;
     const errorMetadata = error
       ? {
           ...metadata,
@@ -77,14 +102,21 @@ export class Logger {
   /**
    * Create a child logger with additional context and metadata
    */
-  child(context: string, metadata: Record<string, any> = {}): Logger {
+  child(
+    context: string,
+    metadata: Record<string, any> = {},
+    minLevel: LogLevel = this.minLevel
+  ): Logger {
     const childContext = `${this.context}:${context}`;
     const childMetadata = { ...this.defaultMetadata, ...metadata };
-    return new Logger(childContext, childMetadata);
+    return new Logger(childContext, childMetadata, minLevel);
   }
 }
 
-// Create a root logger instance
+// Create a root logger instance.
+// 'info' is the safe default: c.env.ENVIRONMENT is per-invocation state and
+// cannot be read at module scope on Workers, so the root logger cannot
+// self-configure. A handler holding c.env can build a child at 'debug'.
 const rootLogger = new Logger('api');
 
 // Export default logger

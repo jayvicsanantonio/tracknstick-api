@@ -358,6 +358,7 @@ describe('errorHandlerEnhanced', () => {
 
       expect(logger.error).toHaveBeenCalledWith(
         'Server error occurred',
+        expect.any(Error),
         expect.objectContaining({
           path: '/api/test',
           method: 'GET',
@@ -387,6 +388,24 @@ describe('errorHandlerEnhanced', () => {
     });
   });
 
+  describe('status code range', () => {
+    it('falls back to 500 for an out-of-range statusCode', () => {
+      const error = new BaseError('weird', 9999, 'business_logic_error');
+
+      errorHandlerEnhanced(error, mockContext);
+
+      expect(mockContext.status).toHaveBeenCalledWith(500);
+    });
+
+    it('passes a valid statusCode through unchanged', () => {
+      const error = new BaseError('conflict', 409, 'conflict');
+
+      errorHandlerEnhanced(error, mockContext);
+
+      expect(mockContext.status).toHaveBeenCalledWith(409);
+    });
+  });
+
   describe('logging behavior', () => {
     it('should log client errors as warnings', async () => {
       const { default: logger } = await import('../../utils/logger.js');
@@ -409,6 +428,7 @@ describe('errorHandlerEnhanced', () => {
 
       expect(logger.error).toHaveBeenCalledWith(
         'Server error occurred',
+        expect.any(Error),
         expect.any(Object)
       );
       expect(logger.warn).not.toHaveBeenCalled();

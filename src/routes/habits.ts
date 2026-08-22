@@ -1,10 +1,7 @@
 import { Hono } from 'hono';
 import { clerkMiddleware } from '../middlewares/clerkMiddleware.js';
 import { validateRequest } from '../middlewares/validateRequest.js';
-import {
-  withClerkFailureHandling,
-  withValidationFailureHandling,
-} from '../middlewares/middlewareFailureHandler.js';
+import { withClerkFailureHandling } from '../middlewares/middlewareFailureHandler.js';
 import * as habitValidator from '../validators/habit.validator.js';
 import * as habitController from '../controllers/habit.controller.js';
 
@@ -19,13 +16,6 @@ app.get(
   '/',
   validateRequest(habitValidator.getHabitsByDateSchema, 'query'),
   habitController.getHabits
-);
-
-// GET /api/v1/habits/progress/overview (MUST be before :habitId routes)
-app.get(
-  '/progress/overview',
-  validateRequest(habitValidator.getProgressOverviewSchema, 'query'),
-  habitController.getProgressOverview
 );
 
 // POST /api/v1/habits

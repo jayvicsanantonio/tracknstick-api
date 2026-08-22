@@ -79,26 +79,20 @@ describe('clerkMiddleware', () => {
         { authorizedParties: [] }
       );
 
-      expect(mockContext.set).toHaveBeenCalledWith(
-        'auth',
-        expect.objectContaining({
-          userId: 'user_123',
-          sessionId: 'session_456',
-          claims: expect.objectContaining({
-            iss: 'https://clerk.dev',
-            aud: 'test-audience',
-          }),
-          metadata: expect.objectContaining({
-            requestId: expect.stringMatching(/^req_\d+_/),
-          }),
-        })
-      );
+      expect(mockContext.set).toHaveBeenCalledWith('auth', {
+        userId: 'user_123',
+        requestId: expect.stringMatching(/^req_\d+_/),
+      });
 
-      expect(mockContext.set).toHaveBeenCalledWith('userId', 'user_123');
+      // 'userId' is no longer set as a separate context variable
+      expect(mockContext.set).not.toHaveBeenCalledWith(
+        'userId',
+        expect.anything()
+      );
       expect(mockNext).toHaveBeenCalled();
     });
 
-    it('should handle request without session ID', async () => {
+    it('authenticates when the token carries no session id', async () => {
       const mockAuth = {
         userId: 'user_123',
         sessionClaims: {
@@ -121,10 +115,7 @@ describe('clerkMiddleware', () => {
 
       expect(mockContext.set).toHaveBeenCalledWith(
         'auth',
-        expect.objectContaining({
-          userId: 'user_123',
-          sessionId: '',
-        })
+        expect.objectContaining({ userId: 'user_123' })
       );
     });
   });
@@ -222,65 +213,4 @@ describe('clerkMiddleware', () => {
     });
   });
 
-  describe('security metadata', () => {
-    it('should extract IP address from CF-Connecting-IP header', async () => {
-      mockContext.req.header.mockImplementation((headerName) => {
-        if (headerName === 'CF-Connecting-IP') return '192.168.1.1';
-        return undefined;
-      });
-
-      const mockAuth = {
-        userId: 'user_123',
-        sessionClaims: { iss: 'https://clerk.dev' },
-      };
-
-      const mockRequestState = {
-        isAuthenticated: true,
-        toAuth: () => mockAuth,
-      };
-
-      mockClerkClient.authenticateRequest.mockResolvedValue(mockRequestState);
-
-      await middleware(mockContext, mockNext);
-
-      expect(mockContext.set).toHaveBeenCalledWith(
-        'auth',
-        expect.objectContaining({
-          metadata: expect.objectContaining({
-            ipAddress: '192.168.1.1',
-          }),
-        })
-      );
-    });
-
-    it('should fall back to X-Forwarded-For when CF-Connecting-IP is missing', async () => {
-      mockContext.req.header.mockImplementation((headerName) => {
-        if (headerName === 'X-Forwarded-For') return '10.0.0.1';
-        return undefined;
-      });
-
-      const mockAuth = {
-        userId: 'user_123',
-        sessionClaims: { iss: 'https://clerk.dev' },
-      };
-
-      const mockRequestState = {
-        isAuthenticated: true,
-        toAuth: () => mockAuth,
-      };
-
-      mockClerkClient.authenticateRequest.mockResolvedValue(mockRequestState);
-
-      await middleware(mockContext, mockNext);
-
-      expect(mockContext.set).toHaveBeenCalledWith(
-        'auth',
-        expect.objectContaining({
-          metadata: expect.objectContaining({
-            ipAddress: '10.0.0.1',
-          }),
-        })
-      );
-    });
-  });
 });

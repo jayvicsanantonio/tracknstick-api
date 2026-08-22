@@ -1,22 +1,9 @@
-import { HabitData } from '../controllers/habit.controller.js';
-
-// Enhanced authentication context interface
+// Authentication context set by clerkMiddleware.
+// Only the fields something reads live here: every consumer uses userId,
+// and the error/security handlers use requestId for correlation.
 export interface AuthContext {
   userId: string;
-  sessionId: string;
-  claims: {
-    iss: string;
-    aud: string | string[];
-    exp: number;
-    iat: number;
-    nbf: number;
-    [key: string]: any;
-  };
-  metadata?: {
-    ipAddress?: string;
-    userAgent?: string;
-    requestId?: string;
-  };
+  requestId: string;
 }
 
 // Authentication context designed for performance with minimal data fetching
@@ -26,62 +13,10 @@ export interface AuthContext {
 declare module 'hono' {
   interface ContextVariableMap {
     auth: AuthContext;
-    userId: string; // Keep for backward compatibility
     validated_json: any;
     validated_query: any;
     validated_param: any;
   }
-}
-
-export interface ApiResponse<T = unknown> {
-  data?: T;
-  message?: string;
-  error?: {
-    code: string;
-    message: string;
-    details?: unknown;
-  };
-}
-
-export interface HabitResponse {
-  id: string;
-  name: string;
-  icon?: string;
-  frequency: {
-    type: 'daily' | 'weekly' | 'monthly' | 'custom';
-    days?: number[];
-    dates?: number[];
-  };
-  startDate: string;
-  endDate?: string;
-  isCompleted: boolean;
-}
-
-export interface TrackerResponse {
-  id: string;
-  habitId: string;
-  timestamp: string;
-  notes?: string;
-}
-
-export interface HabitStatsResponse {
-  total: number;
-  completed: number;
-  streak: number;
-  bestStreak: number;
-  completionRate: number;
-}
-
-export interface ProgressOverviewResponse {
-  totalHabits: number;
-  completionRate: number;
-  habitStats: Array<{
-    habitId: string;
-    name: string;
-    completed: number;
-    total: number;
-    rate: number;
-  }>;
 }
 
 export interface Achievement {
@@ -96,8 +31,7 @@ export interface Achievement {
     | 'completion'
     | 'special_achievement'
     | 'perfect_completion'
-    | 'activity_tracking'
-    | 'milestone';
+    | 'activity_tracking';
   category: 'getting_started' | 'consistency' | 'dedication' | 'milestones';
   requirementType: 'count' | 'streak' | 'days' | 'percentage';
   requirementValue: number;

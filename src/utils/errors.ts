@@ -50,7 +50,9 @@ export class ConflictError extends BaseError {
 
 export class RateLimitError extends BaseError {
   constructor(message = 'Rate limit exceeded') {
-    super(message, 429, 'rate_limit');
+    // 'too_many_requests' is the code that has always gone over the wire;
+    // the class previously disagreed with the handler that emitted it.
+    super(message, 429, 'too_many_requests');
   }
 }
 

@@ -1,0 +1,8 @@
+# git-secrets allow-list.
+#
+# The *_TOKEN / *_API_KEY patterns match the placeholder values that the
+# ingestion scripts print as setup instructions. These are literal
+# placeholders in console.log help text, not credentials.
+export CLOUDFLARE_API_TOKEN=your_api_token
+export PINECONE_API_KEY=your_pinecone_api_key
+export CLOUDFLARE_ACCOUNT_ID=your_account_id

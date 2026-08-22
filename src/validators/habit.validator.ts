@@ -13,6 +13,19 @@ const frequencySchema = z
     message: 'Frequency array cannot contain duplicate days.',
   });
 
+
+// One definition of the date-range invariant, shared by create and update.
+// Null-safe on both ends so it stays correct if either field becomes optional.
+const hasValidDateRange = (data: {
+  startDate?: string;
+  endDate?: string | null;
+}): boolean => {
+  if (!data.startDate || !data.endDate) return true;
+  return new Date(data.endDate).getTime() >= new Date(data.startDate).getTime();
+};
+
+const DATE_RANGE_MESSAGE = 'endDate cannot be earlier than startDate.';
+
 // Request validation schemas
 export const createHabitSchema = z
   .object({
@@ -22,19 +35,7 @@ export const createHabitSchema = z
     startDate: z.string().datetime(),
     endDate: z.union([z.string().datetime(), z.null()]).optional(),
   })
-  .refine(
-    (data) => {
-      if (!data.endDate || data.endDate === null) return true;
-
-      const startTs = new Date(data.startDate).getTime();
-      const endTs = new Date(data.endDate).getTime();
-
-      return endTs >= startTs;
-    },
-    {
-      message: 'endDate cannot be earlier than startDate.',
-    }
-  );
+  .refine(hasValidDateRange, { message: DATE_RANGE_MESSAGE });
 
 export const updateHabitSchema = z
   .object({
@@ -44,19 +45,7 @@ export const updateHabitSchema = z
     startDate: z.string().datetime(),
     endDate: z.union([z.string().datetime(), z.null()]).optional(),
   })
-  .refine(
-    (data) => {
-      if (!data.endDate || data.endDate === null) return true;
-
-      const startTs = new Date(data.startDate).getTime();
-      const endTs = new Date(data.endDate).getTime();
-
-      return endTs >= startTs;
-    },
-    {
-      message: 'endDate cannot be earlier than startDate.',
-    }
-  );
+  .refine(hasValidDateRange, { message: DATE_RANGE_MESSAGE });
 
 export const habitIdParamSchema = z.object({
   habitId: z.string(),
@@ -64,7 +53,7 @@ export const habitIdParamSchema = z.object({
 
 export const getHabitsByDateSchema = z.object({
   date: z.string().datetime().optional(),
-  timeZone: z.string().default('UTC').optional(),
+  timeZone: z.string().default('UTC'),
 });
 
 export const getTrackersSchema = z.object({
@@ -81,10 +70,5 @@ export const manageTrackerSchema = z.object({
 });
 
 export const getHabitStatsSchema = z.object({
-  timeZone: z.string().default('UTC'),
-});
-
-export const getProgressOverviewSchema = z.object({
-  month: z.string().regex(/^\d{4}-\d{2}$/),
   timeZone: z.string().default('UTC'),
 });

@@ -319,7 +319,9 @@ describe('Security Integration Tests', () => {
       const req = new Request('http://localhost/api/v1/habits', {
         method: 'GET',
         headers: {
-          Authorization: 'Bearer ' + 'x'.repeat(1000), // Long token to test robustness
+          // Long *and* rejected, so this exercises the auth failure path
+          // rather than relying on the database mock to blow up
+          Authorization: 'Bearer invalid-' + 'x'.repeat(1000),
           Origin: 'http://localhost:3000',
         },
       });
