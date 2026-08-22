@@ -1,9 +1,11 @@
-// @ts-nocheck
-// Add this comment to suppress TypeScript errors during migration to Hono
 import { D1Database } from '@cloudflare/workers-types';
 import { NotFoundError } from '../utils/errors.js';
 import { computeStreaks } from '../utils/streakUtils.js';
-import { getLocaleStartEndForDateKey, isValidTimeZone } from '../utils/dateUtils.js';
+import {
+  getLocaleStartEndForDateKey,
+  isValidTimeZone,
+  toLocalDateKey,
+} from '../utils/dateUtils.js';
 import { TrackerInsert, Tracker } from '../types/d1.js';
 
 interface TrackerRow {
@@ -52,7 +54,7 @@ export async function findTrackersByDateRange(
     throw new Error('Failed to fetch trackers');
   }
 
-  return trackers.results as TrackerRow[];
+  return trackers.results as unknown as TrackerRow[];
 }
 
 /**
@@ -94,7 +96,7 @@ export async function findTrackersByHabitAndDateRange(
     throw new Error('Failed to fetch trackers by habit and date range');
   }
 
-  return result.results as Tracker[];
+  return result.results as unknown as Tracker[];
 }
 
 /**
@@ -236,7 +238,7 @@ export async function findAllByHabit(
     throw new Error('Failed to fetch all trackers for habit');
   }
 
-  return result.results as Tracker[];
+  return result.results as unknown as Tracker[];
 }
 
 /**
@@ -262,7 +264,7 @@ export async function getAllTrackersForHabit(
     throw new Error(`Failed to fetch trackers for habit ${habitId}`);
   }
 
-  return trackers.results as TrackerRow[];
+  return trackers.results as unknown as TrackerRow[];
 }
 
 /**
@@ -382,7 +384,7 @@ export async function getUserProgressHistory(
     // Build a map of tracker completions by date (in user's timezone)
     const trackersByDate = new Map<string, Set<number>>();
     for (const tracker of trackers) {
-      const trackerDate = trackerDateKey(new Date(tracker.timestamp));
+      const trackerDate = toLocalDateKey(new Date(tracker.timestamp), timeZone);
       if (!trackersByDate.has(trackerDate)) {
         trackersByDate.set(trackerDate, new Set());
       }
